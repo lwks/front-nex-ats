@@ -1,9 +1,5 @@
-import { CandidateOnboarding } from "@/components/candidate-onboarding"
+import { JobListings } from "@/components/job-listings"
 
 export default function Home() {
-  return (
-    <main className="min-h-screen">
-      <CandidateOnboarding />
-    </main>
-  )
+  return <JobListings />
 }
