@@ -1,30 +1,58 @@
 # NEX People Solutions
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+Aplicação front-end construída com Next.js para conduzir o onboarding de candidatos do ATS (Applicant Tracking System) da NEX People Solutions. O projeto foi originalmente gerado pelo [v0.app](https://v0.app) e adaptado para desenvolvimento local.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/lraposoia-6118s-projects/v0-nex-people-solutions)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/XQ8P5ft3O69)
+## Requisitos
 
-## Overview
+- Node.js 20 LTS (ou versão compatível com Next.js 15)
+- npm 9 ou superior (o repositório acompanha `package-lock.json`)
 
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
+## Como começar
 
-## Deployment
+```bash
+# 1. Instalar dependências
+npm install
 
-Your project is live at:
+# 2. Subir o ambiente de desenvolvimento
+npm run dev
 
-**[https://vercel.com/lraposoia-6118s-projects/v0-nex-people-solutions](https://vercel.com/lraposoia-6118s-projects/v0-nex-people-solutions)**
+# 3. Acessar no navegador
+http://localhost:3000
+```
 
-## Build your app
+### Scripts úteis
 
-Continue building your app on:
+- `npm run build`: gera o bundle de produção (`next build`).
+- `npm run start`: executa a aplicação em modo produção (`next start`).
+- `npm run lint`: roda as verificações do `next lint`. (Com a configuração atual, a build falha caso haja erros de lint ou TypeScript.)
 
-**[https://v0.app/chat/projects/XQ8P5ft3O69](https://v0.app/chat/projects/XQ8P5ft3O69)**
+## Estrutura do projeto
 
-## How It Works
+- `app/` – entrypoint do Next.js com `layout.tsx`, `page.tsx` e os estilos globais (`globals.css`).
+- `components/` – componentes reutilizáveis, incluindo:
+  - `candidate-onboarding.tsx` e `progress-indicator.tsx`: orquestram as etapas do formulário.
+  - `steps/`: telas de formulário (`Dados Pessoais`, `Dados Profissionais`, `Interesses Profissionais`).
+  - `ui/`: componentes baseados em Radix UI/ShadCN (botão, select, sheet etc.).
+  - `header.tsx`: cabeçalho da aplicação.
+- `lib/` – utilitários (por exemplo, o helper `cn` para composição de classes).
+- `public/` – assets estáticos (logos e imagens de placeholder).
 
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+## Fluxo atual da aplicação
+
+1. A página inicial (`/`) exibe o cabeçalho e o indicador de progresso.
+2. O formulário multi-etapas coleta dados pessoais, profissionais e interesses.
+3. Ao final, os dados são apenas exibidos no console e via `alert` (não há integração com backend).
+
+## Observações e pontos de atenção
+
+- **Textos em UTF-8**: revisamos os arquivos da interface para garantir que os textos em português estejam com a acentuação correta.
+- **Build mais rígido**: com a remoção de `ignoreDuringBuilds`/`ignoreBuildErrors`, erros de lint e TypeScript agora interrompem a build, reduzindo risco de regressões.
+- **Dependências enxutas**: o `package.json` foi limpo para conter apenas os pacotes realmente utilizados, reduzindo tempo de instalação e superfície de manutenção.
+- **Persistência ausente**: o fluxo continua apenas exibindo os dados no console. Para uso real, será necessário integrar com uma API ou serviço de armazenamento.
+
+## Deploy
+
+- Hospedagem atual no Vercel: [https://vercel.com/lraposoia-6118s-projects/v0-nex-people-solutions](https://vercel.com/lraposoia-6118s-projects/v0-nex-people-solutions)
+- Projeto original no v0.app: [https://v0.app/chat/projects/XQ8P5ft3O69](https://v0.app/chat/projects/XQ8P5ft3O69)
+
+> Caso precise ajustar a estrutura do projeto, combine previamente a alteração.
