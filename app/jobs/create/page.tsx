@@ -6,17 +6,18 @@ import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
 type JobFormState = {
-  client_id: string
   titulo: string
   descricao: string
   nivel: string
   localizacao: string
+  modelo_trabalho: string
   publicada_em: string
-  status: string
   skills: string
+  beneficios: string
   valor_inicial: string
   valor_final: string
 }
@@ -31,26 +32,28 @@ const JOB_CREATION_API_URL =
   process.env.NEXT_PUBLIC_JOBS_API_URL?.split("?")[0] ??
   "http://127.0.0.1:8000/api/v1/vagas"
 
+const DEFAULT_JOB_STATUS = "Aberto"
+
 function createDefaultFormState(): JobFormState {
   return {
-    client_id: "",
     titulo: "",
     descricao: "",
     nivel: "",
     localizacao: "",
+    modelo_trabalho: "",
     publicada_em: new Date().toISOString().split("T")[0],
-    status: "",
     skills: "",
+    beneficios: "",
     valor_inicial: "",
     valor_final: "",
   }
 }
 
-function parseSkills(rawSkills: string): string[] {
-  return rawSkills
+function parseList(rawValue: string): string[] {
+  return rawValue
     .split(/[,\n]/)
-    .map((skill) => skill.trim())
-    .filter((skill) => skill.length > 0)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
 }
 
 export default function CreateJobPage() {
@@ -76,14 +79,15 @@ export default function CreateJobPage() {
     setFeedback(null)
 
     const payload = {
-      client_id: formState.client_id.trim(),
       titulo: formState.titulo.trim(),
       descricao: formState.descricao.trim(),
       nivel: formState.nivel.trim(),
       localizacao: formState.localizacao.trim(),
+      modelo_trabalho: formState.modelo_trabalho,
       publicada_em: formState.publicada_em,
-      status: formState.status.trim(),
-      skills: parseSkills(formState.skills),
+      status: DEFAULT_JOB_STATUS,
+      skills: parseList(formState.skills),
+      beneficios: parseList(formState.beneficios),
       orcamento: {
         valor_inicial: Number(formState.valor_inicial) || 0,
         valor_final: Number(formState.valor_final) || 0,
@@ -149,18 +153,6 @@ export default function CreateJobPage() {
 
         <form onSubmit={handleSubmit} className="space-y-8">
           <section className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="client_id">Client ID</Label>
-              <Input
-                id="client_id"
-                name="client_id"
-                placeholder="Ex: cliente_123"
-                value={formState.client_id}
-                onChange={handleChange("client_id")}
-                required
-              />
-            </div>
-
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="titulo">Título da vaga</Label>
               <Input
@@ -184,7 +176,7 @@ export default function CreateJobPage() {
                 required
                 className={cn(
                   "min-h-[160px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors md:text-sm",
-                  "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+                  "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:bg-muted/40 dark:focus-visible:bg-muted/20",
                 )}
               />
             </div>
@@ -205,10 +197,33 @@ export default function CreateJobPage() {
               <Input
                 id="localizacao"
                 name="localizacao"
-                placeholder="Ex: São Paulo/SP ou Remoto"
+                placeholder="Ex: São Paulo/SP"
                 value={formState.localizacao}
                 onChange={handleChange("localizacao")}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="modelo_trabalho">Modelo de trabalho atual</Label>
+              <Select
+                value={formState.modelo_trabalho}
+                onValueChange={(value) =>
+                  setFormState((previous) => ({
+                    ...previous,
+                    modelo_trabalho: value,
+                  }))
+                }
+                required
+              >
+                <SelectTrigger id="modelo_trabalho" className="w-full">
+                  <SelectValue placeholder="Selecione o modelo de trabalho" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="remote">Remoto</SelectItem>
+                  <SelectItem value="hibrido">Hibrido</SelectItem>
+                  <SelectItem value="presencial">Presencial</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -223,17 +238,6 @@ export default function CreateJobPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Input
-                id="status"
-                name="status"
-                placeholder="Ex: aberta"
-                value={formState.status}
-                onChange={handleChange("status")}
-              />
-            </div>
-
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="skills">Skills (separadas por vírgula ou quebra de linha)</Label>
               <textarea
@@ -244,7 +248,22 @@ export default function CreateJobPage() {
                 onChange={handleChange("skills")}
                 className={cn(
                   "min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors md:text-sm",
-                  "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+                  "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:bg-muted/40 dark:focus-visible:bg-muted/20",
+                )}
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="beneficios">Beneficios (separados por virgula ou quebra de linha)</Label>
+              <textarea
+                id="beneficios"
+                name="beneficios"
+                placeholder="Ex: VR, VA, PLR"
+                value={formState.beneficios}
+                onChange={handleChange("beneficios")}
+                className={cn(
+                  "min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors md:text-sm",
+                  "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:bg-muted/40 dark:focus-visible:bg-muted/20",
                 )}
               />
             </div>
