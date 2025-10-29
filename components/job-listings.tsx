@@ -1,10 +1,9 @@
 import Link from "next/link"
 
+import { JOBS_API_LIST_URL } from "@/config"
+
 import { Header } from "./header"
 import { Button } from "./ui/button"
-
-const JOBS_API_URL =
-  process.env.NEXT_PUBLIC_JOBS_API_URL ?? "http://127.0.0.1:8000/api/v1/vagas?skip=0&limit=20"
 
 type ApiJob = {
   id?: string | number
@@ -139,7 +138,7 @@ function normalizeJob(job: ApiJob, index: number): JobCard {
 
 async function fetchJobs(): Promise<{ jobs: JobCard[]; error?: string }> {
   try {
-    const response = await fetch(JOBS_API_URL, { cache: "no-store" })
+    const response = await fetch(JOBS_API_LIST_URL, { cache: "no-store" })
 
     if (!response.ok) {
       throw new Error(`Request failed with status ${response.status}`)

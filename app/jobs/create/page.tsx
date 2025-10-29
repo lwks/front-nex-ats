@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react"
 
+import { JOBS_API_CREATE_URL } from "@/config"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,11 +27,6 @@ type FeedbackState = {
   type: "success" | "error"
   message: string
 } | null
-
-const JOB_CREATION_API_URL =
-  process.env.NEXT_PUBLIC_JOBS_CREATE_API_URL ??
-  process.env.NEXT_PUBLIC_JOBS_API_URL?.split("?")[0] ??
-  "http://127.0.0.1:8000/api/v1/vagas"
 
 const DEFAULT_JOB_STATUS = "Aberto"
 
@@ -95,7 +91,7 @@ export default function CreateJobPage() {
     }
 
     try {
-      const response = await fetch(JOB_CREATION_API_URL, {
+      const response = await fetch(JOBS_API_CREATE_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
