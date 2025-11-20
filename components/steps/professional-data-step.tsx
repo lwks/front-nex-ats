@@ -2,12 +2,18 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { CandidateData } from "../candidate-onboarding"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  defaultExperienceOptions,
+  defaultIndustryOptions,
+  type OnboardingOption,
+} from "@/lib/onboarding-options"
+import { fetchExperienceOptions, fetchIndustryOptions } from "@/services/onboarding-options-service"
 
 interface ProfessionalDataStepProps {
   data: Partial<CandidateData>
@@ -23,6 +29,27 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
     salario: data.salario || "",
     cargoInteresse: data.cargoInteresse || "",
   })
+  const [experienceOptions, setExperienceOptions] = useState<OnboardingOption[]>(defaultExperienceOptions)
+  const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadOptions = async () => {
+      const [experiences, industries] = await Promise.all([fetchExperienceOptions(), fetchIndustryOptions()])
+
+      if (isMounted) {
+        setExperienceOptions(experiences)
+        setIndustryOptions(industries)
+      }
+    }
+
+    loadOptions().catch((error) => console.error("Failed to load professional data options", error))
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,11 +73,11 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
               <SelectValue placeholder="Selecione seu nível de experiência" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="estagio">Estágio</SelectItem>
-              <SelectItem value="junior">Júnior (1-3 anos)</SelectItem>
-              <SelectItem value="pleno">Pleno (3-5 anos)</SelectItem>
-              <SelectItem value="senior">Sênior (5+ anos)</SelectItem>
-              <SelectItem value="especialista">Especialista (10+ anos)</SelectItem>
+              {experienceOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -66,14 +93,11 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
               <SelectValue placeholder="Selecione a indústria" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="tecnologia">Tecnologia</SelectItem>
-              <SelectItem value="financeiro">Financeiro</SelectItem>
-              <SelectItem value="saude">Saúde</SelectItem>
-              <SelectItem value="educacao">Educação</SelectItem>
-              <SelectItem value="varejo">Varejo</SelectItem>
-              <SelectItem value="industria">Indústria</SelectItem>
-              <SelectItem value="servicos">Serviços</SelectItem>
-              <SelectItem value="outros">Outros</SelectItem>
+              {industryOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

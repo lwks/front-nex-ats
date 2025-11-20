@@ -6,6 +6,7 @@ import { PersonalDataStep } from "./steps/personal-data-step"
 import { ProfessionalDataStep } from "./steps/professional-data-step"
 import { ProfessionalInterestsStep } from "./steps/professional-interests-step"
 import { ProgressIndicator } from "./progress-indicator"
+import { submitCandidateProfile } from "@/services/candidate-service"
 
 export type CandidateData = {
   // Personal Data
@@ -32,6 +33,9 @@ export type CandidateData = {
 export function CandidateOnboarding() {
   const [currentStep, setCurrentStep] = useState(1)
   const [candidateData, setCandidateData] = useState<Partial<CandidateData>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
+  const [submissionSuccess, setSubmissionSuccess] = useState(false)
 
   const updateData = (data: Partial<CandidateData>) => {
     setCandidateData((prev) => ({ ...prev, ...data }))
@@ -49,10 +53,32 @@ export function CandidateOnboarding() {
     }
   }
 
-  const handleSubmit = () => {
-    console.log("Candidate data submitted:", candidateData)
-    // Here you would send the data to your backend
-    alert("Cadastro realizado com sucesso!")
+  const handleSubmit = async () => {
+    if (!isCandidateDataComplete(candidateData)) {
+      alert("Por favor, preencha todas as etapas antes de finalizar o cadastro.")
+      return
+    }
+
+    setSubmissionError(null)
+    setSubmissionSuccess(false)
+    setIsSubmitting(true)
+
+    try {
+      await submitCandidateProfile(candidateData)
+      setSubmissionSuccess(true)
+      alert("Cadastro realizado com sucesso!")
+      setCandidateData({})
+      setCurrentStep(1)
+    } catch (error) {
+      console.error("Failed to submit candidate profile", error)
+      setSubmissionError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível enviar seus dados. Tente novamente em instantes.",
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -75,10 +101,36 @@ export function CandidateOnboarding() {
               onUpdate={updateData}
               onSubmit={handleSubmit}
               onBack={prevStep}
+              isSubmitting={isSubmitting}
+              errorMessage={submissionError}
             />
+          )}
+          {submissionSuccess && (
+            <p className="mt-6 text-sm text-green-600" role="status">
+              Seus dados foram enviados com sucesso.
+            </p>
           )}
         </div>
       </div>
     </div>
+  )
+}
+
+function isCandidateDataComplete(data: Partial<CandidateData>): data is CandidateData {
+  return (
+    Boolean(data.nome) &&
+    Boolean(data.documento) &&
+    Boolean(data.localResidencia) &&
+    Boolean(data.contato) &&
+    data.lgpdAccepted === true &&
+    Boolean(data.experiencia) &&
+    Boolean(data.industria) &&
+    Boolean(data.salario) &&
+    Boolean(data.cargoInteresse) &&
+    Boolean(data.industriaInteresse) &&
+    Boolean(data.cargoInteresseDetalhado) &&
+    Boolean(data.tipoTrabalho) &&
+    Boolean(data.tipoContratacao) &&
+    data.compartilhamentoAccepted === true
   )
 }
