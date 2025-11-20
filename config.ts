@@ -1,7 +1,8 @@
-const DEFAULT_JOBS_API_BASE_URL = "http://127.0.0.1:8000/api/v1"
-const JOBS_LIST_PATH = "/vagas"
-const DEFAULT_JOBS_LIST_QUERY = "?skip=0&limit=20"
-const JOBS_CREATE_PATH = "/applications"
+const DEFAULT_API_BASE_URL = "https://qqkukhkx3ee4of2muxjlb7f3l40qeari.lambda-url.us-east-1.on.aws/api"
+const JOBS_PATH = "/jobs"
+const USERS_PATH = "/users"
+const CANDIDATES_PATH = "/candidates"
+const DEFAULT_JOBS_LIST_QUERY = "?limit=20"
 
 function sanitizeBaseUrl(rawUrl?: string) {
   if (!rawUrl) {
@@ -12,24 +13,18 @@ function sanitizeBaseUrl(rawUrl?: string) {
   return withoutQuery.replace(/\/+$/, "")
 }
 
-const explicitBaseUrl = sanitizeBaseUrl(process.env.NEXT_PUBLIC_JOBS_API_BASE_URL)
-const listEnvUrl = process.env.NEXT_PUBLIC_JOBS_API_URL
+const explicitBaseUrl = sanitizeBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL)
 
-let baseFromListUrl: string | undefined
-if (listEnvUrl) {
-  const sanitizedListUrl = sanitizeBaseUrl(listEnvUrl)
-  if (sanitizedListUrl?.endsWith(JOBS_LIST_PATH)) {
-    baseFromListUrl = sanitizedListUrl.slice(0, -JOBS_LIST_PATH.length)
-  } else {
-    baseFromListUrl = sanitizedListUrl
-  }
-}
+export const API_BASE_URL = explicitBaseUrl ?? DEFAULT_API_BASE_URL
+export const JOBS_API_BASE_URL = API_BASE_URL
+export const USERS_API_BASE_URL = API_BASE_URL
+export const CANDIDATES_API_BASE_URL = API_BASE_URL
 
-export const JOBS_API_BASE_URL =
-  explicitBaseUrl ?? baseFromListUrl ?? DEFAULT_JOBS_API_BASE_URL
+export const USERS_API_URL = `${USERS_API_BASE_URL}${USERS_PATH}`
+export const USERS_API_LIST_URL = `${USERS_API_URL}/`
+export const CANDIDATES_API_URL = `${CANDIDATES_API_BASE_URL}${CANDIDATES_PATH}`
+export const JOBS_API_URL = `${JOBS_API_BASE_URL}${JOBS_PATH}`
 
-export const JOBS_API_LIST_URL =
-  listEnvUrl ?? `${JOBS_API_BASE_URL}${JOBS_LIST_PATH}${DEFAULT_JOBS_LIST_QUERY}`
+export const JOBS_API_LIST_URL = `${JOBS_API_URL}${DEFAULT_JOBS_LIST_QUERY}`
 
-export const JOBS_API_CREATE_URL =
-  process.env.NEXT_PUBLIC_JOBS_CREATE_API_URL ?? `${JOBS_API_BASE_URL}${JOBS_CREATE_PATH}`
+export const JOBS_API_CREATE_URL = JOBS_API_URL
