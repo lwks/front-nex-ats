@@ -50,6 +50,75 @@ type JobCard = {
   isExternal: boolean
 }
 
+const MOCK_JOBS: JobCard[] = [
+  {
+    id: "dev-fullstack",
+    title: "Desenvolvedor(a) Full Stack",
+    company: "NEXJOB Tech",
+    location: "Remoto",
+    workType: "CLT • Tempo integral",
+    description:
+      "Atue no desenvolvimento de novas features, revisão de código e integração contínua usando Node.js e React.",
+    applyHref: "https://example.com/vagas/dev-fullstack",
+    isExternal: true,
+  },
+  {
+    id: "product-manager",
+    title: "Product Manager",
+    company: "Inovação Digital",
+    location: "São Paulo/SP (Híbrido)",
+    workType: "PJ • Híbrido",
+    description:
+      "Lidere squads multidisciplinares, defina roadmap de produto e acompanhe métricas de sucesso.",
+    applyHref: "/candidaturas?vaga=product-manager",
+    isExternal: false,
+  },
+  {
+    id: "designer-ui",
+    title: "Designer UI/UX",
+    company: "Estúdio Criativo",
+    location: "Porto Alegre/RS (Presencial)",
+    workType: "CLT • Presencial",
+    description:
+      "Crie interfaces acessíveis, participe de pesquisas com usuários e colabore com time de desenvolvimento.",
+    applyHref: "https://example.com/vagas/designer-ui",
+    isExternal: true,
+  },
+  {
+    id: "analista-dados",
+    title: "Analista de Dados",
+    company: "Data Insights",
+    location: "Belo Horizonte/MG (Remoto)",
+    workType: "CLT • Remoto",
+    description:
+      "Construa pipelines de dados, crie dashboards e suporte decisões de negócio com análises avançadas.",
+    applyHref: "/candidaturas?vaga=analista-dados",
+    isExternal: false,
+  },
+  {
+    id: "estagio-marketing",
+    title: "Estágio em Marketing",
+    company: "Startup Growth",
+    location: "Curitiba/PR (Híbrido)",
+    workType: "Estágio • 6h/dia",
+    description:
+      "Apoie campanhas digitais, produção de conteúdo e acompanhamento de performance em múltiplos canais.",
+    applyHref: "https://example.com/vagas/estagio-marketing",
+    isExternal: true,
+  },
+  {
+    id: "tech-lead",
+    title: "Tech Lead Mobile",
+    company: "Fintech Plus",
+    location: "Recife/PE (Híbrido)",
+    workType: "PJ • Híbrido",
+    description:
+      "Guie arquiteturas mobile, oriente o time iOS/Android e assegure qualidade das entregas.",
+    applyHref: "/candidaturas?vaga=tech-lead",
+    isExternal: false,
+  },
+]
+
 type ApiPayload = ApiJob[] | Record<string, unknown>
 
 function pickString(...values: Array<unknown>) {
@@ -147,11 +216,15 @@ async function fetchJobs(): Promise<{ jobs: JobCard[]; error?: string }> {
     const payload: ApiPayload = await response.json()
     const jobs = extractJobs(payload).map((job, index) => normalizeJob(job, index))
 
-    return { jobs }
+    if (jobs.length > 0) {
+      return { jobs }
+    }
+
+    return { jobs: MOCK_JOBS }
   } catch (error) {
     console.error("Erro ao buscar vagas:", error)
     return {
-      jobs: [],
+      jobs: MOCK_JOBS,
       error: "Não foi possível carregar as vagas no momento. Tente novamente em instantes.",
     }
   }
