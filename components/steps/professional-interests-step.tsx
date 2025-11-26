@@ -172,7 +172,7 @@ export function ProfessionalInterestsStep({
               Confirmação de Compartilhamento
             </Label>
             <p className="text-xs text-muted-foreground">
-              Autorizo o compartilhamento dos meus dados profissionais com empresas parceiras da plataforma NEXJOB para
+              Autorizo o compartilhamento dos meus dados profissionais com empresas parceiras da plataforma NexJob para
               fins de recrutamento e seleção
             </p>
           </div>

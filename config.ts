@@ -25,6 +25,7 @@ export const USERS_API_LIST_URL = `${USERS_API_URL}/`
 export const CANDIDATES_API_URL = `${CANDIDATES_API_BASE_URL}${CANDIDATES_PATH}`
 export const JOBS_API_URL = `${JOBS_API_BASE_URL}${JOBS_PATH}`
 
-export const JOBS_API_LIST_URL = `${JOBS_API_URL}${DEFAULT_JOBS_LIST_QUERY}`
+export const JOBS_API_LIST_URL = `${JOBS_API_URL}`
 
 export const JOBS_API_CREATE_URL = JOBS_API_URL
+export const JOBS_API_PROXY_URL = "/api/jobs"

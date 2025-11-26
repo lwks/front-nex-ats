@@ -10,24 +10,36 @@ type ApiJob = {
   slug?: string
   codigo?: string | number
   uuid?: string
+  pk?: string
+  sk?: string
+  guid_id?: string
+  entityType?: string
   titulo?: string
   title?: string
   nome?: string
   empresa?: string
   company?: string
   nome_empresa?: string
+  companyId?: string | number
   localizacao?: string
   location?: string
   cidade?: string
+  city?: string
   estado?: string
   uf?: string
+  state?: string
   modalidade?: string
+  modelo_trabalho?: string
   tipoContratacao?: string
   tipo_contratacao?: string
   tipoTrabalho?: string
   workType?: string
   regime?: string
   jornada?: string
+  nivel?: string
+  publicada_em?: string
+  createdAt?: string
+  updatedAt?: string
   descricao?: string
   description?: string
   resumo?: string
@@ -37,6 +49,7 @@ type ApiJob = {
   link?: string
   linkCandidatura?: string
   candidatura_url?: string
+  candidatura_link?: string
 } & Record<string, unknown>
 
 type JobCard = {
@@ -51,6 +64,12 @@ type JobCard = {
 }
 
 type ApiPayload = ApiJob[] | Record<string, unknown>
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object"
+}
+
+const JOB_COLLECTION_KEYS = ["items", "results", "data", "vagas", "jobs", "content"]
 
 function pickString(...values: Array<unknown>) {
   for (const value of values) {
@@ -74,14 +93,38 @@ function extractJobs(payload: unknown): ApiJob[] {
     return payload as ApiJob[]
   }
 
-  if (payload && typeof payload === "object") {
-    const container = payload as Record<string, unknown>
-    const possibleKeys = ["items", "results", "data", "vagas", "jobs", "content"]
+  if (!isRecord(payload)) {
+    return []
+  }
 
-    for (const key of possibleKeys) {
-      const value = container[key]
-      if (Array.isArray(value)) {
-        return value as ApiJob[]
+  const container = payload as Record<string, unknown>
+
+  for (const key of JOB_COLLECTION_KEYS) {
+    const value = container[key]
+    if (Array.isArray(value)) {
+      return value as ApiJob[]
+    }
+  }
+
+  for (const key of JOB_COLLECTION_KEYS) {
+    const value = container[key]
+    if (isRecord(value)) {
+      const nestedJobs = extractJobs(value)
+      if (nestedJobs.length > 0) {
+        return nestedJobs
+      }
+    }
+  }
+
+  for (const value of Object.values(container)) {
+    if (Array.isArray(value)) {
+      return value as ApiJob[]
+    }
+
+    if (isRecord(value)) {
+      const nestedJobs = extractJobs(value)
+      if (nestedJobs.length > 0) {
+        return nestedJobs
       }
     }
   }
@@ -90,15 +133,19 @@ function extractJobs(payload: unknown): ApiJob[] {
 }
 
 function normalizeJob(job: ApiJob, index: number): JobCard {
-  const idSource = pickString(job.id, job.slug, job.codigo, job.uuid) ?? `vaga-${index}`
-  const city = pickString(job.cidade)
-  const state = pickString(job.estado, job.uf)
+  const idSource =
+    pickString(job.id, job.slug, job.codigo, job.uuid, job.guid_id, job.pk) ?? `vaga-${index}`
+  const city = pickString(job.cidade, job.city)
+  const state = pickString(job.estado, job.uf, job.state)
   const cityState = city && state ? `${city}/${state}` : city ?? state
 
   const title = pickString(job.titulo, job.title, job.nome) ?? "Vaga sem título"
-  const company = pickString(job.company, job.empresa, job.nome_empresa) ?? "Empresa confidencial"
+  const company =
+    pickString(job.company, job.empresa, job.nome_empresa) ??
+    (job.companyId ? `Empresa ${job.companyId}` : undefined) ??
+    "Empresa confidencial" // todo: check empresa em /jobs
   const location =
-    pickString(job.localizacao, job.location, cityState) ?? "Localização não informada"
+    pickString(job.localizacao, job.location, cityState) ?? "Localização não informada" // todo: check localização em /jobs
   const workType =
     pickString(
       job.workType,
@@ -106,12 +153,14 @@ function normalizeJob(job: ApiJob, index: number): JobCard {
       job.modalidade,
       job.tipoContratacao,
       job.tipo_contratacao,
+      job.modelo_trabalho,
       job.regime,
       job.jornada,
-    ) ?? "Tipo de contratação não informado"
+      job.nivel,
+    ) ?? "Tipo de contratação não informado" // todo: check tipo de trabalho em /jobs
   const description =
     pickString(job.descricao, job.description, job.resumo, job.summary) ??
-    "Descrição indisponível no momento."
+    "Descrição indisponível no momento." // todo: check descrição em /jobs
 
   const applyCandidate = pickString(
     job.applyUrl,
@@ -119,6 +168,7 @@ function normalizeJob(job: ApiJob, index: number): JobCard {
     job.link,
     job.linkCandidatura,
     job.candidatura_url,
+    job.candidatura_link,
   )
   const fallbackHref = `/candidaturas?vaga=${encodeURIComponent(idSource)}`
   const applyHref = applyCandidate ?? fallbackHref
@@ -171,7 +221,7 @@ export async function JobListings() {
             Encontre sua próxima oportunidade
           </p>
           <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            Vagas em destaque na NEXJOB
+            Vagas em destaque na NexJob
           </h2>
           <p className="mt-4 text-base text-muted-foreground md:w-2/3">
             Explore as oportunidades disponíveis e escolha aquela que mais combina com o seu momento
@@ -210,9 +260,9 @@ export async function JobListings() {
                       href={job.applyHref}
                       {...(job.isExternal
                         ? {
-                            target: "_blank",
-                            rel: "noopener noreferrer",
-                          }
+                          target: "_blank",
+                          rel: "noopener noreferrer",
+                        }
                         : undefined)}
                     >
                       Candidatar-se

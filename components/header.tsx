@@ -32,7 +32,7 @@ export function Header() {
             </SheetContent>
           </Sheet>
 
-          <h1 className="text-xl md:text-2xl font-bold text-foreground">NEXJOB</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">NexJob</h1>
         </div>
 
         <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6">
