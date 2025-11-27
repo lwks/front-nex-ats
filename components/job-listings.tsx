@@ -188,7 +188,7 @@ function normalizeJob(job: ApiJob, index: number): JobCard {
 
 async function fetchJobs(): Promise<{ jobs: JobCard[]; error?: string }> {
   try {
-    const response = await fetch(JOBS_API_URL, { cache: "no-store" })
+    const response = await fetch(JOBS_API_URL, { cache: "force-cache" })
 
     if (!response.ok) {
       throw new Error(`Request failed with status ${response.status}`)
