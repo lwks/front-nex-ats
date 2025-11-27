@@ -2,22 +2,42 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { CandidateData } from "../candidate-onboarding"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  defaultContractTypeOptions,
+  defaultIndustryOptions,
+  defaultWorkTypeOptions,
+  type OnboardingOption,
+} from "@/lib/onboarding-options"
+import {
+  fetchContractTypeOptions,
+  fetchIndustryOptions,
+  fetchWorkTypeOptions,
+} from "@/services/onboarding-options-service"
 
 interface ProfessionalInterestsStepProps {
   data: Partial<CandidateData>
   onUpdate: (data: Partial<CandidateData>) => void
   onSubmit: () => void
   onBack: () => void
+  isSubmitting: boolean
+  errorMessage: string | null
 }
 
-export function ProfessionalInterestsStep({ data, onUpdate, onSubmit, onBack }: ProfessionalInterestsStepProps) {
+export function ProfessionalInterestsStep({
+  data,
+  onUpdate,
+  onSubmit,
+  onBack,
+  isSubmitting,
+  errorMessage,
+}: ProfessionalInterestsStepProps) {
   const [formData, setFormData] = useState({
     industriaInteresse: data.industriaInteresse || "",
     cargoInteresseDetalhado: data.cargoInteresseDetalhado || "",
@@ -25,6 +45,33 @@ export function ProfessionalInterestsStep({ data, onUpdate, onSubmit, onBack }: 
     tipoContratacao: data.tipoContratacao || "",
     compartilhamentoAccepted: data.compartilhamentoAccepted || false,
   })
+  const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
+  const [workTypeOptions, setWorkTypeOptions] = useState<OnboardingOption[]>(defaultWorkTypeOptions)
+  const [contractTypeOptions, setContractTypeOptions] = useState<OnboardingOption[]>(defaultContractTypeOptions)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadOptions = async () => {
+      const [industries, workTypes, contractTypes] = await Promise.all([
+        fetchIndustryOptions(),
+        fetchWorkTypeOptions(),
+        fetchContractTypeOptions(),
+      ])
+
+      if (isMounted) {
+        setIndustryOptions(industries)
+        setWorkTypeOptions(workTypes)
+        setContractTypeOptions(contractTypes)
+      }
+    }
+
+    loadOptions().catch((error) => console.error("Failed to load professional interest options", error))
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,14 +99,11 @@ export function ProfessionalInterestsStep({ data, onUpdate, onSubmit, onBack }: 
               <SelectValue placeholder="Selecione a indústria de interesse" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="tecnologia">Tecnologia</SelectItem>
-              <SelectItem value="financeiro">Financeiro</SelectItem>
-              <SelectItem value="saude">Saúde</SelectItem>
-              <SelectItem value="educacao">Educação</SelectItem>
-              <SelectItem value="varejo">Varejo</SelectItem>
-              <SelectItem value="industria">Indústria</SelectItem>
-              <SelectItem value="servicos">Serviços</SelectItem>
-              <SelectItem value="outros">Outros</SelectItem>
+              {industryOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -88,9 +132,11 @@ export function ProfessionalInterestsStep({ data, onUpdate, onSubmit, onBack }: 
               <SelectValue placeholder="Selecione o tipo de trabalho" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="presencial">Presencial</SelectItem>
-              <SelectItem value="remoto">Remoto</SelectItem>
-              <SelectItem value="hibrido">Híbrido</SelectItem>
+              {workTypeOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -106,11 +152,11 @@ export function ProfessionalInterestsStep({ data, onUpdate, onSubmit, onBack }: 
               <SelectValue placeholder="Selecione o tipo de contratação" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="clt">CLT</SelectItem>
-              <SelectItem value="pj">PJ</SelectItem>
-              <SelectItem value="estagio">Estágio</SelectItem>
-              <SelectItem value="temporario">Temporário</SelectItem>
-              <SelectItem value="freelancer">Freelancer</SelectItem>
+              {contractTypeOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -126,17 +172,28 @@ export function ProfessionalInterestsStep({ data, onUpdate, onSubmit, onBack }: 
               Confirmação de Compartilhamento
             </Label>
             <p className="text-xs text-muted-foreground">
-              Autorizo o compartilhamento dos meus dados profissionais com empresas parceiras da plataforma NEXJOB para
+              Autorizo o compartilhamento dos meus dados profissionais com empresas parceiras da plataforma NexJob para
               fins de recrutamento e seleção
             </p>
           </div>
         </div>
 
+        {errorMessage && (
+          <p className="text-sm text-destructive" role="alert">
+            {errorMessage}
+          </p>
+        )}
+
         <div className="flex gap-4 mt-8">
           <Button type="button" variant="outline" onClick={onBack} className="flex-1 bg-transparent" size="lg">
             Voltar
           </Button>
-          <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground" size="lg">
+          <Button
+            type="submit"
+            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+            size="lg"
+            disabled={isSubmitting}
+          >
             Finalizar Cadastro
           </Button>
         </div>

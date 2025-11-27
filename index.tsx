@@ -1,5 +1,5 @@
 import { JobListings } from "@/components/job-listings"
 
-export default function HomePage() {
+export default function Home() {
   return <JobListings />
 }
