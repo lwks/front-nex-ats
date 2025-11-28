@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 
 type JobFormState = {
@@ -398,15 +399,35 @@ export default function CreateJobPage() {
 
             <div className="space-y-2">
               <Label htmlFor="valor_final">Valor final (R$)</Label>
-              <Input
-                id="valor_final"
-                name="valor_final"
-                type="text"
-                inputMode="numeric"
-                placeholder="0"
-                value={formState.valor_final}
-                onChange={handleCurrencyChange("valor_final")}
-              />
+              <div className="flex items-center gap-4">
+                <Input
+                  id="valor_final"
+                  name="valor_final"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={formState.valor_final}
+                  onChange={handleCurrencyChange("valor_final")}
+                  className="flex-1"
+                />
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="exibir_salario" className="text-sm font-medium text-muted-foreground">
+                    Exibir Salário?
+                  </Label>
+                  <Checkbox
+                    id="exibir_salario"
+                    checked={formState.exibir_salario}
+                    onCheckedChange={(checked) =>
+                      setFormState((previous) => ({
+                        ...previous,
+                        exibir_salario: Boolean(checked),
+                      }))
+                    }
+                    className="bg-card border-muted-foreground/60"
+                  />
+                  <span className="text-sm font-semibold text-foreground">Sim</span>
+                </div>
+              </div>
             </div>
           </section>
 
