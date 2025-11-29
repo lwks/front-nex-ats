@@ -230,16 +230,17 @@ export default function CreateJobPage() {
       <Header />
 
       <main className="container mx-auto max-w-3xl px-4 py-12">
-        <div className="mb-8">
-          <p className="text-sm font-medium uppercase tracking-widest text-primary">Cadastro de vaga</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground">Abertura de nova vaga</h1>
-          <p className="mt-4 text-base text-muted-foreground">
-            Preencha os campos abaixo para cadastrar uma nova oportunidade diretamente na NexJobs.
-          </p>
-        </div>
+        <div className="rounded-3xl border border-border bg-card px-6 py-8 shadow-sm md:px-10">
+          <div className="mb-8">
+            <p className="text-sm font-medium uppercase tracking-widest text-primary">Cadastro de vaga</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground">Abertura de nova vaga</h1>
+            <p className="mt-4 text-base text-muted-foreground">
+              Preencha os campos abaixo para cadastrar uma nova oportunidade diretamente na NexJobs.
+            </p>
+          </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <section className="grid gap-6 md:grid-cols-2">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <section className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="titulo">Título da vaga</Label>
               <Input
@@ -383,7 +384,7 @@ export default function CreateJobPage() {
             </div>
           </section>
 
-          <section className="grid gap-6 md:grid-cols-2">
+          <section className="grid gap-6 md:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="valor_inicial">Valor inicial (R$)</Label>
               <Input
@@ -399,44 +400,45 @@ export default function CreateJobPage() {
 
             <div className="space-y-2">
               <Label htmlFor="valor_final">Valor final (R$)</Label>
-              <div className="flex items-center gap-4">
-                <Input
-                  id="valor_final"
-                  name="valor_final"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  value={formState.valor_final}
-                  onChange={handleCurrencyChange("valor_final")}
-                  className="flex-1"
+              <Input
+                id="valor_final"
+                name="valor_final"
+                type="text"
+                inputMode="numeric"
+                placeholder="0"
+                value={formState.valor_final}
+                onChange={handleCurrencyChange("valor_final")}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="exibir_salario" className="text-sm font-medium text-muted-foreground">
+                Exibir Salário?
+              </Label>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="exibir_salario"
+                  checked={formState.exibir_salario}
+                  onCheckedChange={(checked) =>
+                    setFormState((previous) => ({
+                      ...previous,
+                      exibir_salario: Boolean(checked),
+                    }))
+                  }
+                  className="bg-card border-muted-foreground/60"
                 />
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="exibir_salario" className="text-sm font-medium text-muted-foreground">
-                    Exibir Salário?
-                  </Label>
-                  <Checkbox
-                    id="exibir_salario"
-                    checked={formState.exibir_salario}
-                    onCheckedChange={(checked) =>
-                      setFormState((previous) => ({
-                        ...previous,
-                        exibir_salario: Boolean(checked),
-                      }))
-                    }
-                    className="bg-card border-muted-foreground/60"
-                  />
-                  <span className="text-sm font-semibold text-foreground">Sim</span>
-                </div>
+                <span className="text-sm font-semibold text-foreground">Sim</span>
               </div>
             </div>
           </section>
 
-          <div className="flex items-center justify-end gap-4">
-            <Button type="submit" disabled={isSubmitting} className="min-w-[160px]">
-              {isSubmitting ? "Salvando..." : "Criar vaga"}
-            </Button>
-          </div>
-        </form>
+            <div className="flex items-center justify-end gap-4">
+              <Button type="submit" disabled={isSubmitting} className="min-w-[160px]">
+                {isSubmitting ? "Salvando..." : "Criar vaga"}
+              </Button>
+            </div>
+          </form>
+        </div>
       </main>
     </div>
   )
