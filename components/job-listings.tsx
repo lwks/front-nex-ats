@@ -188,7 +188,9 @@ function normalizeJob(job: ApiJob, index: number): JobCard {
 
 async function fetchJobs(): Promise<{ jobs: JobCard[]; error?: string }> {
   try {
-    const response = await fetch(JOBS_API_URL, { cache: "force-cache" })
+    // Using "no-store" avoids serving a cached response right after creating a
+    // new job via the form, ensuring the latest data is shown on redirect.
+    const response = await fetch(JOBS_API_URL, { cache: "no-store" })
 
     if (!response.ok) {
       throw new Error(`Request failed with status ${response.status}`)
