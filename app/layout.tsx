@@ -7,7 +7,7 @@ import { Suspense } from "react"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "NEXJOB - Sistema de Gestão de Pessoas e Processos de RH",
+  title: "NexJob - Sistema de Gestão de Pessoas e Processos de RH",
   description: "Plataforma ATS para simplificar processos de Recrutamento e Seleção",
   generator: "v0.app",
 }
