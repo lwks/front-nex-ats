@@ -1,9 +1,9 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { FormEvent, useState } from "react"
+import { FormEvent, useEffect, useRef, useState } from "react"
 
-import { JOBS_API_PROXY_URL } from "@/config"
+import { JOBS_API_PROXY_URL, ZIPS_API_PROXY_URL } from "@/config"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -41,6 +41,23 @@ const CONTRACT_FORMAT_OPTIONS = [
   { value: "temporario", label: "Temporário" },
   { value: "meio_periodo", label: "Meio período" },
 ]
+
+const CEP_LENGTH = 8
+
+type ZipLookupResponse = {
+  cep?: string
+  logradouro?: string
+  bairro?: string
+  localidade?: string
+  uf?: string
+  cidade?: string
+  estado?: string
+  street?: string
+  neighborhood?: string
+  city?: string
+  state?: string
+  [key: string]: unknown
+}
 
 function createDefaultFormState(): JobFormState {
   return {
@@ -97,6 +114,52 @@ function generateGuid(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
+function pickFirstStringValue(data: ZipLookupResponse, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const rawValue = data[key]
+    if (typeof rawValue === "string") {
+      const trimmed = rawValue.trim()
+      if (trimmed.length > 0) {
+        return trimmed
+      }
+    }
+  }
+
+  return undefined
+}
+
+function formatZipSummary(data: ZipLookupResponse): string | null {
+  const street = pickFirstStringValue(data, ["logradouro", "street", "address"])
+  const neighborhood = pickFirstStringValue(data, ["bairro", "neighborhood"])
+  const city = pickFirstStringValue(data, ["localidade", "cidade", "city"])
+  const state = pickFirstStringValue(data, ["uf", "estado", "state"])
+
+  const segments: string[] = []
+
+  if (street) {
+    segments.push(street)
+  }
+
+  if (neighborhood) {
+    segments.push(neighborhood)
+  }
+
+  if (city && state) {
+    segments.push(`${city}/${state}`)
+  } else if (city) {
+    segments.push(city)
+  } else if (state) {
+    segments.push(state)
+  }
+
+  if (segments.length === 0) {
+    const cep = pickFirstStringValue(data, ["cep"])
+    return cep ?? null
+  }
+
+  return segments.join(" · ")
+}
+
 type ToastState = {
   type: "success" | "error"
   message: string
@@ -107,6 +170,106 @@ export default function CreateJobPage() {
   const [formState, setFormState] = useState<JobFormState>(createDefaultFormState)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [toast, setToast] = useState<ToastState>(null)
+  const [isZipLookupLoading, setIsZipLookupLoading] = useState(false)
+  const [zipLookupError, setZipLookupError] = useState<string | null>(null)
+  const [zipLookupResult, setZipLookupResult] = useState<ZipLookupResponse | null>(null)
+  const zipLookupController = useRef<AbortController | null>(null)
+
+  useEffect(() => {
+    return () => {
+      zipLookupController.current?.abort()
+    }
+  }, [])
+
+  const zipSummary = zipLookupResult ? formatZipSummary(zipLookupResult) : null
+  const isCepIncomplete =
+    formState.localizacao.length > 0 && formState.localizacao.length < CEP_LENGTH
+
+  const lookupZip = async (cep: string) => {
+    if (zipLookupController.current) {
+      zipLookupController.current.abort()
+    }
+
+    const controller = new AbortController()
+    zipLookupController.current = controller
+
+    setIsZipLookupLoading(true)
+    setZipLookupError(null)
+    setZipLookupResult(null)
+
+    try {
+      const response = await fetch(`${ZIPS_API_PROXY_URL}/${cep}`, {
+        signal: controller.signal,
+      })
+      const rawBody = await response.text()
+
+      if (!response.ok) {
+        let errorMessage = "Não foi possível consultar o CEP informado."
+
+        try {
+          const parsed = JSON.parse(rawBody) as Record<string, unknown>
+          const possibleMessage = parsed?.message
+          if (typeof possibleMessage === "string" && possibleMessage.trim().length > 0) {
+            errorMessage = possibleMessage.trim()
+          }
+        } catch {
+          if (rawBody.trim().length > 0) {
+            errorMessage = rawBody.trim()
+          }
+        }
+
+        throw new Error(errorMessage)
+      }
+
+      let parsedBody: ZipLookupResponse | null = null
+      if (rawBody) {
+        try {
+          parsedBody = JSON.parse(rawBody) as ZipLookupResponse
+        } catch {
+          parsedBody = null
+        }
+      }
+
+      setZipLookupResult(parsedBody ?? { cep })
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return
+      }
+
+      console.error("Erro ao consultar CEP:", error)
+      const normalizedMessage = error instanceof Error ? error.message.trim() : ""
+      setZipLookupError(
+        normalizedMessage.length > 0 ? normalizedMessage : "Não foi possível consultar o CEP informado.",
+      )
+      setZipLookupResult(null)
+    } finally {
+      if (zipLookupController.current === controller) {
+        zipLookupController.current = null
+        setIsZipLookupLoading(false)
+      }
+    }
+  }
+
+  const handleZipChange: React.ChangeEventHandler<HTMLInputElement> = (event) => {
+    const digitsOnly = event.target.value.replace(/\D/g, "").slice(0, CEP_LENGTH)
+
+    setFormState((previous) => ({
+      ...previous,
+      localizacao: digitsOnly,
+    }))
+
+    if (digitsOnly.length === CEP_LENGTH) {
+      void lookupZip(digitsOnly)
+    } else {
+      if (zipLookupController.current) {
+        zipLookupController.current.abort()
+        zipLookupController.current = null
+      }
+      setZipLookupResult(null)
+      setZipLookupError(null)
+      setIsZipLookupLoading(false)
+    }
+  }
 
   const handleChange = (
     field: keyof JobFormState,
@@ -241,196 +404,213 @@ export default function CreateJobPage() {
 
           <form onSubmit={handleSubmit} className="space-y-8">
             <section className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="titulo">Título da vaga</Label>
-              <Input
-                id="titulo"
-                name="titulo"
-                placeholder="Ex: Desenvolvedor(a) Front-end"
-                value={formState.titulo}
-                onChange={handleChange("titulo")}
-                required
-              />
-            </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="titulo">Título da vaga</Label>
+                <Input
+                  id="titulo"
+                  name="titulo"
+                  placeholder="Ex: Desenvolvedor(a) Front-end"
+                  value={formState.titulo}
+                  onChange={handleChange("titulo")}
+                  required
+                />
+              </div>
 
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="descricao">Descrição</Label>
-              <textarea
-                id="descricao"
-                name="descricao"
-                placeholder="Descreva as responsabilidades e requisitos da vaga"
-                value={formState.descricao}
-                onChange={handleChange("descricao")}
-                required
-                className={cn(
-                  "min-h-[160px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors md:text-sm",
-                  "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:bg-muted/40 dark:focus-visible:bg-muted/20",
-                )}
-              />
-            </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="descricao">Descrição</Label>
+                <textarea
+                  id="descricao"
+                  name="descricao"
+                  placeholder="Descreva as responsabilidades e requisitos da vaga"
+                  value={formState.descricao}
+                  onChange={handleChange("descricao")}
+                  required
+                  className={cn(
+                    "min-h-[160px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors md:text-sm",
+                    "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:bg-muted/40 dark:focus-visible:bg-muted/20",
+                  )}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="nivel">Nível</Label>
-              <Select
-                value={formState.nivel}
-                onValueChange={(value) =>
-                  setFormState((previous) => ({
-                    ...previous,
-                    nivel: value,
-                  }))
-                }
-                required
-              >
-                <SelectTrigger id="nivel" className="w-full">
-                  <SelectValue placeholder="Selecione o nível" />
-                </SelectTrigger>
-                <SelectContent>
-                  {JOB_LEVEL_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="localizacao">Localização</Label>
-              <Input
-                id="localizacao"
-                name="localizacao"
-                placeholder="Ex: São Paulo/SP"
-                value={formState.localizacao}
-                onChange={handleChange("localizacao")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="modelo_trabalho">Modelo de trabalho atual</Label>
-              <Select
-                value={formState.modelo_trabalho}
-                onValueChange={(value) =>
-                  setFormState((previous) => ({
-                    ...previous,
-                    modelo_trabalho: value,
-                  }))
-                }
-                required
-              >
-                <SelectTrigger id="modelo_trabalho" className="w-full">
-                  <SelectValue placeholder="Selecione o modelo de trabalho" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="remote">Remoto</SelectItem>
-                  <SelectItem value="hibrido">Hibrido</SelectItem>
-                  <SelectItem value="presencial">Presencial</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="formato_contratacao">Formato de contratação</Label>
-              <Select
-                value={formState.formato_contratacao}
-                onValueChange={(value) =>
-                  setFormState((previous) => ({
-                    ...previous,
-                    formato_contratacao: value,
-                  }))
-                }
-                required
-              >
-                <SelectTrigger id="formato_contratacao" className="w-full">
-                  <SelectValue placeholder="Selecione o formato" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CONTRACT_FORMAT_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="skills">Skills (separadas por vírgula ou quebra de linha)</Label>
-              <textarea
-                id="skills"
-                name="skills"
-                placeholder="Ex: React, TypeScript, Tailwind"
-                value={formState.skills}
-                onChange={handleChange("skills")}
-                className={cn(
-                  "min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors md:text-sm",
-                  "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:bg-muted/40 dark:focus-visible:bg-muted/20",
-                )}
-              />
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="beneficios">Beneficios (separados por virgula ou quebra de linha)</Label>
-              <textarea
-                id="beneficios"
-                name="beneficios"
-                placeholder="Ex: VR, VA, PLR"
-                value={formState.beneficios}
-                onChange={handleChange("beneficios")}
-                className={cn(
-                  "min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors md:text-sm",
-                  "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:bg-muted/40 dark:focus-visible:bg-muted/20",
-                )}
-              />
-            </div>
-          </section>
-
-          <section className="grid gap-6 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="valor_inicial">Valor inicial (R$)</Label>
-              <Input
-                id="valor_inicial"
-                name="valor_inicial"
-                type="text"
-                inputMode="numeric"
-                placeholder="0"
-                value={formState.valor_inicial}
-                onChange={handleCurrencyChange("valor_inicial")}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="valor_final">Valor final (R$)</Label>
-              <Input
-                id="valor_final"
-                name="valor_final"
-                type="text"
-                inputMode="numeric"
-                placeholder="0"
-                value={formState.valor_final}
-                onChange={handleCurrencyChange("valor_final")}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="exibir_salario" className="text-sm font-medium text-muted-foreground">
-                Exibir Salário?
-              </Label>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="exibir_salario"
-                  checked={formState.exibir_salario}
-                  onCheckedChange={(checked) =>
+              <div className="space-y-2">
+                <Label htmlFor="nivel">Nível</Label>
+                <Select
+                  value={formState.nivel}
+                  onValueChange={(value) =>
                     setFormState((previous) => ({
                       ...previous,
-                      exibir_salario: Boolean(checked),
+                      nivel: value,
                     }))
                   }
-                  className="bg-card border-muted-foreground/60"
-                />
-                <span className="text-sm font-semibold text-foreground">Sim</span>
+                  required
+                >
+                  <SelectTrigger id="nivel" className="w-full">
+                    <SelectValue placeholder="Selecione o nível" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {JOB_LEVEL_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-          </section>
+
+              <div className="space-y-2">
+                <Label htmlFor="localizacao">CEP:</Label>
+                <Input
+                  id="localizacao"
+                  name="localizacao"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={CEP_LENGTH}
+                  placeholder="Digite o CEP (Somente números)"
+                  value={formState.localizacao}
+                  onChange={handleZipChange}
+                />
+                {isZipLookupLoading ? (
+                  <p className="text-xs text-muted-foreground">Consultando CEP...</p>
+                ) : zipLookupError ? (
+                  <p className="text-xs text-destructive">{zipLookupError}</p>
+                ) : zipSummary ? (
+                  <p className="text-xs text-muted-foreground">
+                    {zipSummary ?? "CEP localizado com sucesso."}
+                  </p>
+                ) : isCepIncomplete ? (
+                  <p className="text-xs text-muted-foreground">
+                    Informe os {CEP_LENGTH} dígitos do CEP.
+                  </p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="modelo_trabalho">Modelo de trabalho atual</Label>
+                <Select
+                  value={formState.modelo_trabalho}
+                  onValueChange={(value) =>
+                    setFormState((previous) => ({
+                      ...previous,
+                      modelo_trabalho: value,
+                    }))
+                  }
+                  required
+                >
+                  <SelectTrigger id="modelo_trabalho" className="w-full">
+                    <SelectValue placeholder="Selecione o modelo de trabalho" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="remote">Remoto</SelectItem>
+                    <SelectItem value="hibrido">Hibrido</SelectItem>
+                    <SelectItem value="presencial">Presencial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="formato_contratacao">Formato de contratação</Label>
+                <Select
+                  value={formState.formato_contratacao}
+                  onValueChange={(value) =>
+                    setFormState((previous) => ({
+                      ...previous,
+                      formato_contratacao: value,
+                    }))
+                  }
+                  required
+                >
+                  <SelectTrigger id="formato_contratacao" className="w-full">
+                    <SelectValue placeholder="Selecione o formato" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONTRACT_FORMAT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="skills">Skills (separadas por vírgula ou quebra de linha)</Label>
+                <textarea
+                  id="skills"
+                  name="skills"
+                  placeholder="Ex: React, TypeScript, Tailwind"
+                  value={formState.skills}
+                  onChange={handleChange("skills")}
+                  className={cn(
+                    "min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors md:text-sm",
+                    "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:bg-muted/40 dark:focus-visible:bg-muted/20",
+                  )}
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="beneficios">Beneficios (separados por virgula ou quebra de linha)</Label>
+                <textarea
+                  id="beneficios"
+                  name="beneficios"
+                  placeholder="Ex: VR, VA, PLR"
+                  value={formState.beneficios}
+                  onChange={handleChange("beneficios")}
+                  className={cn(
+                    "min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors md:text-sm",
+                    "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:bg-muted/40 dark:focus-visible:bg-muted/20",
+                  )}
+                />
+              </div>
+            </section>
+
+            <section className="grid gap-6 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="valor_inicial">Valor inicial (R$)</Label>
+                <Input
+                  id="valor_inicial"
+                  name="valor_inicial"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={formState.valor_inicial}
+                  onChange={handleCurrencyChange("valor_inicial")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="valor_final">Valor final (R$)</Label>
+                <Input
+                  id="valor_final"
+                  name="valor_final"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={formState.valor_final}
+                  onChange={handleCurrencyChange("valor_final")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="exibir_salario" className="text-sm font-medium text-muted-foreground">
+                  Exibir Salário?
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="exibir_salario"
+                    checked={formState.exibir_salario}
+                    onCheckedChange={(checked) =>
+                      setFormState((previous) => ({
+                        ...previous,
+                        exibir_salario: Boolean(checked),
+                      }))
+                    }
+                    className="bg-card border-muted-foreground/60"
+                  />
+                  <span className="text-sm font-semibold text-foreground">Sim</span>
+                </div>
+              </div>
+            </section>
 
             <div className="flex items-center justify-end gap-4">
               <Button type="submit" disabled={isSubmitting} className="min-w-[160px]">
