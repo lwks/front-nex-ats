@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 type JobFormState = {
   titulo: string
   descricao: string
+  cargo: string
   nivel: string
   localizacao: string
   modelo_trabalho: string
@@ -28,6 +29,13 @@ type JobFormState = {
 
 const DEFAULT_JOB_STATUS = "Aberto"
 const BRL_NUMBER_FORMATTER = new Intl.NumberFormat("pt-BR")
+const JOB_ROLE_OPTIONS = [
+  { value: "estagiario", label: "Estagiario" },
+  { value: "analista", label: "Analista" },
+  { value: "coordenador", label: "Coordenador" },
+  { value: "gerente", label: "Gerente" },
+  { value: "diretor", label: "Diretor" },
+]
 const JOB_LEVEL_OPTIONS = [
   { value: "jr", label: "Jr" },
   { value: "pl", label: "Pl" },
@@ -63,6 +71,7 @@ function createDefaultFormState(): JobFormState {
   return {
     titulo: "",
     descricao: "",
+    cargo: "",
     nivel: "",
     localizacao: "",
     modelo_trabalho: "",
@@ -182,6 +191,7 @@ export default function CreateJobPage() {
   }, [])
 
   const zipSummary = zipLookupResult ? formatZipSummary(zipLookupResult) : null
+  const isNivelDisabled = formState.cargo === "estagiario"
   const isCepIncomplete =
     formState.localizacao.length > 0 && formState.localizacao.length < CEP_LENGTH
 
@@ -303,6 +313,7 @@ export default function CreateJobPage() {
     const payload = {
       titulo: formState.titulo.trim(),
       descricao: formState.descricao.trim(),
+      cargo: formState.cargo,
       nivel: formState.nivel,
       localizacao: formState.localizacao.trim(),
       modelo_trabalho: formState.modelo_trabalho,
@@ -433,8 +444,35 @@ export default function CreateJobPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="cargo">Cargo</Label>
+                <Select
+                  value={formState.cargo}
+                  onValueChange={(value) =>
+                    setFormState((previous) => ({
+                      ...previous,
+                      cargo: value,
+                      ...(value === "estagiario" ? { nivel: "" } : {}),
+                    }))
+                  }
+                  required
+                >
+                  <SelectTrigger id="cargo" className="w-full">
+                    <SelectValue placeholder="Selecione o cargo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {JOB_ROLE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="nivel">Nível</Label>
                 <Select
+                  disabled={isNivelDisabled}
                   value={formState.nivel}
                   onValueChange={(value) =>
                     setFormState((previous) => ({
@@ -442,7 +480,7 @@ export default function CreateJobPage() {
                       nivel: value,
                     }))
                   }
-                  required
+                  required={!isNivelDisabled}
                 >
                   <SelectTrigger id="nivel" className="w-full">
                     <SelectValue placeholder="Selecione o nível" />
@@ -457,7 +495,7 @@ export default function CreateJobPage() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="localizacao">CEP:</Label>
                 <Input
                   id="localizacao"
@@ -466,7 +504,7 @@ export default function CreateJobPage() {
                   inputMode="numeric"
                   pattern="[0-9]*"
                   maxLength={CEP_LENGTH}
-                  placeholder="Digite o CEP (Somente números)"
+                  placeholder="Digite somente números"
                   value={formState.localizacao}
                   onChange={handleZipChange}
                 />
