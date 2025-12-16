@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Header } from "./header"
 import { PersonalDataStep } from "./steps/personal-data-step"
 import { ProfessionalDataStep } from "./steps/professional-data-step"
+import { ProfessionalCvStep } from "./steps/professional-cv-step"
 import { ProfessionalInterestsStep } from "./steps/professional-interests-step"
 import { ProgressIndicator } from "./progress-indicator"
 import { submitCandidateProfile } from "@/services/candidate-service"
@@ -42,7 +43,7 @@ export function CandidateOnboarding() {
   }
 
   const nextStep = () => {
-    if (currentStep < 3) {
+    if (currentStep < 4) {
       setCurrentStep(currentStep + 1)
     }
   }
@@ -86,7 +87,7 @@ export function CandidateOnboarding() {
       <Header />
 
       <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <ProgressIndicator currentStep={currentStep} totalSteps={3} />
+        <ProgressIndicator currentStep={currentStep} totalSteps={4} />
 
         <div className="mt-8">
           {currentStep === 1 && <PersonalDataStep data={candidateData} onUpdate={updateData} onNext={nextStep} />}
@@ -95,7 +96,9 @@ export function CandidateOnboarding() {
             <ProfessionalDataStep data={candidateData} onUpdate={updateData} onNext={nextStep} onBack={prevStep} />
           )}
 
-          {currentStep === 3 && (
+          {currentStep === 3 && <ProfessionalCvStep onNext={nextStep} onBack={prevStep} />}
+
+          {currentStep === 4 && (
             <ProfessionalInterestsStep
               data={candidateData}
               onUpdate={updateData}
