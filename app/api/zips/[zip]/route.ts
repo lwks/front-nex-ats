@@ -2,11 +2,7 @@ import { NextResponse } from "next/server"
 
 import { ZIPS_API_URL } from "@/config"
 
-type RouteParams = {
-  zip: string
-}
-
-export async function GET(_request: Request, { params }: { params: RouteParams }) {
+export async function GET(_request: Request, { params }: { params: { zip: string } }) {
   const sanitizedZip = params.zip?.replace(/\D/g, "")
 
   if (!sanitizedZip || sanitizedZip.length !== 8) {
