@@ -2,8 +2,13 @@ import { NextResponse } from "next/server"
 
 import { ZIPS_API_URL } from "@/config"
 
-export async function GET(_request: Request, { params }: { params: { zip: string } }) {
-  const sanitizedZip = params.zip?.replace(/\D/g, "")
+type ZipRouteContext = {
+  params: Promise<{ zip: string }>
+}
+
+export async function GET(_request: Request, { params }: ZipRouteContext) {
+  const { zip } = await params
+  const sanitizedZip = zip?.replace(/\D/g, "")
 
   if (!sanitizedZip || sanitizedZip.length !== 8) {
     return NextResponse.json(
