@@ -96,6 +96,7 @@ export function PersonalDataStep({ data, onUpdate, onNext }: PersonalDataStepPro
             id="lgpd"
             checked={formData.lgpdAccepted}
             onCheckedChange={(checked) => setFormData({ ...formData, lgpdAccepted: checked as boolean })}
+            className="bg-card border-muted-foreground/60"
           />
           <div className="space-y-1 leading-none">
             <Label htmlFor="lgpd" className="text-sm font-normal cursor-pointer">
