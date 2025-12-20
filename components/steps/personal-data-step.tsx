@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+import { cn } from "@/lib/utils"
 import type { CandidateData } from "../candidate-onboarding"
 
 interface PersonalDataStepProps {
@@ -76,6 +77,13 @@ export function PersonalDataStep({ data, onUpdate, onNext }: PersonalDataStepPro
     documento: "",
     contato: "",
   })
+
+  const isFormComplete =
+    hasFullName(formData.nome) &&
+    getDocumentError(formData.documento) === "" &&
+    Boolean(formData.localResidencia.trim()) &&
+    isValidEmail(formData.contato) &&
+    formData.lgpdAccepted
 
   const validateFields = () => {
     const newErrors = { nome: "", documento: "", contato: "" }
@@ -210,8 +218,14 @@ export function PersonalDataStep({ data, onUpdate, onNext }: PersonalDataStepPro
 
         <Button
           type="submit"
-          className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground mt-8"
+          className={cn(
+            "w-full mt-8",
+            isFormComplete
+              ? "bg-primary hover:bg-primary/90 text-primary-foreground"
+              : "bg-muted text-muted-foreground",
+          )}
           size="lg"
+          disabled={!isFormComplete}
         >
           Continuar
         </Button>

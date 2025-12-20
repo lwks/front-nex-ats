@@ -257,9 +257,11 @@ export default function CreateJobPage() {
     updateCityStateFromZip(null)
 
     try {
+      console.log(ZIPS_API_PROXY_URL)
       const response = await fetch(`${ZIPS_API_PROXY_URL}/${cep}`, {
         signal: controller.signal,
       })
+      console.log("Resposta da consulta de CEP:", response.text())
       const rawBody = await response.text()
 
       if (!response.ok) {

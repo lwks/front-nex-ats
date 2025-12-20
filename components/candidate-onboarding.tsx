@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { CheckCircle2, CircleAlert } from "lucide-react"
 
 import { Header } from "./header"
 import { PersonalDataStep } from "./steps/personal-data-step"
@@ -9,6 +10,7 @@ import { ProfessionalDataStep } from "./steps/professional-data-step"
 import { ProfessionalCvStep } from "./steps/professional-cv-step"
 import { ProfessionalInterestsStep } from "./steps/professional-interests-step"
 import { ProgressIndicator } from "./progress-indicator"
+import { Button } from "@/components/ui/button"
 import { submitCandidateProfile, type CandidateProfilePayload } from "@/services/candidate-service"
 
 export type CandidateData = {
@@ -33,13 +35,18 @@ export type CandidateData = {
   compartilhamentoAccepted: boolean
 }
 
+type SubmissionFeedback = {
+  type: "success" | "error"
+  title: string
+  message: string
+}
+
 export function CandidateOnboarding() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [candidateData, setCandidateData] = useState<Partial<CandidateData>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submissionError, setSubmissionError] = useState<string | null>(null)
-  const [submissionSuccess, setSubmissionSuccess] = useState(false)
+  const [feedbackModal, setFeedbackModal] = useState<SubmissionFeedback | null>(null)
 
   const updateData = (data: Partial<CandidateData>) => {
     setCandidateData((prev) => ({ ...prev, ...data }))
@@ -68,8 +75,6 @@ export function CandidateOnboarding() {
       return
     }
 
-    setSubmissionError(null)
-    setSubmissionSuccess(false)
     setIsSubmitting(true)
 
     const payload: CandidateProfilePayload = {
@@ -80,18 +85,32 @@ export function CandidateOnboarding() {
 
     try {
       await submitCandidateProfile(payload)
-      setSubmissionSuccess(true)
-      alert("Cadastro realizado com sucesso!")
-      router.push("/")
+      setFeedbackModal({
+        type: "success",
+        title: "Cadastro enviado com sucesso!",
+        message: "Recebemos seus dados e em breve entraremos em contato.",
+      })
     } catch (error) {
       console.error("Failed to submit candidate profile", error)
-      setSubmissionError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Não foi possível enviar seus dados. Tente novamente em instantes.",
-      )
+          : "Não foi possível enviar seus dados. Tente novamente em instantes."
+      setFeedbackModal({
+        type: "error",
+        title: "Não conseguimos finalizar seu cadastro",
+        message,
+      })
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const closeFeedbackModal = () => {
+    const shouldRedirectHome = feedbackModal?.type === "success"
+    setFeedbackModal(null)
+    if (shouldRedirectHome) {
+      router.push("/")
     }
   }
 
@@ -118,16 +137,28 @@ export function CandidateOnboarding() {
               onSubmit={handleSubmit}
               onBack={prevStep}
               isSubmitting={isSubmitting}
-              errorMessage={submissionError}
             />
-          )}
-          {submissionSuccess && (
-            <p className="mt-6 text-sm text-green-600" role="status">
-              Seus dados foram enviados com sucesso.
-            </p>
           )}
         </div>
       </div>
+      {feedbackModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" role="alertdialog" aria-modal="true">
+          <div className="w-full max-w-md rounded-lg bg-card p-8 text-center shadow-xl">
+            {feedbackModal.type === "success" ? (
+              <CheckCircle2 className="mx-auto mb-4 size-12 text-green-500" aria-hidden="true" />
+            ) : (
+              <CircleAlert className="mx-auto mb-4 size-12 text-destructive" aria-hidden="true" />
+            )}
+            <h3 className="text-xl font-semibold text-foreground">{feedbackModal.title}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">{feedbackModal.message}</p>
+            <div className="mt-6 flex justify-center">
+              <Button onClick={closeFeedbackModal} size="lg" className="min-w-[180px]">
+                {feedbackModal.type === "success" ? "Voltar para início" : "Tentar novamente"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
