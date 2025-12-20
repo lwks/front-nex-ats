@@ -14,6 +14,7 @@ import {
   type OnboardingOption,
 } from "@/lib/onboarding-options"
 import { fetchExperienceOptions, fetchIndustryOptions } from "@/services/onboarding-options-service"
+import { cn } from "@/lib/utils"
 
 interface ProfessionalDataStepProps {
   data: Partial<CandidateData>
@@ -31,6 +32,11 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
   })
   const [experienceOptions, setExperienceOptions] = useState<OnboardingOption[]>(defaultExperienceOptions)
   const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
+  const isFormComplete =
+    Boolean(formData.experiencia) &&
+    Boolean(formData.industria) &&
+    Boolean(formData.salario.trim()) &&
+    Boolean(formData.cargoInteresse.trim())
 
   useEffect(() => {
     let isMounted = true
@@ -53,6 +59,9 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!isFormComplete) {
+      return
+    }
     onUpdate(formData)
     onNext()
   }
@@ -62,44 +71,46 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
       <h2 className="text-2xl font-semibold text-center mb-8 text-foreground">Dados Profissionais</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="experiencia">Experiência</Label>
-          <Select
-            value={formData.experiencia}
-            onValueChange={(value) => setFormData({ ...formData, experiencia: value })}
-            required
-          >
-            <SelectTrigger className="bg-input">
-              <SelectValue placeholder="Selecione seu nível de experiência" />
-            </SelectTrigger>
-            <SelectContent>
-              {experienceOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="experiencia">Experiência</Label>
+            <Select
+              value={formData.experiencia}
+              onValueChange={(value) => setFormData({ ...formData, experiencia: value })}
+              required
+            >
+              <SelectTrigger className="bg-input">
+                <SelectValue placeholder="Selecione seu nível de experiência" />
+              </SelectTrigger>
+              <SelectContent>
+                {experienceOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="industria">Indústria</Label>
-          <Select
-            value={formData.industria}
-            onValueChange={(value) => setFormData({ ...formData, industria: value })}
-            required
-          >
-            <SelectTrigger className="bg-input">
-              <SelectValue placeholder="Selecione a indústria" />
-            </SelectTrigger>
-            <SelectContent>
-              {industryOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <Label htmlFor="industria">Indústria</Label>
+            <Select
+              value={formData.industria}
+              onValueChange={(value) => setFormData({ ...formData, industria: value })}
+              required
+            >
+              <SelectTrigger className="bg-input">
+                <SelectValue placeholder="Selecione a indústria" />
+              </SelectTrigger>
+              <SelectContent>
+                {industryOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -134,8 +145,14 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
           </Button>
           <Button
             type="submit"
-            className="flex-1 bg-secondary hover:bg-secondary/90 text-secondary-foreground"
+            className={cn(
+              "flex-1",
+              isFormComplete
+                ? "bg-primary hover:bg-primary/90 text-primary-foreground"
+                : "bg-muted text-muted-foreground",
+            )}
             size="lg"
+            disabled={!isFormComplete}
           >
             Continuar
           </Button>

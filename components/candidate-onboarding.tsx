@@ -1,12 +1,17 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { CheckCircle2, CircleAlert } from "lucide-react"
+
 import { Header } from "./header"
 import { PersonalDataStep } from "./steps/personal-data-step"
 import { ProfessionalDataStep } from "./steps/professional-data-step"
+import { ProfessionalCvStep } from "./steps/professional-cv-step"
 import { ProfessionalInterestsStep } from "./steps/professional-interests-step"
 import { ProgressIndicator } from "./progress-indicator"
-import { submitCandidateProfile } from "@/services/candidate-service"
+import { Button } from "@/components/ui/button"
+import { submitCandidateProfile, type CandidateProfilePayload } from "@/services/candidate-service"
 
 export type CandidateData = {
   // Personal Data
@@ -30,19 +35,25 @@ export type CandidateData = {
   compartilhamentoAccepted: boolean
 }
 
+type SubmissionFeedback = {
+  type: "success" | "error"
+  title: string
+  message: string
+}
+
 export function CandidateOnboarding() {
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [candidateData, setCandidateData] = useState<Partial<CandidateData>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submissionError, setSubmissionError] = useState<string | null>(null)
-  const [submissionSuccess, setSubmissionSuccess] = useState(false)
+  const [feedbackModal, setFeedbackModal] = useState<SubmissionFeedback | null>(null)
 
   const updateData = (data: Partial<CandidateData>) => {
     setCandidateData((prev) => ({ ...prev, ...data }))
   }
 
   const nextStep = () => {
-    if (currentStep < 3) {
+    if (currentStep < 4) {
       setCurrentStep(currentStep + 1)
     }
   }
@@ -53,31 +64,53 @@ export function CandidateOnboarding() {
     }
   }
 
-  const handleSubmit = async () => {
-    if (!isCandidateDataComplete(candidateData)) {
+  const handleSubmit = async (finalStepData?: Partial<CandidateData>) => {
+    const mergedData: Partial<CandidateData> = {
+      ...candidateData,
+      ...(finalStepData ?? {}),
+    }
+
+    if (!isCandidateDataComplete(mergedData)) {
       alert("Por favor, preencha todas as etapas antes de finalizar o cadastro.")
       return
     }
 
-    setSubmissionError(null)
-    setSubmissionSuccess(false)
     setIsSubmitting(true)
 
+    const payload: CandidateProfilePayload = {
+      ...(mergedData as CandidateData),
+      guid_id: crypto.randomUUID(),
+      cd_cnpj: generateRandomCnpj(),
+    }
+
     try {
-      await submitCandidateProfile(candidateData)
-      setSubmissionSuccess(true)
-      alert("Cadastro realizado com sucesso!")
-      setCandidateData({})
-      setCurrentStep(1)
+      await submitCandidateProfile(payload)
+      setFeedbackModal({
+        type: "success",
+        title: "Cadastro enviado com sucesso!",
+        message: "Recebemos seus dados e em breve entraremos em contato.",
+      })
     } catch (error) {
       console.error("Failed to submit candidate profile", error)
-      setSubmissionError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Não foi possível enviar seus dados. Tente novamente em instantes.",
-      )
+          : "Não foi possível enviar seus dados. Tente novamente em instantes."
+      setFeedbackModal({
+        type: "error",
+        title: "Não conseguimos finalizar seu cadastro",
+        message,
+      })
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const closeFeedbackModal = () => {
+    const shouldRedirectHome = feedbackModal?.type === "success"
+    setFeedbackModal(null)
+    if (shouldRedirectHome) {
+      router.push("/")
     }
   }
 
@@ -86,7 +119,7 @@ export function CandidateOnboarding() {
       <Header />
 
       <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <ProgressIndicator currentStep={currentStep} totalSteps={3} />
+        <ProgressIndicator currentStep={currentStep} totalSteps={4} />
 
         <div className="mt-8">
           {currentStep === 1 && <PersonalDataStep data={candidateData} onUpdate={updateData} onNext={nextStep} />}
@@ -95,23 +128,37 @@ export function CandidateOnboarding() {
             <ProfessionalDataStep data={candidateData} onUpdate={updateData} onNext={nextStep} onBack={prevStep} />
           )}
 
-          {currentStep === 3 && (
+          {currentStep === 3 && <ProfessionalCvStep onNext={nextStep} onBack={prevStep} />}
+
+          {currentStep === 4 && (
             <ProfessionalInterestsStep
               data={candidateData}
               onUpdate={updateData}
               onSubmit={handleSubmit}
               onBack={prevStep}
               isSubmitting={isSubmitting}
-              errorMessage={submissionError}
             />
-          )}
-          {submissionSuccess && (
-            <p className="mt-6 text-sm text-green-600" role="status">
-              Seus dados foram enviados com sucesso.
-            </p>
           )}
         </div>
       </div>
+      {feedbackModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" role="alertdialog" aria-modal="true">
+          <div className="w-full max-w-md rounded-lg bg-card p-8 text-center shadow-xl">
+            {feedbackModal.type === "success" ? (
+              <CheckCircle2 className="mx-auto mb-4 size-12 text-green-500" aria-hidden="true" />
+            ) : (
+              <CircleAlert className="mx-auto mb-4 size-12 text-destructive" aria-hidden="true" />
+            )}
+            <h3 className="text-xl font-semibold text-foreground">{feedbackModal.title}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">{feedbackModal.message}</p>
+            <div className="mt-6 flex justify-center">
+              <Button onClick={closeFeedbackModal} size="lg" className="min-w-[180px]">
+                {feedbackModal.type === "success" ? "Voltar para início" : "Tentar novamente"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -133,4 +180,13 @@ function isCandidateDataComplete(data: Partial<CandidateData>): data is Candidat
     Boolean(data.tipoContratacao) &&
     data.compartilhamentoAccepted === true
   )
+}
+
+// TODO: substituir o CNPJ gerado aleatoriamente quando o valor real da empresa estiver disponível.
+function generateRandomCnpj(): string {
+  let digits = ""
+  while (digits.length < 14) {
+    digits += crypto.randomUUID().replace(/\D/g, "")
+  }
+  return digits.slice(0, 14)
 }

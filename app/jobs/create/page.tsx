@@ -18,6 +18,8 @@ type JobFormState = {
   cargo: string
   nivel: string
   localizacao: string
+  cidade: string
+  estado: string
   modelo_trabalho: string
   formato_contratacao: string
   skills: string
@@ -64,6 +66,7 @@ type ZipLookupResponse = {
   neighborhood?: string
   city?: string
   state?: string
+  data?: Record<string, unknown>
   [key: string]: unknown
 }
 
@@ -74,6 +77,8 @@ function createDefaultFormState(): JobFormState {
     cargo: "",
     nivel: "",
     localizacao: "",
+    cidade: "",
+    estado: "",
     modelo_trabalho: "",
     formato_contratacao: "",
     skills: "",
@@ -137,6 +142,29 @@ function pickFirstStringValue(data: ZipLookupResponse, keys: string[]): string |
   return undefined
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object"
+}
+
+function normalizeZipResponse(rawData: ZipLookupResponse | null, cep: string): ZipLookupResponse {
+  const normalizedData: ZipLookupResponse = rawData ? { ...rawData } : {}
+  const nestedData = isRecord(rawData?.data) ? (rawData?.data as Record<string, unknown>) : null
+
+  if (nestedData) {
+    for (const [key, value] of Object.entries(nestedData)) {
+      if (normalizedData[key] === undefined) {
+        normalizedData[key] = value
+      }
+    }
+  }
+
+  if (typeof normalizedData.cep !== "string" && cep.length > 0) {
+    normalizedData.cep = cep
+  }
+
+  return normalizedData
+}
+
 function formatZipSummary(data: ZipLookupResponse): string | null {
   const street = pickFirstStringValue(data, ["logradouro", "street", "address"])
   const neighborhood = pickFirstStringValue(data, ["bairro", "neighborhood"])
@@ -194,6 +222,26 @@ export default function CreateJobPage() {
   const isNivelDisabled = formState.cargo === "estagiario"
   const isCepIncomplete =
     formState.localizacao.length > 0 && formState.localizacao.length < CEP_LENGTH
+  const cityStateDisplay =
+    formState.cidade && formState.estado
+      ? `${formState.cidade}, ${formState.estado}`
+      : formState.cidade || formState.estado || ""
+  const blockingMessage = isZipLookupLoading
+    ? "Consultando CEP..."
+    : isSubmitting
+      ? "Criando vaga..."
+      : null
+
+  const updateCityStateFromZip = (data: ZipLookupResponse | null) => {
+    const city = data ? pickFirstStringValue(data, ["localidade", "cidade", "city"]) : undefined
+    const state = data ? pickFirstStringValue(data, ["uf", "estado", "state"]) : undefined
+
+    setFormState((previous) => ({
+      ...previous,
+      cidade: city ?? "",
+      estado: state ?? "",
+    }))
+  }
 
   const lookupZip = async (cep: string) => {
     if (zipLookupController.current) {
@@ -206,11 +254,14 @@ export default function CreateJobPage() {
     setIsZipLookupLoading(true)
     setZipLookupError(null)
     setZipLookupResult(null)
+    updateCityStateFromZip(null)
 
     try {
+      console.log(ZIPS_API_PROXY_URL)
       const response = await fetch(`${ZIPS_API_PROXY_URL}/${cep}`, {
         signal: controller.signal,
       })
+      console.log("Resposta da consulta de CEP:", response.text())
       const rawBody = await response.text()
 
       if (!response.ok) {
@@ -240,7 +291,9 @@ export default function CreateJobPage() {
         }
       }
 
-      setZipLookupResult(parsedBody ?? { cep })
+      const normalizedResult = normalizeZipResponse(parsedBody, cep)
+      setZipLookupResult(normalizedResult)
+      updateCityStateFromZip(normalizedResult)
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return
@@ -252,6 +305,7 @@ export default function CreateJobPage() {
         normalizedMessage.length > 0 ? normalizedMessage : "Não foi possível consultar o CEP informado.",
       )
       setZipLookupResult(null)
+      updateCityStateFromZip(null)
     } finally {
       if (zipLookupController.current === controller) {
         zipLookupController.current = null
@@ -266,6 +320,12 @@ export default function CreateJobPage() {
     setFormState((previous) => ({
       ...previous,
       localizacao: digitsOnly,
+      ...(digitsOnly.length < CEP_LENGTH
+        ? {
+          cidade: "",
+          estado: "",
+        }
+        : {}),
     }))
 
     if (digitsOnly.length === CEP_LENGTH) {
@@ -278,6 +338,7 @@ export default function CreateJobPage() {
       setZipLookupResult(null)
       setZipLookupError(null)
       setIsZipLookupLoading(false)
+      updateCityStateFromZip(null)
     }
   }
 
@@ -322,6 +383,8 @@ export default function CreateJobPage() {
       exibir_salario: formState.exibir_salario,
       guid_id: generateGuid(),
       status: DEFAULT_JOB_STATUS,
+      cidade: formState.cidade.trim(),
+      estado: formState.estado.trim(),
       skills: parseList(formState.skills),
       beneficios: parseList(formState.beneficios),
       orcamento: {
@@ -379,11 +442,11 @@ export default function CreateJobPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {isSubmitting ? (
+      {blockingMessage ? (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card px-6 py-5 shadow-xl">
             <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p className="text-sm font-medium text-muted-foreground">Criando vaga...</p>
+            <p className="text-sm font-medium text-muted-foreground">{blockingMessage}</p>
           </div>
         </div>
       ) : null}
@@ -495,32 +558,44 @@ export default function CreateJobPage() {
                 </Select>
               </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="localizacao">CEP:</Label>
-                <Input
-                  id="localizacao"
-                  name="localizacao"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={CEP_LENGTH}
-                  placeholder="Digite somente números"
-                  value={formState.localizacao}
-                  onChange={handleZipChange}
-                />
-                {isZipLookupLoading ? (
-                  <p className="text-xs text-muted-foreground">Consultando CEP...</p>
-                ) : zipLookupError ? (
-                  <p className="text-xs text-destructive">{zipLookupError}</p>
-                ) : zipSummary ? (
-                  <p className="text-xs text-muted-foreground">
-                    {zipSummary ?? "CEP localizado com sucesso."}
-                  </p>
-                ) : isCepIncomplete ? (
-                  <p className="text-xs text-muted-foreground">
-                    Informe os {CEP_LENGTH} dígitos do CEP.
-                  </p>
-                ) : null}
+              <div className="md:col-span-2 grid gap-4 md:grid-cols-4">
+                <div className="space-y-2 md:col-span-1">
+                  <Label htmlFor="localizacao">CEP:</Label>
+                  <Input
+                    id="localizacao"
+                    name="localizacao"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={CEP_LENGTH}
+                    placeholder="Somente números"
+                    value={formState.localizacao}
+                    onChange={handleZipChange}
+                  />
+                  {isZipLookupLoading ? (
+                    <p className="text-xs text-muted-foreground">Consultando CEP...</p>
+                  ) : zipLookupError ? (
+                    <p className="text-xs text-destructive">{zipLookupError}</p>
+                  ) : zipSummary ? (
+                    <p className="text-xs text-muted-foreground">
+                      {"Localizado com sucesso."}
+                    </p>
+                  ) : isCepIncomplete ? (
+                    <p className="text-xs text-muted-foreground">
+                      Informe os {CEP_LENGTH} dígitos do CEP.
+                    </p>
+                  ) : null}
+                </div>
+                <div className="space-y-2 md:col-span-3">
+                  <Label htmlFor="cidade_estado">Cidade / Estado</Label>
+                  <Input
+                    id="cidade_estado"
+                    name="cidade_estado"
+                    value={cityStateDisplay}
+                    placeholder="Informe o CEP para preencher automaticamente"
+                    readOnly
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="modelo_trabalho">Modelo de trabalho atual</Label>
