@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+
 import { Header } from "./header"
 import { PersonalDataStep } from "./steps/personal-data-step"
 import { ProfessionalDataStep } from "./steps/professional-data-step"
@@ -32,6 +34,7 @@ export type CandidateData = {
 }
 
 export function CandidateOnboarding() {
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [candidateData, setCandidateData] = useState<Partial<CandidateData>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -79,8 +82,7 @@ export function CandidateOnboarding() {
       await submitCandidateProfile(payload)
       setSubmissionSuccess(true)
       alert("Cadastro realizado com sucesso!")
-      setCandidateData({})
-      setCurrentStep(1)
+      router.push("/")
     } catch (error) {
       console.error("Failed to submit candidate profile", error)
       setSubmissionError(
