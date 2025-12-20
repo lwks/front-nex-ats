@@ -69,7 +69,11 @@ export function CandidateOnboarding() {
     setSubmissionSuccess(false)
     setIsSubmitting(true)
 
-    const payload: CandidateProfilePayload = { ...mergedData, guid_id: crypto.randomUUID() }
+    const payload: CandidateProfilePayload = {
+      ...(mergedData as CandidateData),
+      guid_id: crypto.randomUUID(),
+      cd_cnpj: generateRandomCnpj(),
+    }
 
     try {
       await submitCandidateProfile(payload)
@@ -143,4 +147,13 @@ function isCandidateDataComplete(data: Partial<CandidateData>): data is Candidat
     Boolean(data.tipoContratacao) &&
     data.compartilhamentoAccepted === true
   )
+}
+
+// TODO: substituir o CNPJ gerado aleatoriamente quando o valor real da empresa estiver disponível.
+function generateRandomCnpj(): string {
+  let digits = ""
+  while (digits.length < 14) {
+    digits += crypto.randomUUID().replace(/\D/g, "")
+  }
+  return digits.slice(0, 14)
 }

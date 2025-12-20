@@ -5,6 +5,7 @@ const CANDIDATE_ENDPOINT = "/candidates"
 
 export type CandidateProfilePayload = CandidateData & {
   guid_id: string
+  cd_cnpj: string
 }
 
 export async function submitCandidateProfile(data: CandidateProfilePayload) {
