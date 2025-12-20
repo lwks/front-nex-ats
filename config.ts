@@ -28,5 +28,7 @@ export const JOBS_API_URL = `${JOBS_API_BASE_URL}${JOBS_PATH}`
 export const ZIPS_API_URL = `${API_BASE_URL}${ZIPS_PATH}`
 
 export const JOBS_API_CREATE_URL = JOBS_API_URL
+export const CANDIDATES_API_CREATE_URL = CANDIDATES_API_URL
 export const JOBS_API_PROXY_URL = "/api/jobs"
+export const CANDIDATES_API_PROXY_URL = "/api/candidates"
 export const ZIPS_API_PROXY_URL = "/api/zips"
