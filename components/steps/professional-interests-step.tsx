@@ -24,7 +24,7 @@ import {
 interface ProfessionalInterestsStepProps {
   data: Partial<CandidateData>
   onUpdate: (data: Partial<CandidateData>) => void
-  onSubmit: () => void
+  onSubmit: (finalData: Partial<CandidateData>) => void
   onBack: () => void
   isSubmitting: boolean
   errorMessage: string | null
@@ -80,7 +80,7 @@ export function ProfessionalInterestsStep({
       return
     }
     onUpdate(formData)
-    onSubmit()
+    onSubmit(formData)
   }
 
   return (

@@ -7,7 +7,7 @@ import { ProfessionalDataStep } from "./steps/professional-data-step"
 import { ProfessionalCvStep } from "./steps/professional-cv-step"
 import { ProfessionalInterestsStep } from "./steps/professional-interests-step"
 import { ProgressIndicator } from "./progress-indicator"
-import { submitCandidateProfile } from "@/services/candidate-service"
+import { submitCandidateProfile, type CandidateProfilePayload } from "@/services/candidate-service"
 
 export type CandidateData = {
   // Personal Data
@@ -54,8 +54,13 @@ export function CandidateOnboarding() {
     }
   }
 
-  const handleSubmit = async () => {
-    if (!isCandidateDataComplete(candidateData)) {
+  const handleSubmit = async (finalStepData?: Partial<CandidateData>) => {
+    const mergedData: Partial<CandidateData> = {
+      ...candidateData,
+      ...(finalStepData ?? {}),
+    }
+
+    if (!isCandidateDataComplete(mergedData)) {
       alert("Por favor, preencha todas as etapas antes de finalizar o cadastro.")
       return
     }
@@ -64,8 +69,10 @@ export function CandidateOnboarding() {
     setSubmissionSuccess(false)
     setIsSubmitting(true)
 
+    const payload: CandidateProfilePayload = { ...mergedData, guid_id: crypto.randomUUID() }
+
     try {
-      await submitCandidateProfile(candidateData)
+      await submitCandidateProfile(payload)
       setSubmissionSuccess(true)
       alert("Cadastro realizado com sucesso!")
       setCandidateData({})
