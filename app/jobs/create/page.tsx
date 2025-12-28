@@ -210,6 +210,7 @@ export default function CreateJobPage() {
   const [isZipLookupLoading, setIsZipLookupLoading] = useState(false)
   const [zipLookupError, setZipLookupError] = useState<string | null>(null)
   const [zipLookupResult, setZipLookupResult] = useState<ZipLookupResponse | null>(null)
+  const [hasAttemptedZipLookup, setHasAttemptedZipLookup] = useState(false)
   const zipLookupController = useRef<AbortController | null>(null)
 
   useEffect(() => {
@@ -222,6 +223,21 @@ export default function CreateJobPage() {
   const isNivelDisabled = formState.cargo === "estagiario"
   const isCepIncomplete =
     formState.localizacao.length > 0 && formState.localizacao.length < CEP_LENGTH
+  const hasZipCityState = Boolean(formState.cidade.trim() && formState.estado.trim())
+  const shouldValidateZip = hasAttemptedZipLookup || formState.localizacao.length === CEP_LENGTH
+  const isZipValidationBlocked =
+    shouldValidateZip && (isZipLookupLoading || Boolean(zipLookupError) || !hasZipCityState)
+  const zipValidationMessage = isZipLookupLoading
+    ? "Consultando CEP..."
+    : zipLookupError
+      ? zipLookupError
+      : shouldValidateZip && !hasZipCityState
+        ? "Informe um CEP válido para preencher cidade e estado."
+        : isCepIncomplete
+          ? `Informe os ${CEP_LENGTH} dígitos do CEP.`
+          : zipSummary
+            ? "Localizado com sucesso."
+            : null
   const cityStateDisplay =
     formState.cidade && formState.estado
       ? `${formState.cidade}, ${formState.estado}`
@@ -254,6 +270,7 @@ export default function CreateJobPage() {
     setIsZipLookupLoading(true)
     setZipLookupError(null)
     setZipLookupResult(null)
+    setHasAttemptedZipLookup(true)
     updateCityStateFromZip(null)
 
     try {
@@ -326,6 +343,8 @@ export default function CreateJobPage() {
         : {}),
     }))
 
+    setHasAttemptedZipLookup(digitsOnly.length === CEP_LENGTH)
+
     if (digitsOnly.length === CEP_LENGTH) {
       void lookupZip(digitsOnly)
     } else {
@@ -335,6 +354,7 @@ export default function CreateJobPage() {
       }
       setZipLookupResult(null)
       setZipLookupError(null)
+      setHasAttemptedZipLookup(false)
       setIsZipLookupLoading(false)
       updateCityStateFromZip(null)
     }
@@ -366,8 +386,17 @@ export default function CreateJobPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setIsSubmitting(true)
     setToast(null)
+
+    if (isZipValidationBlocked) {
+      setToast({
+        type: "error",
+        message: "Consulte um CEP válido para preencher cidade e estado antes de salvar.",
+      })
+      return
+    }
+
+    setIsSubmitting(true)
 
     const payload = {
       titulo: formState.titulo.trim(),
@@ -570,17 +599,16 @@ export default function CreateJobPage() {
                     value={formState.localizacao}
                     onChange={handleZipChange}
                   />
-                  {isZipLookupLoading ? (
-                    <p className="text-xs text-muted-foreground">Consultando CEP...</p>
-                  ) : zipLookupError ? (
-                    <p className="text-xs text-destructive">{zipLookupError}</p>
-                  ) : zipSummary ? (
-                    <p className="text-xs text-muted-foreground">
-                      {"Localizado com sucesso."}
-                    </p>
-                  ) : isCepIncomplete ? (
-                    <p className="text-xs text-muted-foreground">
-                      Informe os {CEP_LENGTH} dígitos do CEP.
+                  {zipValidationMessage ? (
+                    <p
+                      className={cn(
+                        "text-xs",
+                        isZipValidationBlocked && !isZipLookupLoading
+                          ? "text-destructive"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {zipValidationMessage}
                     </p>
                   ) : null}
                 </div>
@@ -724,7 +752,11 @@ export default function CreateJobPage() {
             </section>
 
             <div className="flex items-center justify-end gap-4">
-              <Button type="submit" disabled={isSubmitting} className="min-w-[160px]">
+              <Button
+                type="submit"
+                disabled={isSubmitting || isZipValidationBlocked}
+                className="min-w-[160px]"
+              >
                 {isSubmitting ? "Salvando..." : "Criar vaga"}
               </Button>
             </div>
