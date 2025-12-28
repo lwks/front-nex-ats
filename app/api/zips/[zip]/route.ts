@@ -2,8 +2,16 @@ import { NextResponse } from "next/server"
 
 import { ZIPS_API_URL } from "@/config"
 
+import { CORS_HEADERS, corsOptionsResponse } from "../../cors"
+
 type ZipRouteContext = {
   params: Promise<{ zip: string }>
+}
+
+export const dynamic = "force-dynamic"
+
+export async function OPTIONS() {
+  return corsOptionsResponse()
 }
 
 export async function GET(_request: Request, { params }: ZipRouteContext) {
@@ -15,6 +23,7 @@ export async function GET(_request: Request, { params }: ZipRouteContext) {
       { message: "CEP inválido. Informe os 8 dígitos do CEP." },
       {
         status: 400,
+        headers: CORS_HEADERS,
       },
     )
   }
@@ -29,6 +38,7 @@ export async function GET(_request: Request, { params }: ZipRouteContext) {
     return new NextResponse(responseBody, {
       status: upstreamResponse.status,
       headers: {
+        ...CORS_HEADERS,
         "Content-Type": upstreamResponse.headers.get("Content-Type") ?? "application/json",
       },
     })
@@ -38,6 +48,7 @@ export async function GET(_request: Request, { params }: ZipRouteContext) {
       { message: "Não foi possível consultar o CEP no momento." },
       {
         status: 500,
+        headers: CORS_HEADERS,
       },
     )
   }
