@@ -2,17 +2,12 @@ import { NextResponse } from "next/server"
 
 import { JOBS_API_CREATE_URL } from "@/config"
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-}
+import { CORS_HEADERS, corsOptionsResponse } from "../cors"
+
+export const dynamic = "force-dynamic"
 
 export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: CORS_HEADERS,
-  })
+  return corsOptionsResponse()
 }
 
 export async function POST(request: Request) {
