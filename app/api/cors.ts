@@ -1,4 +1,6 @@
-import { NextResponse, type NextResponseInit } from "next/server"
+import { NextResponse } from 'next/server';
+
+type NextResponseInit = ConstructorParameters<typeof NextResponse>[1];
 
 export const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
