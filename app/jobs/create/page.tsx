@@ -197,6 +197,19 @@ function formatZipSummary(data: ZipLookupResponse): string | null {
   return segments.join(" · ")
 }
 
+async function safeReadResponseText(response: Response): Promise<string> {
+  if (response.bodyUsed) {
+    return ""
+  }
+
+  try {
+    return await response.text()
+  } catch (error) {
+    console.error("Erro ao ler o corpo da resposta do CEP:", error)
+    return ""
+  }
+}
+
 type ToastState = {
   type: "success" | "error"
   message: string
@@ -277,8 +290,8 @@ export default function CreateJobPage() {
       const response = await fetch(`${ZIPS_API_PROXY_URL}/${cep}`, {
         signal: controller.signal,
       })
-      const rawBody = await response.text()
-
+      const rawBody = await safeReadResponseText(response)
+      console.log("Resposta da consulta de CEP:", rawBody)
       if (!response.ok) {
         let errorMessage = "Não foi possível consultar o CEP informado."
 
