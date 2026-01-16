@@ -197,19 +197,6 @@ function formatZipSummary(data: ZipLookupResponse): string | null {
   return segments.join(" · ")
 }
 
-async function safeReadResponseText(response: Response): Promise<string> {
-  if (response.bodyUsed) {
-    return ""
-  }
-
-  try {
-    return await response.text()
-  } catch (error) {
-    console.error("Erro ao ler o corpo da resposta do CEP:", error)
-    return ""
-  }
-}
-
 type ToastState = {
   type: "success" | "error"
   message: string
@@ -290,34 +277,30 @@ export default function CreateJobPage() {
       const response = await fetch(`${ZIPS_API_PROXY_URL}/${cep}`, {
         signal: controller.signal,
       })
-      const rawBody = await safeReadResponseText(response)
-      console.log("Resposta da consulta de CEP:", rawBody)
+      console.log("Resposta bruta da consulta de CEP:", response)
+      let responseData: unknown = null
+
+      try {
+        responseData = await response.json()
+      } catch (error) {
+        console.error("Erro ao ler o corpo da resposta do CEP:", error)
+      }
+
+      console.log("Resposta da consulta de CEP:", responseData)
       if (!response.ok) {
         let errorMessage = "Não foi possível consultar o CEP informado."
 
-        try {
-          const parsed = JSON.parse(rawBody) as Record<string, unknown>
-          const possibleMessage = parsed?.message
+        if (isRecord(responseData)) {
+          const possibleMessage = responseData.message
           if (typeof possibleMessage === "string" && possibleMessage.trim().length > 0) {
             errorMessage = possibleMessage.trim()
-          }
-        } catch {
-          if (rawBody.trim().length > 0) {
-            errorMessage = rawBody.trim()
           }
         }
 
         throw new Error(errorMessage)
       }
 
-      let parsedBody: ZipLookupResponse | null = null
-      if (rawBody) {
-        try {
-          parsedBody = JSON.parse(rawBody) as ZipLookupResponse
-        } catch {
-          parsedBody = null
-        }
-      }
+      const parsedBody = isRecord(responseData) ? (responseData as ZipLookupResponse) : null
 
       const normalizedResult = normalizeZipResponse(parsedBody, cep)
       setZipLookupResult(normalizedResult)
