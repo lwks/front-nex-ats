@@ -47,6 +47,12 @@ export function ProfessionalInterestsStep({
   const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
   const [workTypeOptions, setWorkTypeOptions] = useState<OnboardingOption[]>(defaultWorkTypeOptions)
   const [contractTypeOptions, setContractTypeOptions] = useState<OnboardingOption[]>(defaultContractTypeOptions)
+  const isFormComplete =
+    Boolean(formData.industriaInteresse) &&
+    Boolean(formData.cargoInteresseDetalhado.trim()) &&
+    Boolean(formData.tipoTrabalho) &&
+    Boolean(formData.tipoContratacao) &&
+    formData.compartilhamentoAccepted
 
   useEffect(() => {
     let isMounted = true
@@ -75,6 +81,9 @@ export function ProfessionalInterestsStep({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (isSubmitting) {
+      return
+    }
+    if (!isFormComplete) {
       return
     }
     if (!formData.compartilhamentoAccepted) {
@@ -200,7 +209,7 @@ export function ProfessionalInterestsStep({
             type="submit"
             className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
             size="lg"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !isFormComplete}
           >
             {isSubmitting ? (
               <span className="flex items-center justify-center gap-2">

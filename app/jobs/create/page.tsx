@@ -53,6 +53,8 @@ const CONTRACT_FORMAT_OPTIONS = [
 ]
 
 const CEP_LENGTH = 8
+const MIN_TITLE_LENGTH = 5
+const MIN_DESCRIPTION_LENGTH = 30
 
 type ZipLookupResponse = {
   cep?: string
@@ -221,23 +223,48 @@ export default function CreateJobPage() {
 
   const zipSummary = zipLookupResult ? formatZipSummary(zipLookupResult) : null
   const isNivelDisabled = formState.cargo === "estagiario"
+  const isCepMissing = formState.localizacao.trim().length === 0
   const isCepIncomplete =
     formState.localizacao.length > 0 && formState.localizacao.length < CEP_LENGTH
   const hasZipCityState = Boolean(formState.cidade.trim() && formState.estado.trim())
-  const shouldValidateZip = hasAttemptedZipLookup || formState.localizacao.length === CEP_LENGTH
+  const shouldValidateZip =
+    isCepMissing || hasAttemptedZipLookup || formState.localizacao.length === CEP_LENGTH
   const isZipValidationBlocked =
-    shouldValidateZip && (isZipLookupLoading || Boolean(zipLookupError) || !hasZipCityState)
+    shouldValidateZip &&
+    (isCepMissing ||
+      isCepIncomplete ||
+      isZipLookupLoading ||
+      Boolean(zipLookupError) ||
+      !hasZipCityState)
+  const isTitleTooShort = formState.titulo.trim().length < MIN_TITLE_LENGTH
+  const isDescriptionTooShort = formState.descricao.trim().length < MIN_DESCRIPTION_LENGTH
+  const initialSalaryValue = parseCurrencyToNumber(formState.valor_inicial)
+  const finalSalaryValue = parseCurrencyToNumber(formState.valor_final)
+  const isSalaryMissing =
+    formState.valor_inicial.trim().length === 0 || formState.valor_final.trim().length === 0
+  const isSalaryNegative = initialSalaryValue < 0 || finalSalaryValue < 0
+  const isSalaryRangeInvalid = initialSalaryValue > finalSalaryValue
+  const isSalaryInvalid = isSalaryMissing || isSalaryNegative || isSalaryRangeInvalid
   const zipValidationMessage = isZipLookupLoading
     ? "Consultando CEP..."
     : zipLookupError
       ? zipLookupError
-      : shouldValidateZip && !hasZipCityState
+      : isCepMissing
+        ? "Informe o CEP."
+        : shouldValidateZip && !hasZipCityState
         ? "Informe um CEP válido para preencher cidade e estado."
         : isCepIncomplete
           ? `Informe os ${CEP_LENGTH} dígitos do CEP.`
           : zipSummary
             ? "Localizado com sucesso."
             : null
+  const salaryValidationMessage = isSalaryMissing
+    ? "Informe os valores inicial e final."
+    : isSalaryNegative
+      ? "Os valores não podem ser negativos."
+      : isSalaryRangeInvalid
+        ? "O valor inicial não pode ser maior que o valor final."
+        : null
   const cityStateDisplay =
     formState.cidade && formState.estado
       ? `${formState.cidade}, ${formState.estado}`
@@ -392,6 +419,30 @@ export default function CreateJobPage() {
       return
     }
 
+    if (isTitleTooShort) {
+      setToast({
+        type: "error",
+        message: `O título da vaga deve ter pelo menos ${MIN_TITLE_LENGTH} caracteres.`,
+      })
+      return
+    }
+
+    if (isDescriptionTooShort) {
+      setToast({
+        type: "error",
+        message: `A descrição deve ter pelo menos ${MIN_DESCRIPTION_LENGTH} caracteres.`,
+      })
+      return
+    }
+
+    if (isSalaryInvalid) {
+      setToast({
+        type: "error",
+        message: salaryValidationMessage ?? "Informe uma faixa salarial válida.",
+      })
+      return
+    }
+
     setIsSubmitting(true)
 
     const payload = {
@@ -510,7 +561,13 @@ export default function CreateJobPage() {
                   value={formState.titulo}
                   onChange={handleChange("titulo")}
                   required
+                  minLength={MIN_TITLE_LENGTH}
                 />
+                {isTitleTooShort ? (
+                  <p className="text-xs text-destructive">
+                    Informe pelo menos {MIN_TITLE_LENGTH} caracteres.
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -522,11 +579,17 @@ export default function CreateJobPage() {
                   value={formState.descricao}
                   onChange={handleChange("descricao")}
                   required
+                  minLength={MIN_DESCRIPTION_LENGTH}
                   className={cn(
                     "min-h-[160px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors md:text-sm",
                     "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:bg-muted/40 dark:focus-visible:bg-muted/20",
                   )}
                 />
+                {isDescriptionTooShort ? (
+                  <p className="text-xs text-destructive">
+                    Informe pelo menos {MIN_DESCRIPTION_LENGTH} caracteres.
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-2">
@@ -594,6 +657,7 @@ export default function CreateJobPage() {
                     placeholder="Somente números"
                     value={formState.localizacao}
                     onChange={handleZipChange}
+                    required
                   />
                   {zipValidationMessage ? (
                     <p
@@ -710,6 +774,7 @@ export default function CreateJobPage() {
                   placeholder="0"
                   value={formState.valor_inicial}
                   onChange={handleCurrencyChange("valor_inicial")}
+                  required
                 />
               </div>
 
@@ -723,7 +788,11 @@ export default function CreateJobPage() {
                   placeholder="0"
                   value={formState.valor_final}
                   onChange={handleCurrencyChange("valor_final")}
+                  required
                 />
+                {salaryValidationMessage ? (
+                  <p className="text-xs text-destructive">{salaryValidationMessage}</p>
+                ) : null}
               </div>
 
               <div className="space-y-2">
@@ -750,7 +819,13 @@ export default function CreateJobPage() {
             <div className="flex items-center justify-end gap-4">
               <Button
                 type="submit"
-                disabled={isSubmitting || isZipValidationBlocked}
+                disabled={
+                  isSubmitting ||
+                  isZipValidationBlocked ||
+                  isSalaryInvalid ||
+                  isTitleTooShort ||
+                  isDescriptionTooShort
+                }
                 className="min-w-[160px]"
               >
                 {isSubmitting ? "Salvando..." : "Criar vaga"}
