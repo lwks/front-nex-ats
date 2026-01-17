@@ -88,6 +88,15 @@ function pickString(...values: Array<unknown>) {
   return undefined
 }
 
+function isZipLocation(value?: string) {
+  if (!value) {
+    return false
+  }
+
+  const digitsOnly = value.replace(/\D/g, "")
+  return digitsOnly.length === 8 && digitsOnly === value
+}
+
 function extractJobs(payload: unknown): ApiJob[] {
   if (Array.isArray(payload)) {
     return payload as ApiJob[]
@@ -144,8 +153,10 @@ function normalizeJob(job: ApiJob, index: number): JobCard {
     pickString(job.company, job.empresa, job.nome_empresa) ??
     (job.companyId ? `Empresa ${job.companyId}` : undefined) ??
     "Empresa confidencial" // todo: check empresa em /jobs
-  const location =
-    pickString(job.localizacao, job.location, cityState) ?? "Localização não informada" // todo: check localização em /jobs
+  const rawLocation = pickString(job.localizacao, job.location)
+  const resolvedLocation =
+    cityState ?? (rawLocation && !isZipLocation(rawLocation) ? rawLocation : undefined)
+  const location = resolvedLocation ?? "Localização não informada" // todo: check localização em /jobs
   const workType =
     pickString(
       job.workType,
