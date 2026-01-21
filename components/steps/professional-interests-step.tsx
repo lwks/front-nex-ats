@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,10 +25,9 @@ import {
 interface ProfessionalInterestsStepProps {
   data: Partial<CandidateData>
   onUpdate: (data: Partial<CandidateData>) => void
-  onSubmit: () => void
+  onSubmit: (finalData: Partial<CandidateData>) => void
   onBack: () => void
   isSubmitting: boolean
-  errorMessage: string | null
 }
 
 export function ProfessionalInterestsStep({
@@ -36,7 +36,6 @@ export function ProfessionalInterestsStep({
   onSubmit,
   onBack,
   isSubmitting,
-  errorMessage,
 }: ProfessionalInterestsStepProps) {
   const [formData, setFormData] = useState({
     industriaInteresse: data.industriaInteresse || "",
@@ -48,6 +47,12 @@ export function ProfessionalInterestsStep({
   const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
   const [workTypeOptions, setWorkTypeOptions] = useState<OnboardingOption[]>(defaultWorkTypeOptions)
   const [contractTypeOptions, setContractTypeOptions] = useState<OnboardingOption[]>(defaultContractTypeOptions)
+  const isFormComplete =
+    Boolean(formData.industriaInteresse) &&
+    Boolean(formData.cargoInteresseDetalhado.trim()) &&
+    Boolean(formData.tipoTrabalho) &&
+    Boolean(formData.tipoContratacao) &&
+    formData.compartilhamentoAccepted
 
   useEffect(() => {
     let isMounted = true
@@ -75,12 +80,18 @@ export function ProfessionalInterestsStep({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (isSubmitting) {
+      return
+    }
+    if (!isFormComplete) {
+      return
+    }
     if (!formData.compartilhamentoAccepted) {
       alert("Por favor, confirme o compartilhamento de dados para continuar.")
       return
     }
     onUpdate(formData)
-    onSubmit()
+    onSubmit(formData)
   }
 
   return (
@@ -91,6 +102,7 @@ export function ProfessionalInterestsStep({
         <div className="space-y-2">
           <Label htmlFor="industriaInteresse">Indústria de Interesse</Label>
           <Select
+            disabled={isSubmitting}
             value={formData.industriaInteresse}
             onValueChange={(value) => setFormData({ ...formData, industriaInteresse: value })}
             required
@@ -111,6 +123,7 @@ export function ProfessionalInterestsStep({
         <div className="space-y-2">
           <Label htmlFor="cargoInteresseDetalhado">Cargo de Interesse</Label>
           <Input
+            disabled={isSubmitting}
             id="cargoInteresseDetalhado"
             type="text"
             placeholder="Ex: Gerente de Projetos"
@@ -124,6 +137,7 @@ export function ProfessionalInterestsStep({
         <div className="space-y-2">
           <Label htmlFor="tipoTrabalho">Tipo de Trabalho</Label>
           <Select
+            disabled={isSubmitting}
             value={formData.tipoTrabalho}
             onValueChange={(value) => setFormData({ ...formData, tipoTrabalho: value })}
             required
@@ -144,6 +158,7 @@ export function ProfessionalInterestsStep({
         <div className="space-y-2">
           <Label htmlFor="tipoContratacao">Tipo de Contratação</Label>
           <Select
+            disabled={isSubmitting}
             value={formData.tipoContratacao}
             onValueChange={(value) => setFormData({ ...formData, tipoContratacao: value })}
             required
@@ -164,6 +179,7 @@ export function ProfessionalInterestsStep({
         <div className="flex items-start space-x-3 pt-4">
           <Checkbox
             id="compartilhamento"
+            disabled={isSubmitting}
             checked={formData.compartilhamentoAccepted}
             onCheckedChange={(checked) => setFormData({ ...formData, compartilhamentoAccepted: checked as boolean })}
           />
@@ -178,23 +194,31 @@ export function ProfessionalInterestsStep({
           </div>
         </div>
 
-        {errorMessage && (
-          <p className="text-sm text-destructive" role="alert">
-            {errorMessage}
-          </p>
-        )}
-
         <div className="flex gap-4 mt-8">
-          <Button type="button" variant="outline" onClick={onBack} className="flex-1 bg-transparent" size="lg">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onBack}
+            className="flex-1 bg-transparent"
+            size="lg"
+            disabled={isSubmitting}
+          >
             Voltar
           </Button>
           <Button
             type="submit"
             className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
             size="lg"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !isFormComplete}
           >
-            Finalizar Cadastro
+            {isSubmitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="size-4 animate-spin" />
+                Processando...
+              </span>
+            ) : (
+              "Finalizar Cadastro"
+            )}
           </Button>
         </div>
       </form>

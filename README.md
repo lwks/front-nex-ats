@@ -31,7 +31,7 @@ http://localhost:3000
 - `app/` – entrypoint do Next.js com `layout.tsx`, `page.tsx` e os estilos globais (`globals.css`).
 - `components/` – componentes reutilizáveis, incluindo:
   - `candidate-onboarding.tsx` e `progress-indicator.tsx`: orquestram as etapas do formulário.
-  - `steps/`: telas de formulário (`Dados Pessoais`, `Dados Profissionais`, `Interesses Profissionais`).
+  - `steps/`: telas de formulário (`Dados Pessoais`, `Dados Profissionais`, upload de CV em PDF, `Interesses Profissionais`).
   - `ui/`: componentes baseados em Radix UI/ShadCN (botão, select, sheet etc.).
   - `header.tsx`: cabeçalho da aplicação.
 - `lib/` – utilitários (por exemplo, o helper `cn` para composição de classes).
@@ -40,7 +40,7 @@ http://localhost:3000
 ## Fluxo atual da aplicação
 
 1. A página inicial (`/`) exibe o cabeçalho e o indicador de progresso.
-2. O formulário multi-etapas coleta dados pessoais, profissionais e interesses.
+2. O formulário multi-etapas coleta dados pessoais, profissionais (em duas etapas, incluindo upload de CV em PDF) e interesses.
 3. Ao final, os dados são apenas exibidos no console e via `alert` (não há integração com backend).
 
 ## Observações e pontos de atenção

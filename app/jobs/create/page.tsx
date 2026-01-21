@@ -18,6 +18,8 @@ type JobFormState = {
   cargo: string
   nivel: string
   localizacao: string
+  cidade: string
+  estado: string
   modelo_trabalho: string
   formato_contratacao: string
   skills: string
@@ -51,6 +53,9 @@ const CONTRACT_FORMAT_OPTIONS = [
 ]
 
 const CEP_LENGTH = 8
+const MIN_TITLE_LENGTH = 5
+const MIN_DESCRIPTION_LENGTH = 30
+
 
 type ZipLookupResponse = {
   cep?: string
@@ -64,6 +69,7 @@ type ZipLookupResponse = {
   neighborhood?: string
   city?: string
   state?: string
+  data?: Record<string, unknown>
   [key: string]: unknown
 }
 
@@ -74,6 +80,8 @@ function createDefaultFormState(): JobFormState {
     cargo: "",
     nivel: "",
     localizacao: "",
+    cidade: "",
+    estado: "",
     modelo_trabalho: "",
     formato_contratacao: "",
     skills: "",
@@ -137,6 +145,29 @@ function pickFirstStringValue(data: ZipLookupResponse, keys: string[]): string |
   return undefined
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object"
+}
+
+function normalizeZipResponse(rawData: ZipLookupResponse | null, cep: string): ZipLookupResponse {
+  const normalizedData: ZipLookupResponse = rawData ? { ...rawData } : {}
+  const nestedData = isRecord(rawData?.data) ? (rawData?.data as Record<string, unknown>) : null
+
+  if (nestedData) {
+    for (const [key, value] of Object.entries(nestedData)) {
+      if (normalizedData[key] === undefined) {
+        normalizedData[key] = value
+      }
+    }
+  }
+
+  if (typeof normalizedData.cep !== "string" && cep.length > 0) {
+    normalizedData.cep = cep
+  }
+
+  return normalizedData
+}
+
 function formatZipSummary(data: ZipLookupResponse): string | null {
   const street = pickFirstStringValue(data, ["logradouro", "street", "address"])
   const neighborhood = pickFirstStringValue(data, ["bairro", "neighborhood"])
@@ -182,6 +213,7 @@ export default function CreateJobPage() {
   const [isZipLookupLoading, setIsZipLookupLoading] = useState(false)
   const [zipLookupError, setZipLookupError] = useState<string | null>(null)
   const [zipLookupResult, setZipLookupResult] = useState<ZipLookupResponse | null>(null)
+  const [hasAttemptedZipLookup, setHasAttemptedZipLookup] = useState(false)
   const zipLookupController = useRef<AbortController | null>(null)
 
   useEffect(() => {
@@ -192,8 +224,68 @@ export default function CreateJobPage() {
 
   const zipSummary = zipLookupResult ? formatZipSummary(zipLookupResult) : null
   const isNivelDisabled = formState.cargo === "estagiario"
+  const isCepMissing = formState.localizacao.trim().length === 0
   const isCepIncomplete =
     formState.localizacao.length > 0 && formState.localizacao.length < CEP_LENGTH
+  const hasZipCityState = Boolean(formState.cidade.trim() && formState.estado.trim())
+  const shouldValidateZip =
+    isCepMissing || hasAttemptedZipLookup || formState.localizacao.length === CEP_LENGTH
+  const isZipValidationBlocked =
+    shouldValidateZip &&
+    (isCepMissing ||
+      isCepIncomplete ||
+      isZipLookupLoading ||
+      Boolean(zipLookupError) ||
+      !hasZipCityState)
+  const isTitleTooShort = formState.titulo.trim().length < MIN_TITLE_LENGTH
+  const isDescriptionTooShort = formState.descricao.trim().length < MIN_DESCRIPTION_LENGTH
+  const initialSalaryValue = parseCurrencyToNumber(formState.valor_inicial)
+  const finalSalaryValue = parseCurrencyToNumber(formState.valor_final)
+  const isSalaryMissing =
+    formState.valor_inicial.trim().length === 0 || formState.valor_final.trim().length === 0
+  const isSalaryNegative = initialSalaryValue < 0 || finalSalaryValue < 0
+  const isSalaryRangeInvalid = initialSalaryValue > finalSalaryValue
+  const isSalaryInvalid = isSalaryMissing || isSalaryNegative || isSalaryRangeInvalid
+  const zipValidationMessage = isZipLookupLoading
+    ? "Consultando CEP..."
+    : zipLookupError
+      ? zipLookupError
+      : isCepMissing
+        ? "Informe o CEP."
+        : shouldValidateZip && !hasZipCityState
+        ? "Informe um CEP válido para preencher cidade e estado."
+        : isCepIncomplete
+          ? `Informe os ${CEP_LENGTH} dígitos do CEP.`
+          : zipSummary
+            ? "Localizado com sucesso."
+            : null
+  const salaryValidationMessage = isSalaryMissing
+    ? "Informe os valores inicial e final."
+    : isSalaryNegative
+      ? "Os valores não podem ser negativos."
+      : isSalaryRangeInvalid
+        ? "O valor inicial não pode ser maior que o valor final."
+        : null
+  const cityStateDisplay =
+    formState.cidade && formState.estado
+      ? `${formState.cidade}, ${formState.estado}`
+      : formState.cidade || formState.estado || ""
+  const blockingMessage = isZipLookupLoading
+    ? "Consultando CEP..."
+    : isSubmitting
+      ? "Criando vaga..."
+      : null
+
+  const updateCityStateFromZip = (data: ZipLookupResponse | null) => {
+    const city = data ? pickFirstStringValue(data, ["localidade", "cidade", "city"]) : undefined
+    const state = data ? pickFirstStringValue(data, ["uf", "estado", "state"]) : undefined
+
+    setFormState((previous) => ({
+      ...previous,
+      cidade: city ?? "",
+      estado: state ?? "",
+    }))
+  }
 
   const lookupZip = async (cep: string) => {
     if (zipLookupController.current) {
@@ -206,41 +298,41 @@ export default function CreateJobPage() {
     setIsZipLookupLoading(true)
     setZipLookupError(null)
     setZipLookupResult(null)
+    setHasAttemptedZipLookup(true)
+    updateCityStateFromZip(null)
 
     try {
       const response = await fetch(`${ZIPS_API_PROXY_URL}/${cep}`, {
         signal: controller.signal,
       })
-      const rawBody = await response.text()
+      console.log("Resposta bruta da consulta de CEP:", response)
+      let responseData: unknown = null
 
+      try {
+        responseData = await response.json()
+      } catch (error) {
+        console.error("Erro ao ler o corpo da resposta do CEP:", error)
+      }
+
+      console.log("Resposta da consulta de CEP:", responseData)
       if (!response.ok) {
         let errorMessage = "Não foi possível consultar o CEP informado."
 
-        try {
-          const parsed = JSON.parse(rawBody) as Record<string, unknown>
-          const possibleMessage = parsed?.message
+        if (isRecord(responseData)) {
+          const possibleMessage = responseData.message
           if (typeof possibleMessage === "string" && possibleMessage.trim().length > 0) {
             errorMessage = possibleMessage.trim()
-          }
-        } catch {
-          if (rawBody.trim().length > 0) {
-            errorMessage = rawBody.trim()
           }
         }
 
         throw new Error(errorMessage)
       }
 
-      let parsedBody: ZipLookupResponse | null = null
-      if (rawBody) {
-        try {
-          parsedBody = JSON.parse(rawBody) as ZipLookupResponse
-        } catch {
-          parsedBody = null
-        }
-      }
+      const parsedBody = isRecord(responseData) ? (responseData as ZipLookupResponse) : null
 
-      setZipLookupResult(parsedBody ?? { cep })
+      const normalizedResult = normalizeZipResponse(parsedBody, cep)
+      setZipLookupResult(normalizedResult)
+      updateCityStateFromZip(normalizedResult)
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return
@@ -252,6 +344,7 @@ export default function CreateJobPage() {
         normalizedMessage.length > 0 ? normalizedMessage : "Não foi possível consultar o CEP informado.",
       )
       setZipLookupResult(null)
+      updateCityStateFromZip(null)
     } finally {
       if (zipLookupController.current === controller) {
         zipLookupController.current = null
@@ -266,7 +359,15 @@ export default function CreateJobPage() {
     setFormState((previous) => ({
       ...previous,
       localizacao: digitsOnly,
+      ...(digitsOnly.length < CEP_LENGTH
+        ? {
+          cidade: "",
+          estado: "",
+        }
+        : {}),
     }))
+
+    setHasAttemptedZipLookup(digitsOnly.length === CEP_LENGTH)
 
     if (digitsOnly.length === CEP_LENGTH) {
       void lookupZip(digitsOnly)
@@ -277,7 +378,9 @@ export default function CreateJobPage() {
       }
       setZipLookupResult(null)
       setZipLookupError(null)
+      setHasAttemptedZipLookup(false)
       setIsZipLookupLoading(false)
+      updateCityStateFromZip(null)
     }
   }
 
@@ -307,8 +410,41 @@ export default function CreateJobPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setIsSubmitting(true)
     setToast(null)
+
+    if (isZipValidationBlocked) {
+      setToast({
+        type: "error",
+        message: "Consulte um CEP válido para preencher cidade e estado antes de salvar.",
+      })
+      return
+    }
+
+    if (isTitleTooShort) {
+      setToast({
+        type: "error",
+        message: `O título da vaga deve ter pelo menos ${MIN_TITLE_LENGTH} caracteres.`,
+      })
+      return
+    }
+
+    if (isDescriptionTooShort) {
+      setToast({
+        type: "error",
+        message: `A descrição deve ter pelo menos ${MIN_DESCRIPTION_LENGTH} caracteres.`,
+      })
+      return
+    }
+
+    if (isSalaryInvalid) {
+      setToast({
+        type: "error",
+        message: salaryValidationMessage ?? "Informe uma faixa salarial válida.",
+      })
+      return
+    }
+
+    setIsSubmitting(true)
 
     const payload = {
       titulo: formState.titulo.trim(),
@@ -322,6 +458,8 @@ export default function CreateJobPage() {
       exibir_salario: formState.exibir_salario,
       guid_id: generateGuid(),
       status: DEFAULT_JOB_STATUS,
+      cidade: formState.cidade.trim(),
+      estado: formState.estado.trim(),
       skills: parseList(formState.skills),
       beneficios: parseList(formState.beneficios),
       orcamento: {
@@ -379,11 +517,11 @@ export default function CreateJobPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {isSubmitting ? (
+      {blockingMessage ? (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card px-6 py-5 shadow-xl">
             <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p className="text-sm font-medium text-muted-foreground">Criando vaga...</p>
+            <p className="text-sm font-medium text-muted-foreground">{blockingMessage}</p>
           </div>
         </div>
       ) : null}
@@ -424,7 +562,13 @@ export default function CreateJobPage() {
                   value={formState.titulo}
                   onChange={handleChange("titulo")}
                   required
+                  minLength={MIN_TITLE_LENGTH}
                 />
+                {isTitleTooShort ? (
+                  <p className="text-xs text-destructive">
+                    Informe pelo menos {MIN_TITLE_LENGTH} caracteres.
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -436,11 +580,17 @@ export default function CreateJobPage() {
                   value={formState.descricao}
                   onChange={handleChange("descricao")}
                   required
+                  minLength={MIN_DESCRIPTION_LENGTH}
                   className={cn(
                     "min-h-[160px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors md:text-sm",
                     "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:bg-muted/40 dark:focus-visible:bg-muted/20",
                   )}
                 />
+                {isDescriptionTooShort ? (
+                  <p className="text-xs text-destructive">
+                    Informe pelo menos {MIN_DESCRIPTION_LENGTH} caracteres.
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-2">
@@ -495,32 +645,44 @@ export default function CreateJobPage() {
                 </Select>
               </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="localizacao">CEP:</Label>
-                <Input
-                  id="localizacao"
-                  name="localizacao"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={CEP_LENGTH}
-                  placeholder="Digite somente números"
-                  value={formState.localizacao}
-                  onChange={handleZipChange}
-                />
-                {isZipLookupLoading ? (
-                  <p className="text-xs text-muted-foreground">Consultando CEP...</p>
-                ) : zipLookupError ? (
-                  <p className="text-xs text-destructive">{zipLookupError}</p>
-                ) : zipSummary ? (
-                  <p className="text-xs text-muted-foreground">
-                    {zipSummary ?? "CEP localizado com sucesso."}
-                  </p>
-                ) : isCepIncomplete ? (
-                  <p className="text-xs text-muted-foreground">
-                    Informe os {CEP_LENGTH} dígitos do CEP.
-                  </p>
-                ) : null}
+              <div className="md:col-span-2 grid gap-4 md:grid-cols-4">
+                <div className="space-y-2 md:col-span-1">
+                  <Label htmlFor="localizacao">CEP:</Label>
+                  <Input
+                    id="localizacao"
+                    name="localizacao"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={CEP_LENGTH}
+                    placeholder="Somente números"
+                    value={formState.localizacao}
+                    onChange={handleZipChange}
+                    required
+                  />
+                  {zipValidationMessage ? (
+                    <p
+                      className={cn(
+                        "text-xs",
+                        isZipValidationBlocked && !isZipLookupLoading
+                          ? "text-destructive"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {zipValidationMessage}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="space-y-2 md:col-span-3">
+                  <Label htmlFor="cidade_estado">Cidade / Estado</Label>
+                  <Input
+                    id="cidade_estado"
+                    name="cidade_estado"
+                    value={cityStateDisplay}
+                    placeholder="Informe o CEP para preencher automaticamente"
+                    readOnly
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="modelo_trabalho">Modelo de trabalho atual</Label>
@@ -613,6 +775,7 @@ export default function CreateJobPage() {
                   placeholder="0"
                   value={formState.valor_inicial}
                   onChange={handleCurrencyChange("valor_inicial")}
+                  required
                 />
               </div>
 
@@ -626,7 +789,11 @@ export default function CreateJobPage() {
                   placeholder="0"
                   value={formState.valor_final}
                   onChange={handleCurrencyChange("valor_final")}
+                  required
                 />
+                {salaryValidationMessage ? (
+                  <p className="text-xs text-destructive">{salaryValidationMessage}</p>
+                ) : null}
               </div>
 
               <div className="space-y-2">
@@ -651,7 +818,17 @@ export default function CreateJobPage() {
             </section>
 
             <div className="flex items-center justify-end gap-4">
-              <Button type="submit" disabled={isSubmitting} className="min-w-[160px]">
+              <Button
+                type="submit"
+                disabled={
+                  isSubmitting ||
+                  isZipValidationBlocked ||
+                  isSalaryInvalid ||
+                  isTitleTooShort ||
+                  isDescriptionTooShort
+                }
+                className="min-w-[160px]"
+              >
                 {isSubmitting ? "Salvando..." : "Criar vaga"}
               </Button>
             </div>

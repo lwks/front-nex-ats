@@ -25,3 +25,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Adicionar editor/IDE e sistema de arquivos indesejados:
+.vscode/
+.idea/
+.DS_Store
+
+# Adicionar cache de ferramentas (opcional):
+.eslintcache

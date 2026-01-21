@@ -7,7 +7,8 @@ export function ProgressIndicator({ currentStep, totalSteps }: ProgressIndicator
   const steps = [
     { number: 1, label: "Dados Pessoais" },
     { number: 2, label: "Dados Profissionais" },
-    { number: 3, label: "Interesses Profissionais" },
+    { number: 3, label: "Dados Profissionais" },
+    { number: 4, label: "Interesses Profissionais" },
   ]
 
   return (
