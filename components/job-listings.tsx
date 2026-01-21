@@ -1,9 +1,7 @@
-import Link from "next/link"
-
 import { JOBS_API_URL } from "@/config"
 
 import { Header } from "./header"
-import { Button } from "./ui/button"
+import { JobListingsClient } from "./job-listings-client"
 
 type ApiJob = {
   id?: string | number
@@ -50,6 +48,23 @@ type ApiJob = {
   linkCandidatura?: string
   candidatura_url?: string
   candidatura_link?: string
+  segmento?: string
+  segment?: string
+  setor?: string
+  sector?: string
+  ramo_atuacao?: string
+  ramoAtuacao?: string
+  industry?: string
+  area_atuacao?: string
+  site?: string
+  website?: string
+  site_empresa?: string
+  siteEmpresa?: string
+  companyWebsite?: string
+  email?: string
+  contactEmail?: string
+  email_contato?: string
+  contato_email?: string
 } & Record<string, unknown>
 
 type JobCard = {
@@ -61,6 +76,13 @@ type JobCard = {
   description: string
   applyHref: string
   isExternal: boolean
+  companyDetails: {
+    segment?: string
+    industry?: string
+    website?: string
+    companyWebsite?: string
+    contactEmail?: string
+  }
 }
 
 type ApiPayload = ApiJob[] | Record<string, unknown>
@@ -172,6 +194,13 @@ function normalizeJob(job: ApiJob, index: number): JobCard {
   const description =
     pickString(job.descricao, job.description, job.resumo, job.summary) ??
     "Descrição indisponível no momento." // todo: check descrição em /jobs
+  const companyDetails = {
+    segment: pickString(job.segmento, job.segment, job.setor, job.sector),
+    industry: pickString(job.ramo_atuacao, job.ramoAtuacao, job.industry, job.area_atuacao),
+    website: pickString(job.site, job.website),
+    companyWebsite: pickString(job.site_empresa, job.siteEmpresa, job.companyWebsite),
+    contactEmail: pickString(job.email, job.contactEmail, job.email_contato, job.contato_email),
+  }
 
   const applyCandidate = pickString(
     job.applyUrl,
@@ -194,6 +223,7 @@ function normalizeJob(job: ApiJob, index: number): JobCard {
     description,
     applyHref,
     isExternal,
+    companyDetails,
   }
 }
 
@@ -249,42 +279,7 @@ export async function JobListings() {
         ) : null}
 
         {jobs.length > 0 ? (
-          <section className="grid gap-6 md:grid-cols-2">
-            {jobs.map((job) => (
-              <article
-                key={job.id}
-                className="flex h-full flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-              >
-                <div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-                    <span className="font-semibold text-primary">{job.company}</span>
-                    <span>{job.location}</span>
-                  </div>
-                  <h3 className="mt-3 text-xl font-semibold text-foreground">{job.title}</h3>
-                  <p className="mt-2 text-sm font-medium text-muted-foreground">{job.workType}</p>
-                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                    {job.description}
-                  </p>
-                </div>
-
-                <div className="mt-6">
-                  <Button asChild className="w-full rounded-full md:w-auto">
-                    <Link
-                      href={job.applyHref}
-                      {...(job.isExternal
-                        ? {
-                          target: "_blank",
-                          rel: "noopener noreferrer",
-                        }
-                        : undefined)}
-                    >
-                      Candidatar-se
-                    </Link>
-                  </Button>
-                </div>
-              </article>
-            ))}
-          </section>
+          <JobListingsClient jobs={jobs} />
         ) : null}
 
         {showEmptyState ? (
