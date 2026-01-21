@@ -56,6 +56,7 @@ const CEP_LENGTH = 8
 const MIN_TITLE_LENGTH = 5
 const MIN_DESCRIPTION_LENGTH = 30
 
+
 type ZipLookupResponse = {
   cep?: string
   logradouro?: string
