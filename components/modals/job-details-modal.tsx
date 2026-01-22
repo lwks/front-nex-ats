@@ -77,10 +77,12 @@ export function JobDetailsModal({ job, onClose }: JobDetailsModalProps) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-8"
+      role="dialog"
+      aria-modal="true"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-4xl overflow-hidden rounded-3xl bg-background shadow-xl"
+        className="flex w-full max-w-4xl max-h-[calc(100vh-4rem)] flex-col overflow-hidden rounded-3xl bg-background shadow-xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-8 py-6">
@@ -91,12 +93,13 @@ export function JobDetailsModal({ job, onClose }: JobDetailsModalProps) {
               {job.location} • {job.workType}
             </p>
           </div>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" type="button" onClick={onClose}>
             Fechar
           </Button>
         </div>
 
-        <div className="grid gap-8 px-8 py-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="flex-1 overflow-y-auto px-8 py-6">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <div>
             <h4 className="text-lg font-semibold text-foreground">Descrição da vaga</h4>
             <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
@@ -119,10 +122,11 @@ export function JobDetailsModal({ job, onClose }: JobDetailsModalProps) {
               ))}
             </dl>
           </div>
+          </div>
         </div>
 
         <div className="flex flex-col-reverse gap-3 border-t border-border px-8 py-6 sm:flex-row sm:items-center sm:justify-end">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" type="button" onClick={onClose}>
             Voltar para lista
           </Button>
           <Button asChild className="rounded-full">
