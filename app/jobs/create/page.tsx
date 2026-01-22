@@ -215,12 +215,23 @@ export default function CreateJobPage() {
   const [zipLookupResult, setZipLookupResult] = useState<ZipLookupResponse | null>(null)
   const [hasAttemptedZipLookup, setHasAttemptedZipLookup] = useState(false)
   const zipLookupController = useRef<AbortController | null>(null)
+  const descriptionEditorRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     return () => {
       zipLookupController.current?.abort()
     }
   }, [])
+
+  useEffect(() => {
+    if (!descriptionEditorRef.current) {
+      return
+    }
+
+    if (descriptionEditorRef.current.innerHTML !== formState.descricao) {
+      descriptionEditorRef.current.innerHTML = formState.descricao
+    }
+  }, [formState.descricao])
 
   const zipSummary = zipLookupResult ? formatZipSummary(zipLookupResult) : null
   const isNivelDisabled = formState.cargo === "estagiario"
@@ -238,7 +249,12 @@ export default function CreateJobPage() {
       Boolean(zipLookupError) ||
       !hasZipCityState)
   const isTitleTooShort = formState.titulo.trim().length < MIN_TITLE_LENGTH
-  const isDescriptionTooShort = formState.descricao.trim().length < MIN_DESCRIPTION_LENGTH
+  const descriptionPlainText = formState.descricao
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  const isDescriptionTooShort = descriptionPlainText.length < MIN_DESCRIPTION_LENGTH
   const initialSalaryValue = parseCurrencyToNumber(formState.valor_inicial)
   const finalSalaryValue = parseCurrencyToNumber(formState.valor_final)
   const isSalaryMissing =
@@ -394,6 +410,28 @@ export default function CreateJobPage() {
         [field]: value,
       }))
     }
+  }
+
+  const handleDescriptionInput: React.FormEventHandler<HTMLDivElement> = (event) => {
+    const htmlValue = event.currentTarget.innerHTML
+    setFormState((previous) => ({
+      ...previous,
+      descricao: htmlValue,
+    }))
+  }
+
+  const applyDescriptionFormat = (command: "bold" | "italic" | "underline") => {
+    if (!descriptionEditorRef.current) {
+      return
+    }
+
+    descriptionEditorRef.current.focus()
+    document.execCommand(command)
+    const htmlValue = descriptionEditorRef.current.innerHTML
+    setFormState((previous) => ({
+      ...previous,
+      descricao: htmlValue,
+    }))
   }
 
   const handleCurrencyChange = (
@@ -573,17 +611,51 @@ export default function CreateJobPage() {
 
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="descricao">Descrição</Label>
-                <textarea
+                <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Formatação
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => applyDescriptionFormat("bold")}
+                    className="h-8 px-3 text-xs font-semibold"
+                  >
+                    Negrito
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => applyDescriptionFormat("italic")}
+                    className="h-8 px-3 text-xs font-semibold italic"
+                  >
+                    Itálico
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => applyDescriptionFormat("underline")}
+                    className="h-8 px-3 text-xs font-semibold underline"
+                  >
+                    Sublinhado
+                  </Button>
+                </div>
+                <div
                   id="descricao"
-                  name="descricao"
-                  placeholder="Descreva as responsabilidades e requisitos da vaga"
-                  value={formState.descricao}
-                  onChange={handleChange("descricao")}
-                  required
-                  minLength={MIN_DESCRIPTION_LENGTH}
+                  ref={descriptionEditorRef}
+                  role="textbox"
+                  aria-label="Descrição da vaga"
+                  contentEditable
+                  data-placeholder="Descreva as responsabilidades e requisitos da vaga"
+                  onInput={handleDescriptionInput}
                   className={cn(
                     "min-h-[160px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors md:text-sm",
-                    "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:bg-muted/40 dark:focus-visible:bg-muted/20",
+                    "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:bg-muted/40 dark:focus-visible:bg-muted/20",
+                    "relative whitespace-pre-wrap outline-none before:pointer-events-none before:absolute before:left-3 before:top-2 before:text-muted-foreground",
+                    "empty:before:content-[attr(data-placeholder)]",
                   )}
                 />
                 {isDescriptionTooShort ? (
