@@ -26,7 +26,12 @@ export function ProfessionalCvStep({ onNext, onBack }: ProfessionalCvStepProps) 
         <Button type="button" variant="outline" onClick={onBack} className="flex-1 bg-transparent" size="lg">
           Voltar
         </Button>
-        <Button type="button" onClick={onNext} className="flex-1 bg-secondary hover:bg-secondary/90 text-secondary-foreground" size="lg">
+        <Button
+          type="button"
+          onClick={onNext}
+          className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+          size="lg"
+        >
           Continuar
         </Button>
       </div>
