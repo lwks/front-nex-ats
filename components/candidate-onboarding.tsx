@@ -18,6 +18,8 @@ export type CandidateData = {
   nome: string
   documento: string
   localResidencia: string
+  endereco: string
+  contatoCel: string
   contato: string
   lgpdAccepted: boolean
 
@@ -168,6 +170,8 @@ function isCandidateDataComplete(data: Partial<CandidateData>): data is Candidat
     Boolean(data.nome) &&
     Boolean(data.documento) &&
     Boolean(data.localResidencia) &&
+    Boolean(data.endereco) &&
+    Boolean(data.contatoCel) &&
     Boolean(data.contato) &&
     data.lgpdAccepted === true &&
     Boolean(data.experiencia) &&

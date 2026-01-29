@@ -23,6 +23,22 @@ interface ProfessionalDataStepProps {
   onBack: () => void
 }
 
+const BRL_NUMBER_FORMATTER = new Intl.NumberFormat("pt-BR")
+
+function formatCurrencyInput(rawValue: string): string {
+  const digitsOnly = rawValue.replace(/\D/g, "")
+  if (digitsOnly.length === 0) {
+    return ""
+  }
+
+  const numericValue = Number(digitsOnly)
+  if (Number.isNaN(numericValue)) {
+    return ""
+  }
+
+  return BRL_NUMBER_FORMATTER.format(numericValue)
+}
+
 export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: ProfessionalDataStepProps) {
   const [formData, setFormData] = useState({
     experiencia: data.experiencia || "",
@@ -32,11 +48,13 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
   })
   const [experienceOptions, setExperienceOptions] = useState<OnboardingOption[]>(defaultExperienceOptions)
   const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
+  const [salaryTouched, setSalaryTouched] = useState(false)
   const isFormComplete =
     Boolean(formData.experiencia) &&
     Boolean(formData.industria) &&
     Boolean(formData.salario.trim()) &&
     Boolean(formData.cargoInteresse.trim())
+  const isSalaryMissing = formData.salario.trim().length === 0
 
   useEffect(() => {
     let isMounted = true
@@ -120,10 +138,17 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
             type="text"
             placeholder="Ex: R$ 5.000,00"
             value={formData.salario}
-            onChange={(e) => setFormData({ ...formData, salario: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, salario: formatCurrencyInput(e.target.value) })
+            }
+            onBlur={() => setSalaryTouched(true)}
             required
             className="bg-input"
+            inputMode="numeric"
           />
+          {salaryTouched && isSalaryMissing ? (
+            <p className="text-xs text-destructive">Informe um salário válido.</p>
+          ) : null}
         </div>
 
         <div className="space-y-2">
