@@ -46,15 +46,27 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
     salario: data.salario || "",
     cargoInteresse: data.cargoInteresse || "",
   })
+  const [touched, setTouched] = useState({
+    experiencia: false,
+    industria: false,
+    salario: false,
+    cargoInteresse: false,
+  })
   const [experienceOptions, setExperienceOptions] = useState<OnboardingOption[]>(defaultExperienceOptions)
   const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
-  const [salaryTouched, setSalaryTouched] = useState(false)
   const isFormComplete =
     Boolean(formData.experiencia) &&
     Boolean(formData.industria) &&
     Boolean(formData.salario.trim()) &&
     Boolean(formData.cargoInteresse.trim())
   const isSalaryMissing = formData.salario.trim().length === 0
+  const experienceError =
+    touched.experiencia && !formData.experiencia ? "Selecione seu nível de experiência." : ""
+  const industryError = touched.industria && !formData.industria ? "Selecione a indústria." : ""
+  const salaryError =
+    touched.salario && isSalaryMissing ? "Informe um salário válido." : ""
+  const roleError =
+    touched.cargoInteresse && !formData.cargoInteresse.trim() ? "Informe o cargo de interesse." : ""
 
   useEffect(() => {
     let isMounted = true
@@ -94,10 +106,23 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
             <Label htmlFor="experiencia">Experiência</Label>
             <Select
               value={formData.experiencia}
-              onValueChange={(value) => setFormData({ ...formData, experiencia: value })}
+              onValueChange={(value) => {
+                setFormData({ ...formData, experiencia: value })
+                if (!touched.experiencia) {
+                  setTouched((previous) => ({ ...previous, experiencia: true }))
+                }
+              }}
               required
             >
-              <SelectTrigger className="bg-input">
+              <SelectTrigger
+                className={cn("bg-input", experienceError && "border-destructive focus-visible:ring-destructive/40")}
+                aria-invalid={experienceError ? "true" : "false"}
+                onBlur={() => {
+                  if (!touched.experiencia) {
+                    setTouched((previous) => ({ ...previous, experiencia: true }))
+                  }
+                }}
+              >
                 <SelectValue placeholder="Selecione seu nível de experiência" />
               </SelectTrigger>
               <SelectContent>
@@ -108,16 +133,30 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
                 ))}
               </SelectContent>
             </Select>
+            {experienceError ? <p className="text-xs text-destructive">{experienceError}</p> : null}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="industria">Indústria</Label>
             <Select
               value={formData.industria}
-              onValueChange={(value) => setFormData({ ...formData, industria: value })}
+              onValueChange={(value) => {
+                setFormData({ ...formData, industria: value })
+                if (!touched.industria) {
+                  setTouched((previous) => ({ ...previous, industria: true }))
+                }
+              }}
               required
             >
-              <SelectTrigger className="bg-input">
+              <SelectTrigger
+                className={cn("bg-input", industryError && "border-destructive focus-visible:ring-destructive/40")}
+                aria-invalid={industryError ? "true" : "false"}
+                onBlur={() => {
+                  if (!touched.industria) {
+                    setTouched((previous) => ({ ...previous, industria: true }))
+                  }
+                }}
+              >
                 <SelectValue placeholder="Selecione a indústria" />
               </SelectTrigger>
               <SelectContent>
@@ -128,6 +167,7 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
                 ))}
               </SelectContent>
             </Select>
+            {industryError ? <p className="text-xs text-destructive">{industryError}</p> : null}
           </div>
         </div>
 
@@ -141,14 +181,17 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
             onChange={(e) =>
               setFormData({ ...formData, salario: formatCurrencyInput(e.target.value) })
             }
-            onBlur={() => setSalaryTouched(true)}
+            onBlur={() => {
+              if (!touched.salario) {
+                setTouched((previous) => ({ ...previous, salario: true }))
+              }
+            }}
             required
-            className="bg-input"
+            className={cn("bg-input", salaryError && "border-destructive focus-visible:ring-destructive/40")}
             inputMode="numeric"
+            aria-invalid={salaryError ? "true" : "false"}
           />
-          {salaryTouched && isSalaryMissing ? (
-            <p className="text-xs text-destructive">Informe um salário válido.</p>
-          ) : null}
+          {salaryError ? <p className="text-xs text-destructive">{salaryError}</p> : null}
         </div>
 
         <div className="space-y-2">
@@ -159,9 +202,16 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
             placeholder="Ex: Desenvolvedor Full Stack"
             value={formData.cargoInteresse}
             onChange={(e) => setFormData({ ...formData, cargoInteresse: e.target.value })}
+            onBlur={() => {
+              if (!touched.cargoInteresse) {
+                setTouched((previous) => ({ ...previous, cargoInteresse: true }))
+              }
+            }}
             required
-            className="bg-input"
+            className={cn("bg-input", roleError && "border-destructive focus-visible:ring-destructive/40")}
+            aria-invalid={roleError ? "true" : "false"}
           />
+          {roleError ? <p className="text-xs text-destructive">{roleError}</p> : null}
         </div>
 
         <div className="flex gap-4 mt-8">

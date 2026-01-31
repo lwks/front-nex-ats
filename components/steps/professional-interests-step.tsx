@@ -44,6 +44,13 @@ export function ProfessionalInterestsStep({
     tipoContratacao: data.tipoContratacao || "",
     compartilhamentoAccepted: data.compartilhamentoAccepted || false,
   })
+  const [touched, setTouched] = useState({
+    industriaInteresse: false,
+    cargoInteresseDetalhado: false,
+    tipoTrabalho: false,
+    tipoContratacao: false,
+    compartilhamentoAccepted: false,
+  })
   const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
   const [workTypeOptions, setWorkTypeOptions] = useState<OnboardingOption[]>(defaultWorkTypeOptions)
   const [contractTypeOptions, setContractTypeOptions] = useState<OnboardingOption[]>(defaultContractTypeOptions)
@@ -53,6 +60,20 @@ export function ProfessionalInterestsStep({
     Boolean(formData.tipoTrabalho) &&
     Boolean(formData.tipoContratacao) &&
     formData.compartilhamentoAccepted
+  const industryError =
+    touched.industriaInteresse && !formData.industriaInteresse ? "Selecione a indústria de interesse." : ""
+  const roleError =
+    touched.cargoInteresseDetalhado && !formData.cargoInteresseDetalhado.trim()
+      ? "Informe o cargo de interesse."
+      : ""
+  const workTypeError =
+    touched.tipoTrabalho && !formData.tipoTrabalho ? "Selecione o tipo de trabalho." : ""
+  const contractError =
+    touched.tipoContratacao && !formData.tipoContratacao ? "Selecione o tipo de contratação." : ""
+  const shareError =
+    touched.compartilhamentoAccepted && !formData.compartilhamentoAccepted
+      ? "Confirme o compartilhamento de dados."
+      : ""
 
   useEffect(() => {
     let isMounted = true
@@ -104,10 +125,23 @@ export function ProfessionalInterestsStep({
           <Select
             disabled={isSubmitting}
             value={formData.industriaInteresse}
-            onValueChange={(value) => setFormData({ ...formData, industriaInteresse: value })}
+            onValueChange={(value) => {
+              setFormData({ ...formData, industriaInteresse: value })
+              if (!touched.industriaInteresse) {
+                setTouched((previous) => ({ ...previous, industriaInteresse: true }))
+              }
+            }}
             required
           >
-            <SelectTrigger className="bg-input">
+            <SelectTrigger
+              className={industryError ? "bg-input border-destructive focus-visible:ring-destructive/40" : "bg-input"}
+              aria-invalid={industryError ? "true" : "false"}
+              onBlur={() => {
+                if (!touched.industriaInteresse) {
+                  setTouched((previous) => ({ ...previous, industriaInteresse: true }))
+                }
+              }}
+            >
               <SelectValue placeholder="Selecione a indústria de interesse" />
             </SelectTrigger>
             <SelectContent>
@@ -118,6 +152,7 @@ export function ProfessionalInterestsStep({
               ))}
             </SelectContent>
           </Select>
+          {industryError ? <p className="text-xs text-destructive">{industryError}</p> : null}
         </div>
 
         <div className="space-y-2">
@@ -129,9 +164,18 @@ export function ProfessionalInterestsStep({
             placeholder="Ex: Gerente de Projetos"
             value={formData.cargoInteresseDetalhado}
             onChange={(e) => setFormData({ ...formData, cargoInteresseDetalhado: e.target.value })}
+            onBlur={() => {
+              if (!touched.cargoInteresseDetalhado) {
+                setTouched((previous) => ({ ...previous, cargoInteresseDetalhado: true }))
+              }
+            }}
             required
-            className="bg-input"
+            className={
+              roleError ? "bg-input border-destructive focus-visible:ring-destructive/40" : "bg-input"
+            }
+            aria-invalid={roleError ? "true" : "false"}
           />
+          {roleError ? <p className="text-xs text-destructive">{roleError}</p> : null}
         </div>
 
         <div className="space-y-2">
@@ -139,10 +183,23 @@ export function ProfessionalInterestsStep({
           <Select
             disabled={isSubmitting}
             value={formData.tipoTrabalho}
-            onValueChange={(value) => setFormData({ ...formData, tipoTrabalho: value })}
+            onValueChange={(value) => {
+              setFormData({ ...formData, tipoTrabalho: value })
+              if (!touched.tipoTrabalho) {
+                setTouched((previous) => ({ ...previous, tipoTrabalho: true }))
+              }
+            }}
             required
           >
-            <SelectTrigger className="bg-input">
+            <SelectTrigger
+              className={workTypeError ? "bg-input border-destructive focus-visible:ring-destructive/40" : "bg-input"}
+              aria-invalid={workTypeError ? "true" : "false"}
+              onBlur={() => {
+                if (!touched.tipoTrabalho) {
+                  setTouched((previous) => ({ ...previous, tipoTrabalho: true }))
+                }
+              }}
+            >
               <SelectValue placeholder="Selecione o tipo de trabalho" />
             </SelectTrigger>
             <SelectContent>
@@ -153,6 +210,7 @@ export function ProfessionalInterestsStep({
               ))}
             </SelectContent>
           </Select>
+          {workTypeError ? <p className="text-xs text-destructive">{workTypeError}</p> : null}
         </div>
 
         <div className="space-y-2">
@@ -160,10 +218,23 @@ export function ProfessionalInterestsStep({
           <Select
             disabled={isSubmitting}
             value={formData.tipoContratacao}
-            onValueChange={(value) => setFormData({ ...formData, tipoContratacao: value })}
+            onValueChange={(value) => {
+              setFormData({ ...formData, tipoContratacao: value })
+              if (!touched.tipoContratacao) {
+                setTouched((previous) => ({ ...previous, tipoContratacao: true }))
+              }
+            }}
             required
           >
-            <SelectTrigger className="bg-input">
+            <SelectTrigger
+              className={contractError ? "bg-input border-destructive focus-visible:ring-destructive/40" : "bg-input"}
+              aria-invalid={contractError ? "true" : "false"}
+              onBlur={() => {
+                if (!touched.tipoContratacao) {
+                  setTouched((previous) => ({ ...previous, tipoContratacao: true }))
+                }
+              }}
+            >
               <SelectValue placeholder="Selecione o tipo de contratação" />
             </SelectTrigger>
             <SelectContent>
@@ -174,6 +245,7 @@ export function ProfessionalInterestsStep({
               ))}
             </SelectContent>
           </Select>
+          {contractError ? <p className="text-xs text-destructive">{contractError}</p> : null}
         </div>
 
         <div className="flex items-start space-x-3 pt-4">
@@ -181,7 +253,12 @@ export function ProfessionalInterestsStep({
             id="compartilhamento"
             disabled={isSubmitting}
             checked={formData.compartilhamentoAccepted}
-            onCheckedChange={(checked) => setFormData({ ...formData, compartilhamentoAccepted: checked as boolean })}
+            onCheckedChange={(checked) => {
+              setFormData({ ...formData, compartilhamentoAccepted: checked as boolean })
+              if (!touched.compartilhamentoAccepted) {
+                setTouched((previous) => ({ ...previous, compartilhamentoAccepted: true }))
+              }
+            }}
           />
           <div className="space-y-1 leading-none">
             <Label htmlFor="compartilhamento" className="text-sm font-normal cursor-pointer">
@@ -191,6 +268,7 @@ export function ProfessionalInterestsStep({
               Autorizo o compartilhamento dos meus dados profissionais com empresas parceiras da plataforma NexJob para
               fins de recrutamento e seleção
             </p>
+            {shareError ? <p className="text-xs text-destructive">{shareError}</p> : null}
           </div>
         </div>
 

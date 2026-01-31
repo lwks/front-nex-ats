@@ -212,35 +212,30 @@ export function PersonalDataStep({ data, onUpdate, onNext }: PersonalDataStepPro
     isValidEmail(formData.contato) &&
     formData.lgpdAccepted
 
+  function getZipErrorMessage() {
+    if (!isZipValidationBlocked) {
+      return ""
+    }
+
+    if (isCepMissing) {
+      return "Informe o CEP."
+    }
+    if (isCepIncomplete) {
+      return `Informe os ${CEP_LENGTH} digitos do CEP.`
+    }
+    return zipLookupError ?? "Informe um CEP valido."
+  }
+
   const validateFields = () => {
     const newErrors = { nome: "", documento: "", localResidencia: "", contatoCel: "", contato: "" }
 
-    if (!hasFullName(formData.nome)) {
-      newErrors.nome = "Informe nome e sobrenome."
-    }
-
-    const documentError = getDocumentError(formData.documento)
-    if (documentError) {
-      newErrors.documento = documentError
-    }
-
-    if (isZipValidationBlocked) {
-      if (isCepMissing) {
-        newErrors.localResidencia = "Informe o CEP."
-      } else if (isCepIncomplete) {
-        newErrors.localResidencia = `Informe os ${CEP_LENGTH} digitos do CEP.`
-      } else {
-        newErrors.localResidencia = zipLookupError ?? "Informe um CEP valido."
-      }
-    }
-
-    if (!isValidPhone(formData.contatoCel)) {
-      newErrors.contatoCel = `Informe um celular com ${CEL_MIN_LENGTH} a ${CEL_MAX_LENGTH} digitos.`
-    }
-
-    if (!isValidEmail(formData.contato)) {
-      newErrors.contato = "Digite um e-mail válido."
-    }
+    newErrors.nome = hasFullName(formData.nome) ? "" : "Informe nome e sobrenome."
+    newErrors.documento = getDocumentError(formData.documento)
+    newErrors.localResidencia = getZipErrorMessage()
+    newErrors.contatoCel = isValidPhone(formData.contatoCel)
+      ? ""
+      : `Informe um celular com ${CEL_MIN_LENGTH} a ${CEL_MAX_LENGTH} digitos.`
+    newErrors.contato = isValidEmail(formData.contato) ? "" : "Digite um e-mail válido."
 
     setErrors(newErrors)
     return Object.values(newErrors).every((error) => error === "")
@@ -400,6 +395,12 @@ export function PersonalDataStep({ data, onUpdate, onNext }: PersonalDataStepPro
                 }
                 setFormData({ ...formData, nome: e.target.value })
               }}
+              onBlur={() => {
+                const error = hasFullName(formData.nome) ? "" : "Informe nome e sobrenome."
+                if (error !== errors.nome) {
+                  setErrors((previous) => ({ ...previous, nome: error }))
+                }
+              }}
               required
               className="bg-input"
               aria-invalid={errors.nome ? "true" : "false"}
@@ -421,6 +422,12 @@ export function PersonalDataStep({ data, onUpdate, onNext }: PersonalDataStepPro
                 const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, CPF_LENGTH)
                 setFormData({ ...formData, documento: digitsOnly })
               }}
+              onBlur={() => {
+                const error = getDocumentError(formData.documento)
+                if (error !== errors.documento) {
+                  setErrors((previous) => ({ ...previous, documento: error }))
+                }
+              }}
               required
               className="bg-input"
               aria-invalid={errors.documento ? "true" : "false"}
@@ -439,6 +446,12 @@ export function PersonalDataStep({ data, onUpdate, onNext }: PersonalDataStepPro
                 placeholder="Somente numeros"
                 value={formData.localResidencia}
                 onChange={handleZipChange}
+                onBlur={() => {
+                  const error = getZipErrorMessage()
+                  if (error !== errors.localResidencia) {
+                    setErrors((previous) => ({ ...previous, localResidencia: error }))
+                  }
+                }}
                 required
                 className="bg-input"
                 inputMode="numeric"
@@ -478,6 +491,14 @@ export function PersonalDataStep({ data, onUpdate, onNext }: PersonalDataStepPro
                   const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, CEL_MAX_LENGTH)
                   setFormData({ ...formData, contatoCel: digitsOnly })
                 }}
+                onBlur={() => {
+                  const error = isValidPhone(formData.contatoCel)
+                    ? ""
+                    : `Informe um celular com ${CEL_MIN_LENGTH} a ${CEL_MAX_LENGTH} digitos.`
+                  if (error !== errors.contatoCel) {
+                    setErrors((previous) => ({ ...previous, contatoCel: error }))
+                  }
+                }}
                 required
                 className="bg-input"
                 inputMode="numeric"
@@ -500,6 +521,12 @@ export function PersonalDataStep({ data, onUpdate, onNext }: PersonalDataStepPro
                     setErrors((previous) => ({ ...previous, contato: "" }))
                   }
                   setFormData({ ...formData, contato: e.target.value })
+                }}
+                onBlur={() => {
+                  const error = isValidEmail(formData.contato) ? "" : "Digite um e-mail válido."
+                  if (error !== errors.contato) {
+                    setErrors((previous) => ({ ...previous, contato: error }))
+                  }
                 }}
                 required
                 className="bg-input"
