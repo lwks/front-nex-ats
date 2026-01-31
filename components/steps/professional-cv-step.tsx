@@ -17,9 +17,6 @@ export function ProfessionalCvStep({ onNext, onBack }: ProfessionalCvStepProps) 
           Adicione seu currículo em PDF para complementar seu perfil. Em breve você poderá fazer o upload diretamente
           por aqui.
         </p>
-        <Button type="button" disabled className="w-full mt-4" size="lg">
-          Upload CV (PDF)
-        </Button>
       </div>
 
       <div className="flex gap-4 mt-8">
