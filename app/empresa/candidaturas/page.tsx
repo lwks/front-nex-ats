@@ -65,7 +65,7 @@ const candidate = (
 const jobs: Job[] = [
   {
     id: "vaga-1",
-    title: "Pessoa Desenvolvedora Front-end",
+    title: "Desenvolvedora Front-end",
     location: "São Paulo, SP",
     team: "Produto",
     createdBy: "Mariana Oliveira",
@@ -73,12 +73,22 @@ const jobs: Job[] = [
     salaryRange: "R$ 8.000 - R$ 12.000",
     reportUrl: "https://relatorios.exemplo.com/vaga-1",
     stages: {
-      novos: [candidate("c1", "Paulo Nunes", "Front-end", "Triagem inicial", "Pleno", "5 anos", "Híbrido", ["React", "TypeScript", "Next.js"])],
-      rh: [candidate("c2", "Carla Neves", "Front-end", "Agendado", "Pleno", "4 anos", "Remoto", ["Design System", "React", "Jest"])],
-      hm: [candidate("c3", "Vinícius Prado", "Front-end", "Teste técnico", "Sênior", "8 anos", "Híbrido", ["Next.js", "Acessibilidade", "GraphQL"])],
+      novos: [
+        candidate("c1", "Paulo Nunes", "Front-end", "Triagem inicial", "Pleno", "5 anos", "Híbrido", ["React", "TypeScript", "Next.js"]),
+        candidate("c30", "Julio Braga", "Front-end", "Curriculo recebido", "Junior", "2 anos", "Remoto", ["HTML", "CSS", "React"]),
+        candidate("c31", "Lara Matos", "Front-end", "Novo", "Pleno", "4 anos", "Híbrido", ["TypeScript", "Storybook", "Vite"]),
+      ],
+      rh: [
+        candidate("c2", "Carla Neves", "Front-end", "Agendado", "Pleno", "4 anos", "Remoto", ["Design System", "React", "Jest"]),
+        candidate("c32", "Rita Campos", "Front-end", "Em entrevista", "Senior", "7 anos", "Remoto", ["Next.js", "Testing Library", "A11y"]),
+      ],
+      hm: [
+        candidate("c3", "Vinícius Prado", "Front-end", "Teste técnico", "Sênior", "8 anos", "Híbrido", ["Next.js", "Acessibilidade", "GraphQL"]),
+        candidate("c33", "Andre Farias", "Front-end", "Entrevista HM", "Pleno", "5 anos", "Presencial", ["React", "Redux", "GraphQL"]),
+      ],
       oferta: [],
-      contratado: [],
-      rejeitado: [],
+      contratado: [candidate("c34", "Beatriz Alves", "Front-end", "Admissao", "Pleno", "6 anos", "Remoto", ["React", "TypeScript", "Node.js"])],
+      rejeitado: [candidate("c35", "Joana Telles", "Front-end", "Nao aderente", "Junior", "2 anos", "Remoto", ["React", "Tailwind"])],
     },
   },
   {
@@ -91,12 +101,18 @@ const jobs: Job[] = [
     salaryRange: "R$ 12.000 - R$ 17.000",
     reportUrl: "https://relatorios.exemplo.com/vaga-2",
     stages: {
-      novos: [candidate("c4", "Bruno Kato", "Dados", "Novo", "Júnior", "2 anos", "Remoto", ["SQL", "Python", "dbt"])],
-      rh: [candidate("c5", "Bianca Teixeira", "Dados", "Em entrevista", "Pleno", "5 anos", "Remoto", ["ETL", "Airflow", "Spark"])],
-      hm: [],
+      novos: [
+        candidate("c4", "Bruno Kato", "Dados", "Novo", "Júnior", "2 anos", "Remoto", ["SQL", "Python", "dbt"]),
+        candidate("c36", "Marina Lopes", "Dados", "Triagem", "Pleno", "5 anos", "Híbrido", ["Python", "Pandas", "DBT"]),
+      ],
+      rh: [
+        candidate("c5", "Bianca Teixeira", "Dados", "Em entrevista", "Pleno", "5 anos", "Remoto", ["ETL", "Airflow", "Spark"]),
+        candidate("c37", "Henrique Dias", "Dados", "Agendado", "Senior", "8 anos", "Remoto", ["Kafka", "Snowflake", "Airflow"]),
+      ],
+      hm: [candidate("c38", "Luiza Pacheco", "Dados", "Case tecnico", "Pleno", "6 anos", "Remoto", ["SQL", "Python", "BigQuery"])],
       oferta: [candidate("c6", "Leandro Zago", "Dados", "Proposta enviada", "Sênior", "9 anos", "Remoto", ["AWS", "Glue", "Kafka"])],
-      contratado: [],
-      rejeitado: [],
+      contratado: [candidate("c39", "Eduardo Ramos", "Dados", "Admissao", "Senior", "10 anos", "Remoto", ["AWS", "Spark", "Lakehouse"])],
+      rejeitado: [candidate("c40", "Paula Reis", "Dados", "Reprovado", "Pleno", "4 anos", "Remoto", ["SQL", "Python", "DBT"])],
     },
   },
   {
@@ -109,12 +125,21 @@ const jobs: Job[] = [
     salaryRange: "R$ 9.500 - R$ 14.500",
     reportUrl: "https://relatorios.exemplo.com/vaga-3",
     stages: {
-      novos: [candidate("c7", "Gabriel Faria", "Back-end", "Triagem", "Pleno", "6 anos", "Híbrido", ["Java", "Spring", "PostgreSQL"])],
-      rh: [],
-      hm: [candidate("c8", "Ruan Ferraz", "Back-end", "Entrevista técnica", "Sênior", "10 anos", "Híbrido", ["Spring", "Microsserviços", "Kubernetes"])],
-      oferta: [],
+      novos: [
+        candidate("c7", "Gabriel Faria", "Back-end", "Triagem", "Pleno", "6 anos", "Híbrido", ["Java", "Spring", "PostgreSQL"]),
+        candidate("c41", "Diego Souza", "Back-end", "Novo", "Junior", "2 anos", "Remoto", ["Java", "Spring Boot", "MySQL"]),
+      ],
+      rh: [candidate("c42", "Isabela Maia", "Back-end", "Agendado", "Pleno", "5 anos", "Híbrido", ["Java", "Kafka", "PostgreSQL"])],
+      hm: [
+        candidate("c8", "Ruan Ferraz", "Back-end", "Entrevista técnica", "Sênior", "10 anos", "Híbrido", ["Spring", "Microsserviços", "Kubernetes"]),
+        candidate("c43", "Tiago Melo", "Back-end", "Case tecnico", "Senior", "9 anos", "Presencial", ["Java", "Quarkus", "AWS"]),
+      ],
+      oferta: [candidate("c44", "Paulo Bittencourt", "Back-end", "Proposta enviada", "Senior", "11 anos", "Remoto", ["Java", "Kotlin", "AWS"])],
       contratado: [],
-      rejeitado: [candidate("c9", "Talita Xavier", "Back-end", "Não aderente", "Pleno", "5 anos", "Presencial", ["Java", "Redis", "Docker"])],
+      rejeitado: [
+        candidate("c9", "Talita Xavier", "Back-end", "Não aderente", "Pleno", "5 anos", "Presencial", ["Java", "Redis", "Docker"]),
+        candidate("c45", "Kelly Lima", "Back-end", "Reprovado", "Junior", "1 ano", "Presencial", ["Java", "SQL", "JUnit"]),
+      ],
     },
   },
   {
@@ -127,10 +152,16 @@ const jobs: Job[] = [
     salaryRange: "R$ 13.000 - R$ 18.000",
     reportUrl: "https://relatorios.exemplo.com/vaga-4",
     stages: {
-      novos: [candidate("c10", "Danilo Sá", "DevOps", "Novo", "Pleno", "4 anos", "Híbrido", ["AWS", "Terraform", "CI/CD"])],
-      rh: [candidate("c11", "Patrícia Camargo", "DevOps", "Em entrevista", "Sênior", "8 anos", "Remoto", ["Kubernetes", "Helm", "ArgoCD"])],
-      hm: [],
-      oferta: [],
+      novos: [
+        candidate("c10", "Danilo Sá", "DevOps", "Novo", "Pleno", "4 anos", "Híbrido", ["AWS", "Terraform", "CI/CD"]),
+        candidate("c46", "Felipe Costa", "DevOps", "Triagem", "Junior", "2 anos", "Híbrido", ["Docker", "GitLab CI", "Linux"]),
+      ],
+      rh: [
+        candidate("c11", "Patrícia Camargo", "DevOps", "Em entrevista", "Sênior", "8 anos", "Remoto", ["Kubernetes", "Helm", "ArgoCD"]),
+        candidate("c47", "Larissa Prado", "DevOps", "Agendado", "Pleno", "5 anos", "Remoto", ["Terraform", "EKS", "Observability"]),
+      ],
+      hm: [candidate("c48", "Gustavo Rocha", "DevOps", "Case tecnico", "Senior", "9 anos", "Presencial", ["AWS", "Kubernetes", "SRE"])],
+      oferta: [candidate("c49", "Aline Castro", "DevOps", "Proposta enviada", "Senior", "10 anos", "Remoto", ["Terraform", "AWS", "SRE"])],
       contratado: [],
       rejeitado: [],
     },
@@ -145,12 +176,18 @@ const jobs: Job[] = [
     salaryRange: "R$ 7.500 - R$ 11.000",
     reportUrl: "https://relatorios.exemplo.com/vaga-5",
     stages: {
-      novos: [candidate("c12", "Lucas Barreto", "QA", "Novo", "Júnior", "2 anos", "Remoto", ["Cypress", "Playwright", "API Test"])],
-      rh: [],
-      hm: [candidate("c13", "Amanda Borges", "QA", "Teste prático", "Pleno", "5 anos", "Remoto", ["Selenium", "Java", "TestRail"])],
+      novos: [
+        candidate("c12", "Lucas Barreto", "QA", "Novo", "Júnior", "2 anos", "Remoto", ["Cypress", "Playwright", "API Test"]),
+        candidate("c50", "Marcio Reis", "QA", "Triagem", "Junior", "1 ano", "Remoto", ["Postman", "Cypress", "Jira"]),
+      ],
+      rh: [candidate("c51", "Carolina Lima", "QA", "Agendado", "Pleno", "4 anos", "Híbrido", ["TestRail", "Cypress", "SQL"])],
+      hm: [
+        candidate("c13", "Amanda Borges", "QA", "Teste prático", "Pleno", "5 anos", "Remoto", ["Selenium", "Java", "TestRail"]),
+        candidate("c52", "Rafael Nobre", "QA", "Case tecnico", "Senior", "8 anos", "Remoto", ["Playwright", "Node.js", "CI/CD"]),
+      ],
       oferta: [],
       contratado: [candidate("c14", "Otávio Rocha", "QA", "Admissão", "Pleno", "6 anos", "Híbrido", ["Playwright", "Node.js", "CI/CD"])],
-      rejeitado: [],
+      rejeitado: [candidate("c53", "Debora Simas", "QA", "Reprovado", "Junior", "2 anos", "Remoto", ["Selenium", "JavaScript"])],
     },
   },
   {
@@ -163,10 +200,16 @@ const jobs: Job[] = [
     salaryRange: "R$ 8.000 - R$ 12.500",
     reportUrl: "https://relatorios.exemplo.com/vaga-6",
     stages: {
-      novos: [candidate("c15", "Cecília Araújo", "UX/UI", "Novo", "Pleno", "4 anos", "Híbrido", ["Figma", "Design System", "Pesquisa"])],
-      rh: [candidate("c16", "Heitor Mello", "UX/UI", "Em entrevista", "Sênior", "7 anos", "Remoto", ["UX Writing", "Prototipagem", "Métricas"])],
-      hm: [],
-      oferta: [],
+      novos: [
+        candidate("c15", "Cecília Araújo", "UX/UI", "Novo", "Pleno", "4 anos", "Híbrido", ["Figma", "Design System", "Pesquisa"]),
+        candidate("c54", "Marcela Pinto", "UX/UI", "Triagem", "Junior", "2 anos", "Remoto", ["Figma", "UX Research", "Prototipagem"]),
+      ],
+      rh: [
+        candidate("c16", "Heitor Mello", "UX/UI", "Em entrevista", "Sênior", "7 anos", "Remoto", ["UX Writing", "Prototipagem", "Métricas"]),
+        candidate("c55", "Bruno Carvalho", "UX/UI", "Agendado", "Pleno", "5 anos", "Híbrido", ["Design Ops", "Acessibilidade", "Figma"]),
+      ],
+      hm: [candidate("c56", "Ana Torres", "UX/UI", "Case tecnico", "Senior", "9 anos", "Remoto", ["Design System", "Discovery", "Jornada"])],
+      oferta: [candidate("c57", "Igor Sampaio", "UX/UI", "Proposta enviada", "Pleno", "6 anos", "Remoto", ["Figma", "UX Research", "OKR"])],
       contratado: [],
       rejeitado: [],
     },
@@ -263,12 +306,70 @@ const jobs: Job[] = [
   },
 ]
 
+const menuItems = [
+  { key: "minhas-vagas", label: "Minhas vagas", shortLabel: "MV", description: "Pipeline e candidatos" },
+  { key: "extracao", label: "Extracao", shortLabel: "EX", description: "Relatorios e dados" },
+  { key: "gerenciar-vagas", label: "Gerenciar Vagas", shortLabel: "GV", description: "Criacao e ajustes" },
+] as const
+
 export default function CompanyApplicationsPage() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-10 lg:px-10">
+    <div className="min-h-screen bg-slate-50">
+      <div className="mx-auto flex min-h-screen max-w-[1440px] flex-col gap-6 px-4 py-8 md:flex-row lg:px-10">
+        <aside
+          className={`flex w-full flex-col rounded-3xl border border-slate-200 bg-white shadow-sm transition-all duration-300 md:sticky md:top-8 md:h-[calc(100vh-4rem)] ${isSidebarCollapsed ? "md:w-24" : "md:w-72"}`}
+        >
+          <div className={`flex items-center justify-between px-4 py-4 ${isSidebarCollapsed ? "flex-col gap-3" : ""}`}>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-xs font-semibold text-white">ATS</div>
+              <div className={isSidebarCollapsed ? "hidden" : "block"}>
+                <p className="text-sm font-semibold text-slate-900">Area da empresa</p>
+                <p className="text-xs text-slate-500">Candidaturas</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsSidebarCollapsed((prev) => !prev)}
+              className="hidden rounded-full border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-700 md:inline-flex"
+              aria-label={isSidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+              aria-expanded={!isSidebarCollapsed}
+            >
+              {isSidebarCollapsed ? ">>" : "<<"}
+            </button>
+          </div>
+
+          {!isSidebarCollapsed && (
+            <nav className="flex flex-1 flex-col gap-2 px-3 pb-4">
+              {menuItems.map((item) => {
+                const isActive = item.key === "minhas-vagas"
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    aria-current={isActive ? "page" : undefined}
+                    className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${isActive ? "bg-slate-100" : "hover:bg-slate-50"}`}
+                  >
+                    <span
+                      className={`flex h-10 w-10 items-center justify-center rounded-xl text-xs font-semibold ${isActive ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}
+                    >
+                      {item.shortLabel}
+                    </span>
+                    <span className="flex flex-col">
+                      <span className="text-sm font-semibold text-slate-900">{item.label}</span>
+                      <span className="text-xs text-slate-500">{item.description}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </nav>
+          )}
+        </aside>
+
+        <main className="min-w-0 flex-1">
       <header className="mb-8 rounded-3xl border border-slate-200 bg-white px-8 py-6 shadow-sm">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Empresa • Candidaturas</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-900">Pipeline de candidatos por vaga</h1>
@@ -327,6 +428,8 @@ export default function CompanyApplicationsPage() {
           </article>
         ))}
       </section>
+        </main>
+      </div>
 
       {selectedJob ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
