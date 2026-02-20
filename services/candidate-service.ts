@@ -1,13 +1,14 @@
 import type { CandidateData } from "@/components/candidate-onboarding"
-import { CANDIDATES_API_PROXY_URL } from "@/config"
+import { CANDIDATES_BY_JOB_GUIDS_API_PROXY_URL } from "@/config"
 
 export type CandidateProfilePayload = CandidateData & {
   guid_id: string
+  guid_vaga: string
   cd_cnpj: string
 }
 
 export async function submitCandidateProfile(data: CandidateProfilePayload) {
-  const response = await fetch(CANDIDATES_API_PROXY_URL, {
+  const response = await fetch(CANDIDATES_BY_JOB_GUIDS_API_PROXY_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
