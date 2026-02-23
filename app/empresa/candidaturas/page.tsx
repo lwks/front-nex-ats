@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 const stages = [
   { key: "novos", label: "Novos" },
@@ -62,7 +62,7 @@ const candidate = (
   linkedinUrl: `https://linkedin.com/in/${name.toLowerCase().replace(/\s+/g, "")}`,
 })
 
-const jobs: Job[] = [
+const mockJobs: Job[] = [
   {
     id: "vaga-1",
     title: "Desenvolvedora Front-end",
@@ -306,6 +306,84 @@ const jobs: Job[] = [
   },
 ]
 
+function createEmptyStages(): Record<StageKey, Candidate[]> {
+  return {
+    novos: [],
+    rh: [],
+    hm: [],
+    oferta: [],
+    contratado: [],
+    rejeitado: [],
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object"
+}
+
+function pickString(...values: Array<unknown>) {
+  for (const value of values) {
+    if (typeof value === "string") {
+      const trimmed = value.trim()
+      if (trimmed.length > 0) {
+        return trimmed
+      }
+    }
+
+    if (typeof value === "number" && !Number.isNaN(value)) {
+      return String(value)
+    }
+  }
+
+  return undefined
+}
+
+function extractJobItems(payload: unknown): unknown[] {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  if (!isRecord(payload)) {
+    return []
+  }
+
+  const collectionKeys = ["items", "results", "data", "vagas", "jobs", "content"]
+  for (const key of collectionKeys) {
+    const value = payload[key]
+    if (Array.isArray(value)) {
+      return value
+    }
+  }
+
+  return []
+}
+
+function normalizeJob(item: unknown): Job | null {
+  if (!isRecord(item)) {
+    return null
+  }
+
+  const id = pickString(item.guid_vaga, item.guid_id, item.id, item.codigo, item.pk)
+  const title = pickString(item.titulo, item.title, item.nome)
+
+  if (!id || !title) {
+    return null
+  }
+
+  return {
+    id,
+    title,
+    location: pickString(item.localizacao, item.location, item.cidade, item.city) ?? "Localização não informada",
+    team: pickString(item.area, item.team, item.departamento) ?? "Time não informado",
+    createdBy: pickString(item.createdBy, item.criado_por, item.company, item.empresa) ?? "Não informado",
+    createdAt: pickString(item.createdAt, item.created_at, item.data_criacao) ?? "Não informado",
+    salaryRange: pickString(item.salaryRange, item.faixa_salarial) ?? "Não informado",
+    reportUrl: pickString(item.reportUrl, item.report_url, item.relatorio_url) ?? "#",
+    stages: createEmptyStages(),
+  }
+}
+
+
 const menuItems = [
   { key: "minhas-vagas", label: "Minhas vagas", shortLabel: "MV", description: "Pipeline e candidatos" },
   { key: "extracao", label: "Extracao", shortLabel: "EX", description: "Relatorios e dados" },
@@ -316,6 +394,37 @@ export default function CompanyApplicationsPage() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [jobs, setJobs] = useState<Job[]>(mockJobs)
+
+  useEffect(() => {
+    let mounted = true
+
+    async function loadJobs() {
+      try {
+        const response = await fetch("/api/candidates/by-job-guids", { cache: "no-store" })
+        if (!response.ok) {
+          return
+        }
+
+        const payload: unknown = await response.json()
+        const fetchedJobs = extractJobItems(payload)
+          .map((item) => normalizeJob(item))
+          .filter((job): job is Job => job !== null)
+
+        if (mounted && fetchedJobs.length > 0) {
+          setJobs(fetchedJobs)
+        }
+      } catch (error) {
+        console.error("Erro ao buscar vagas de candidaturas:", error)
+      }
+    }
+
+    loadJobs()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-slate-50">
