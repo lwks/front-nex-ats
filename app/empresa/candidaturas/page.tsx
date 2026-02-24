@@ -1,34 +1,18 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
-const stages = [
-  { key: "novos", label: "Novos" },
-  { key: "rh", label: "Entrevista RH" },
-  { key: "hm", label: "Entrevista HM" },
-  { key: "oferta", label: "Oferta" },
-  { key: "contratado", label: "Contratado" },
-  { key: "rejeitado", label: "Rejeitados" },
-] as const
+import {
+  Application,
+  ApplicationBoardFromApi,
+  ApplicationColumn,
+} from "@/components/application-board"
+import { JOBS_API_URL } from "@/config"
 
-type StageKey = (typeof stages)[number]["key"]
+type ApiJob = Record<string, unknown>
 
-type Candidate = {
-  id: string
-  name: string
-  role: string
-  status: string
-  email: string
-  phone: string
-  workModel: string
-  seniority: string
-  experience: string
-  skills: string[]
-  linkedinUrl: string
-}
-
-type Job = {
-  id: string
+type JobOption = {
+  guidVaga: string
   title: string
   location: string
   team: string
@@ -36,286 +20,22 @@ type Job = {
   createdAt: string
   salaryRange: string
   reportUrl: string
-  stages: Record<StageKey, Candidate[]>
 }
 
-const candidate = (
-  id: string,
-  name: string,
-  role: string,
-  status: string,
-  seniority: string,
-  experience: string,
-  workModel: string,
-  skills: string[],
-) => ({
-  id,
-  name,
-  role,
-  status,
-  email: `${name.toLowerCase().replace(/\s+/g, ".")}@email.com`,
-  phone: "+55 (11) 99999-0000",
-  workModel,
-  seniority,
-  experience,
-  skills,
-  linkedinUrl: `https://linkedin.com/in/${name.toLowerCase().replace(/\s+/g, "")}`,
-})
-
-const mockJobs: Job[] = [
-  {
-    id: "vaga-1",
-    title: "Desenvolvedora Front-end",
-    location: "São Paulo, SP",
-    team: "Produto",
-    createdBy: "Mariana Oliveira",
-    createdAt: "2025-01-04",
-    salaryRange: "R$ 8.000 - R$ 12.000",
-    reportUrl: "https://relatorios.exemplo.com/vaga-1",
-    stages: {
-      novos: [
-        candidate("c1", "Paulo Nunes", "Front-end", "Triagem inicial", "Pleno", "5 anos", "Híbrido", ["React", "TypeScript", "Next.js"]),
-        candidate("c30", "Julio Braga", "Front-end", "Curriculo recebido", "Junior", "2 anos", "Remoto", ["HTML", "CSS", "React"]),
-        candidate("c31", "Lara Matos", "Front-end", "Novo", "Pleno", "4 anos", "Híbrido", ["TypeScript", "Storybook", "Vite"]),
-      ],
-      rh: [
-        candidate("c2", "Carla Neves", "Front-end", "Agendado", "Pleno", "4 anos", "Remoto", ["Design System", "React", "Jest"]),
-        candidate("c32", "Rita Campos", "Front-end", "Em entrevista", "Senior", "7 anos", "Remoto", ["Next.js", "Testing Library", "A11y"]),
-      ],
-      hm: [
-        candidate("c3", "Vinícius Prado", "Front-end", "Teste técnico", "Sênior", "8 anos", "Híbrido", ["Next.js", "Acessibilidade", "GraphQL"]),
-        candidate("c33", "Andre Farias", "Front-end", "Entrevista HM", "Pleno", "5 anos", "Presencial", ["React", "Redux", "GraphQL"]),
-      ],
-      oferta: [],
-      contratado: [candidate("c34", "Beatriz Alves", "Front-end", "Admissao", "Pleno", "6 anos", "Remoto", ["React", "TypeScript", "Node.js"])],
-      rejeitado: [candidate("c35", "Joana Telles", "Front-end", "Nao aderente", "Junior", "2 anos", "Remoto", ["React", "Tailwind"])],
-    },
-  },
-  {
-    id: "vaga-2",
-    title: "Engenheiro(a) de Dados",
-    location: "Remoto",
-    team: "Data Platform",
-    createdBy: "Rafael Lima",
-    createdAt: "2025-01-09",
-    salaryRange: "R$ 12.000 - R$ 17.000",
-    reportUrl: "https://relatorios.exemplo.com/vaga-2",
-    stages: {
-      novos: [
-        candidate("c4", "Bruno Kato", "Dados", "Novo", "Júnior", "2 anos", "Remoto", ["SQL", "Python", "dbt"]),
-        candidate("c36", "Marina Lopes", "Dados", "Triagem", "Pleno", "5 anos", "Híbrido", ["Python", "Pandas", "DBT"]),
-      ],
-      rh: [
-        candidate("c5", "Bianca Teixeira", "Dados", "Em entrevista", "Pleno", "5 anos", "Remoto", ["ETL", "Airflow", "Spark"]),
-        candidate("c37", "Henrique Dias", "Dados", "Agendado", "Senior", "8 anos", "Remoto", ["Kafka", "Snowflake", "Airflow"]),
-      ],
-      hm: [candidate("c38", "Luiza Pacheco", "Dados", "Case tecnico", "Pleno", "6 anos", "Remoto", ["SQL", "Python", "BigQuery"])],
-      oferta: [candidate("c6", "Leandro Zago", "Dados", "Proposta enviada", "Sênior", "9 anos", "Remoto", ["AWS", "Glue", "Kafka"])],
-      contratado: [candidate("c39", "Eduardo Ramos", "Dados", "Admissao", "Senior", "10 anos", "Remoto", ["AWS", "Spark", "Lakehouse"])],
-      rejeitado: [candidate("c40", "Paula Reis", "Dados", "Reprovado", "Pleno", "4 anos", "Remoto", ["SQL", "Python", "DBT"])],
-    },
-  },
-  {
-    id: "vaga-3",
-    title: "Desenvolvedor(a) Back-end Java",
-    location: "Campinas, SP",
-    team: "Core Services",
-    createdBy: "Aline Ribeiro",
-    createdAt: "2025-01-12",
-    salaryRange: "R$ 9.500 - R$ 14.500",
-    reportUrl: "https://relatorios.exemplo.com/vaga-3",
-    stages: {
-      novos: [
-        candidate("c7", "Gabriel Faria", "Back-end", "Triagem", "Pleno", "6 anos", "Híbrido", ["Java", "Spring", "PostgreSQL"]),
-        candidate("c41", "Diego Souza", "Back-end", "Novo", "Junior", "2 anos", "Remoto", ["Java", "Spring Boot", "MySQL"]),
-      ],
-      rh: [candidate("c42", "Isabela Maia", "Back-end", "Agendado", "Pleno", "5 anos", "Híbrido", ["Java", "Kafka", "PostgreSQL"])],
-      hm: [
-        candidate("c8", "Ruan Ferraz", "Back-end", "Entrevista técnica", "Sênior", "10 anos", "Híbrido", ["Spring", "Microsserviços", "Kubernetes"]),
-        candidate("c43", "Tiago Melo", "Back-end", "Case tecnico", "Senior", "9 anos", "Presencial", ["Java", "Quarkus", "AWS"]),
-      ],
-      oferta: [candidate("c44", "Paulo Bittencourt", "Back-end", "Proposta enviada", "Senior", "11 anos", "Remoto", ["Java", "Kotlin", "AWS"])],
-      contratado: [],
-      rejeitado: [
-        candidate("c9", "Talita Xavier", "Back-end", "Não aderente", "Pleno", "5 anos", "Presencial", ["Java", "Redis", "Docker"]),
-        candidate("c45", "Kelly Lima", "Back-end", "Reprovado", "Junior", "1 ano", "Presencial", ["Java", "SQL", "JUnit"]),
-      ],
-    },
-  },
-  {
-    id: "vaga-4",
-    title: "Engenheiro(a) DevOps",
-    location: "Belo Horizonte, MG",
-    team: "Infraestrutura",
-    createdBy: "Diego Cordeiro",
-    createdAt: "2025-01-17",
-    salaryRange: "R$ 13.000 - R$ 18.000",
-    reportUrl: "https://relatorios.exemplo.com/vaga-4",
-    stages: {
-      novos: [
-        candidate("c10", "Danilo Sá", "DevOps", "Novo", "Pleno", "4 anos", "Híbrido", ["AWS", "Terraform", "CI/CD"]),
-        candidate("c46", "Felipe Costa", "DevOps", "Triagem", "Junior", "2 anos", "Híbrido", ["Docker", "GitLab CI", "Linux"]),
-      ],
-      rh: [
-        candidate("c11", "Patrícia Camargo", "DevOps", "Em entrevista", "Sênior", "8 anos", "Remoto", ["Kubernetes", "Helm", "ArgoCD"]),
-        candidate("c47", "Larissa Prado", "DevOps", "Agendado", "Pleno", "5 anos", "Remoto", ["Terraform", "EKS", "Observability"]),
-      ],
-      hm: [candidate("c48", "Gustavo Rocha", "DevOps", "Case tecnico", "Senior", "9 anos", "Presencial", ["AWS", "Kubernetes", "SRE"])],
-      oferta: [candidate("c49", "Aline Castro", "DevOps", "Proposta enviada", "Senior", "10 anos", "Remoto", ["Terraform", "AWS", "SRE"])],
-      contratado: [],
-      rejeitado: [],
-    },
-  },
-  {
-    id: "vaga-5",
-    title: "QA Engineer (Automação)",
-    location: "Recife, PE",
-    team: "Qualidade",
-    createdBy: "Renata Pires",
-    createdAt: "2025-01-19",
-    salaryRange: "R$ 7.500 - R$ 11.000",
-    reportUrl: "https://relatorios.exemplo.com/vaga-5",
-    stages: {
-      novos: [
-        candidate("c12", "Lucas Barreto", "QA", "Novo", "Júnior", "2 anos", "Remoto", ["Cypress", "Playwright", "API Test"]),
-        candidate("c50", "Marcio Reis", "QA", "Triagem", "Junior", "1 ano", "Remoto", ["Postman", "Cypress", "Jira"]),
-      ],
-      rh: [candidate("c51", "Carolina Lima", "QA", "Agendado", "Pleno", "4 anos", "Híbrido", ["TestRail", "Cypress", "SQL"])],
-      hm: [
-        candidate("c13", "Amanda Borges", "QA", "Teste prático", "Pleno", "5 anos", "Remoto", ["Selenium", "Java", "TestRail"]),
-        candidate("c52", "Rafael Nobre", "QA", "Case tecnico", "Senior", "8 anos", "Remoto", ["Playwright", "Node.js", "CI/CD"]),
-      ],
-      oferta: [],
-      contratado: [candidate("c14", "Otávio Rocha", "QA", "Admissão", "Pleno", "6 anos", "Híbrido", ["Playwright", "Node.js", "CI/CD"])],
-      rejeitado: [candidate("c53", "Debora Simas", "QA", "Reprovado", "Junior", "2 anos", "Remoto", ["Selenium", "JavaScript"])],
-    },
-  },
-  {
-    id: "vaga-6",
-    title: "UX/UI Designer de Produto",
-    location: "São Paulo, SP",
-    team: "Design",
-    createdBy: "Juliana Freitas",
-    createdAt: "2025-01-22",
-    salaryRange: "R$ 8.000 - R$ 12.500",
-    reportUrl: "https://relatorios.exemplo.com/vaga-6",
-    stages: {
-      novos: [
-        candidate("c15", "Cecília Araújo", "UX/UI", "Novo", "Pleno", "4 anos", "Híbrido", ["Figma", "Design System", "Pesquisa"]),
-        candidate("c54", "Marcela Pinto", "UX/UI", "Triagem", "Junior", "2 anos", "Remoto", ["Figma", "UX Research", "Prototipagem"]),
-      ],
-      rh: [
-        candidate("c16", "Heitor Mello", "UX/UI", "Em entrevista", "Sênior", "7 anos", "Remoto", ["UX Writing", "Prototipagem", "Métricas"]),
-        candidate("c55", "Bruno Carvalho", "UX/UI", "Agendado", "Pleno", "5 anos", "Híbrido", ["Design Ops", "Acessibilidade", "Figma"]),
-      ],
-      hm: [candidate("c56", "Ana Torres", "UX/UI", "Case tecnico", "Senior", "9 anos", "Remoto", ["Design System", "Discovery", "Jornada"])],
-      oferta: [candidate("c57", "Igor Sampaio", "UX/UI", "Proposta enviada", "Pleno", "6 anos", "Remoto", ["Figma", "UX Research", "OKR"])],
-      contratado: [],
-      rejeitado: [],
-    },
-  },
-  {
-    id: "vaga-7",
-    title: "Especialista em Segurança da Informação",
-    location: "Curitiba, PR",
-    team: "Security",
-    createdBy: "Marcos Tadeu",
-    createdAt: "2025-01-25",
-    salaryRange: "R$ 14.000 - R$ 20.000",
-    reportUrl: "https://relatorios.exemplo.com/vaga-7",
-    stages: {
-      novos: [candidate("c17", "Fernando Goulart", "Security", "Triagem", "Sênior", "9 anos", "Híbrido", ["SOC", "SIEM", "LGPD"])],
-      rh: [],
-      hm: [candidate("c18", "Nathália Resende", "Security", "Entrevista técnica", "Sênior", "11 anos", "Presencial", ["OWASP", "Cloud Security", "Pentest"])],
-      oferta: [],
-      contratado: [],
-      rejeitado: [],
-    },
-  },
-  {
-    id: "vaga-8",
-    title: "Product Manager (TI)",
-    location: "Remoto",
-    team: "Produto",
-    createdBy: "Camila Duarte",
-    createdAt: "2025-01-27",
-    salaryRange: "R$ 12.000 - R$ 16.500",
-    reportUrl: "https://relatorios.exemplo.com/vaga-8",
-    stages: {
-      novos: [candidate("c19", "Rodrigo Simões", "Produto", "Novo", "Pleno", "6 anos", "Remoto", ["Roadmap", "Discovery", "OKR"])],
-      rh: [candidate("c20", "Ariane Paes", "Produto", "Agendado", "Sênior", "8 anos", "Remoto", ["Analytics", "SQL", "Negócio"])],
-      hm: [],
-      oferta: [],
-      contratado: [],
-      rejeitado: [],
-    },
-  },
-  {
-    id: "vaga-9",
-    title: "Cientista de Dados",
-    location: "Florianópolis, SC",
-    team: "Data Science",
-    createdBy: "Felipe Amaral",
-    createdAt: "2025-01-29",
-    salaryRange: "R$ 11.000 - R$ 15.000",
-    reportUrl: "https://relatorios.exemplo.com/vaga-9",
-    stages: {
-      novos: [candidate("c21", "Igor Dantas", "Data Science", "Novo", "Pleno", "5 anos", "Híbrido", ["Python", "ML", "Feature Store"])],
-      rh: [],
-      hm: [candidate("c22", "Daniela Neri", "Data Science", "Case técnico", "Sênior", "9 anos", "Remoto", ["MLOps", "NLP", "Deep Learning"])],
-      oferta: [candidate("c23", "Renan Porto", "Data Science", "Proposta enviada", "Pleno", "6 anos", "Remoto", ["Forecast", "PySpark", "Docker"])],
-      contratado: [],
-      rejeitado: [],
-    },
-  },
-  {
-    id: "vaga-10",
-    title: "Analista de Suporte N2",
-    location: "Porto Alegre, RS",
-    team: "Operações",
-    createdBy: "Paula Ferreira",
-    createdAt: "2025-02-01",
-    salaryRange: "R$ 4.500 - R$ 7.000",
-    reportUrl: "https://relatorios.exemplo.com/vaga-10",
-    stages: {
-      novos: [candidate("c24", "Mateus Corrêa", "Suporte", "Novo", "Júnior", "2 anos", "Presencial", ["ITIL", "Windows", "Redes"])],
-      rh: [candidate("c25", "Priscila Furtado", "Suporte", "Em entrevista", "Pleno", "4 anos", "Presencial", ["Service Desk", "Atendimento", "SLA"])],
-      hm: [],
-      oferta: [],
-      contratado: [],
-      rejeitado: [candidate("c26", "Yasmin Lacerda", "Suporte", "Reprovado", "Júnior", "1 ano", "Presencial", ["Linux", "Troubleshooting", "Zabbix"])],
-    },
-  },
-  {
-    id: "vaga-11",
-    title: "Arquiteto(a) de Soluções Cloud",
-    location: "Rio de Janeiro, RJ",
-    team: "Arquitetura",
-    createdBy: "Thiago Almeida",
-    createdAt: "2025-02-03",
-    salaryRange: "R$ 18.000 - R$ 24.000",
-    reportUrl: "https://relatorios.exemplo.com/vaga-11",
-    stages: {
-      novos: [candidate("c27", "Fábio Guedes", "Cloud", "Triagem", "Sênior", "12 anos", "Híbrido", ["AWS", "Azure", "Well-Architected"])],
-      rh: [],
-      hm: [candidate("c28", "Mirela Bastos", "Cloud", "Entrevista técnica", "Especialista", "14 anos", "Híbrido", ["Kubernetes", "FinOps", "Observabilidade"])],
-      oferta: [],
-      contratado: [candidate("c29", "João Venturi", "Cloud", "Admissão", "Sênior", "11 anos", "Remoto", ["Terraform", "Landing Zone", "Governança"])],
-      rejeitado: [],
-    },
-  },
+const boardColumns: ApplicationColumn[] = [
+  { id: "novos", titulo: "Novos" },
+  { id: "entrevista-rh", titulo: "Entrevista RH" },
+  { id: "entrevista-tecnica", titulo: "Entrevista Técnica" },
+  { id: "proposta", titulo: "Proposta" },
+  { id: "contratado", titulo: "Contratado" },
+  { id: "rejeitado", titulo: "Rejeitado" },
 ]
 
-function createEmptyStages(): Record<StageKey, Candidate[]> {
-  return {
-    novos: [],
-    rh: [],
-    hm: [],
-    oferta: [],
-    contratado: [],
-    rejeitado: [],
-  }
-}
+const menuItems = [
+  { key: "minhas-vagas", label: "Minhas vagas", shortLabel: "MV", description: "Pipeline e candidatos" },
+  { key: "extracao", label: "Extracao", shortLabel: "EX", description: "Relatorios e dados" },
+  { key: "gerenciar-vagas", label: "Gerenciar Vagas", shortLabel: "GV", description: "Criacao e ajustes" },
+] as const
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object"
@@ -338,93 +58,120 @@ function pickString(...values: Array<unknown>) {
   return undefined
 }
 
-function extractJobItems(payload: unknown): unknown[] {
+function extractJobItems(payload: unknown): ApiJob[] {
   if (Array.isArray(payload)) {
-    return payload
+    return payload.filter((item): item is ApiJob => isRecord(item))
   }
 
   if (!isRecord(payload)) {
     return []
   }
 
-  const collectionKeys = ["items", "results", "data", "vagas", "jobs", "content"]
-  for (const key of collectionKeys) {
-    const value = payload[key]
+  const container = payload as Record<string, unknown>
+  const keys = ["items", "results", "data", "vagas", "jobs", "content"]
+
+  for (const key of keys) {
+    const value = container[key]
     if (Array.isArray(value)) {
-      return value
+      return value.filter((item): item is ApiJob => isRecord(item))
+    }
+  }
+
+  for (const value of Object.values(container)) {
+    if (isRecord(value) || Array.isArray(value)) {
+      const nested = extractJobItems(value)
+      if (nested.length > 0) {
+        return nested
+      }
     }
   }
 
   return []
 }
 
-function normalizeJob(item: unknown): Job | null {
-  if (!isRecord(item)) {
-    return null
-  }
-
-  const id = pickString(item.guid_vaga, item.guid_id, item.id, item.codigo, item.pk)
+function normalizeJob(item: ApiJob): JobOption | null {
+  const guidVaga = pickString(item.guid_id, item.guid_vaga, item.id, item.codigo)
   const title = pickString(item.titulo, item.title, item.nome)
 
-  if (!id || !title) {
+  if (!guidVaga || !title) {
     return null
   }
 
   return {
-    id,
+    guidVaga,
     title,
-    location: pickString(item.localizacao, item.location, item.cidade, item.city) ?? "Localização não informada",
-    team: pickString(item.area, item.team, item.departamento) ?? "Time não informado",
+    location: pickString(item.localizacao, item.location, item.cidade, item.city) ?? "Não informado",
+    team: pickString(item.area, item.team, item.departamento) ?? "Não informado",
     createdBy: pickString(item.createdBy, item.criado_por, item.company, item.empresa) ?? "Não informado",
     createdAt: pickString(item.createdAt, item.created_at, item.data_criacao) ?? "Não informado",
     salaryRange: pickString(item.salaryRange, item.faixa_salarial) ?? "Não informado",
-    reportUrl: pickString(item.reportUrl, item.report_url, item.relatorio_url) ?? "#",
-    stages: createEmptyStages(),
+    reportUrl: pickString(item.reportUrl, item.report_url, item.relatorio_url) ?? "Não informado",
   }
 }
 
-
-const menuItems = [
-  { key: "minhas-vagas", label: "Minhas vagas", shortLabel: "MV", description: "Pipeline e candidatos" },
-  { key: "extracao", label: "Extracao", shortLabel: "EX", description: "Relatorios e dados" },
-  { key: "gerenciar-vagas", label: "Gerenciar Vagas", shortLabel: "GV", description: "Criacao e ajustes" },
-] as const
+function fallback(value?: string | null) {
+  if (!value) return "Não informado"
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : "Não informado"
+}
 
 export default function CompanyApplicationsPage() {
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null)
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null)
+  const [selectedCandidate, setSelectedCandidate] = useState<Application | null>(null)
+  const [selectedJob, setSelectedJob] = useState<JobOption | null>(null)
+  const [selectedGuidVaga, setSelectedGuidVaga] = useState("")
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const [jobs, setJobs] = useState<Job[]>(mockJobs)
+  const [jobs, setJobs] = useState<JobOption[]>([])
+  const [isLoadingJobs, setIsLoadingJobs] = useState(false)
+  const [jobsError, setJobsError] = useState<string | null>(null)
 
   useEffect(() => {
-    let mounted = true
+    let active = true
 
     async function loadJobs() {
+      setIsLoadingJobs(true)
+      setJobsError(null)
+
       try {
-        const response = await fetch("/api/candidates/by-job-guids", { cache: "no-store" })
+        const response = await fetch(JOBS_API_URL, { cache: "no-store" })
         if (!response.ok) {
-          return
+          throw new Error(`Falha ao buscar vagas (${response.status}).`)
         }
 
         const payload: unknown = await response.json()
-        const fetchedJobs = extractJobItems(payload)
+        const normalizedJobs = extractJobItems(payload)
           .map((item) => normalizeJob(item))
-          .filter((job): job is Job => job !== null)
+          .filter((job): job is JobOption => job !== null)
 
-        if (mounted && fetchedJobs.length > 0) {
-          setJobs(fetchedJobs)
+        if (active) {
+          setJobs(normalizedJobs)
         }
       } catch (error) {
-        console.error("Erro ao buscar vagas de candidaturas:", error)
+        if (active) {
+          setJobs([])
+          setJobsError(
+            error instanceof Error
+              ? error.message
+              : "Não foi possível carregar as vagas no momento.",
+          )
+        }
+      } finally {
+        if (active) {
+          setIsLoadingJobs(false)
+        }
       }
     }
 
     loadJobs()
 
     return () => {
-      mounted = false
+      active = false
     }
   }, [])
+
+  const currentJob = useMemo(
+    () => jobs.find((job) => job.guidVaga === selectedGuidVaga) ?? null,
+    [jobs, selectedGuidVaga],
+  )
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -479,64 +226,73 @@ export default function CompanyApplicationsPage() {
         </aside>
 
         <main className="min-w-0 flex-1">
-      <header className="mb-8 rounded-3xl border border-slate-200 bg-white px-8 py-6 shadow-sm">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Empresa • Candidaturas</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-900">Pipeline de candidatos por vaga</h1>
-        <p className="mt-2 text-sm text-slate-500">Acompanhe o andamento das candidaturas em cada etapa do processo seletivo.</p>
-      </header>
+          <header className="mb-8 rounded-3xl border border-slate-200 bg-white px-8 py-6 shadow-sm">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Empresa • Candidaturas</p>
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Pipeline de candidatos por vaga</h1>
+            <p className="mt-2 text-sm text-slate-500">Acompanhe o andamento das candidaturas em cada etapa do processo seletivo.</p>
+          </header>
 
-      <section className="space-y-6">
-        {jobs.map((job) => (
-          <article key={job.id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-semibold text-slate-900">{job.title}</h2>
-                <p className="text-sm text-slate-500">{job.team} • {job.location}</p>
+          <section className="mb-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+              <div className="space-y-2">
+                <label htmlFor="job-guid-select" className="text-sm font-semibold text-slate-700">
+                  Selecione a vaga
+                </label>
+                <select
+                  id="job-guid-select"
+                  value={selectedGuidVaga}
+                  onChange={(event) => {
+                    const guid = event.target.value
+                    setSelectedGuidVaga(guid)
+                    setSelectedCandidate(null)
+                  }}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-400"
+                  disabled={isLoadingJobs || Boolean(jobsError)}
+                >
+                  <option value="">Selecione uma vaga para carregar candidaturas</option>
+                  {jobs.map((job) => (
+                    <option key={job.guidVaga} value={job.guidVaga}>
+                      {job.title} ({job.guidVaga})
+                    </option>
+                  ))}
+                </select>
               </div>
+
               <button
                 type="button"
-                onClick={() => setSelectedJob(job)}
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-700"
+                onClick={() => currentJob && setSelectedJob(currentJob)}
+                disabled={!currentJob}
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition enabled:hover:border-slate-300 enabled:hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Ver detalhes
+                Ver detalhes da vaga
               </button>
             </div>
 
-            <div className="-mx-6 overflow-x-auto px-6">
-              <div className="grid min-w-[1200px] grid-cols-6 gap-4">
-                {stages.map((stage) => (
-                  <div key={stage.key} className="flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-slate-700">{stage.label}</span>
-                      <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500">{job.stages[stage.key].length}</span>
-                    </div>
-                    <div className="flex flex-col gap-3">
-                      {job.stages[stage.key].length === 0 ? (
-                        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-xs font-medium text-slate-400">Sem candidatos</div>
-                      ) : (
-                        job.stages[stage.key].map((person) => (
-                          <button
-                            type="button"
-                            key={person.id}
-                            onClick={() => setSelectedCandidate(person)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition hover:border-slate-300 hover:shadow-md"
-                          >
-                            <div className="mb-2 flex items-center justify-between">
-                              <h3 className="text-sm font-semibold text-slate-900">{person.name}</h3>
-                              <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">{person.status}</span>
-                            </div>
-                            <p className="text-xs text-slate-500">{person.role}</p>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                ))}
+            {isLoadingJobs ? (
+              <p className="mt-4 text-sm text-slate-500">Carregando vagas...</p>
+            ) : null}
+
+            {jobsError ? (
+              <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                {jobsError}
               </div>
-            </div>
-          </article>
-        ))}
-      </section>
+            ) : null}
+          </section>
+
+          {!selectedGuidVaga ? (
+            <section className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500 shadow-sm">
+              Selecione uma vaga para visualizar os candidatos por etapa.
+            </section>
+          ) : (
+            <section className="space-y-6">
+              <ApplicationBoardFromApi
+                guidVaga={selectedGuidVaga}
+                colunas={boardColumns}
+                draggable={false}
+                onApplicationSelect={(application) => setSelectedCandidate(application)}
+              />
+            </section>
+          )}
         </main>
       </div>
 
@@ -560,10 +316,8 @@ export default function CompanyApplicationsPage() {
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <div className="rounded-2xl bg-slate-50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Número de candidatos</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-800">
-                  {Object.values(selectedJob.stages).reduce((total, stageCandidates) => total + stageCandidates.length, 0)}
-                </p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Guid da vaga</p>
+                <p className="mt-2 text-base font-semibold text-slate-800">{selectedJob.guidVaga}</p>
               </div>
               <div className="rounded-2xl bg-slate-50 p-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Criador da vaga</p>
@@ -578,11 +332,8 @@ export default function CompanyApplicationsPage() {
                 <p className="mt-2 text-base font-semibold text-slate-800">{selectedJob.salaryRange}</p>
               </div>
               <div className="rounded-2xl bg-slate-50 p-5 md:col-span-2 xl:col-span-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Download de relatório</p>
-                <a href={selectedJob.reportUrl} className="mt-2 inline-block text-sm font-semibold text-blue-600 underline decoration-blue-200 underline-offset-4">
-                  {selectedJob.reportUrl}
-                </a>
-                <p className="mt-2 text-xs text-slate-500">Link ilustrativo sem ação para visualização de layout.</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Relatório</p>
+                <p className="mt-2 text-sm font-semibold text-slate-700">{selectedJob.reportUrl}</p>
               </div>
             </div>
           </div>
@@ -595,8 +346,8 @@ export default function CompanyApplicationsPage() {
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Perfil do candidato</p>
-                <h2 className="text-2xl font-semibold text-slate-900">{selectedCandidate.name}</h2>
-                <p className="text-sm text-slate-500">{selectedCandidate.role}</p>
+                <h2 className="text-2xl font-semibold text-slate-900">{fallback(selectedCandidate.nome)}</h2>
+                <p className="text-sm text-slate-500">{fallback(selectedCandidate.cargo)}</p>
               </div>
               <button
                 type="button"
@@ -608,21 +359,21 @@ export default function CompanyApplicationsPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Email</p><p className="text-sm font-medium text-slate-700">{selectedCandidate.email}</p></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Telefone</p><p className="text-sm font-medium text-slate-700">{selectedCandidate.phone}</p></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Modelo de trabalho</p><p className="text-sm font-medium text-slate-700">{selectedCandidate.workModel}</p></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Senioridade</p><p className="text-sm font-medium text-slate-700">{selectedCandidate.seniority}</p></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Experiência</p><p className="text-sm font-medium text-slate-700">{selectedCandidate.experience}</p></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Email</p><p className="text-sm font-medium text-slate-700">{fallback(selectedCandidate.email)}</p></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Telefone</p><p className="text-sm font-medium text-slate-700">{fallback(selectedCandidate.telefone)}</p></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Modelo de trabalho</p><p className="text-sm font-medium text-slate-700">{fallback(selectedCandidate.modeloTrabalho)}</p></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Senioridade</p><p className="text-sm font-medium text-slate-700">{fallback(selectedCandidate.senioridade)}</p></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Experiência</p><p className="text-sm font-medium text-slate-700">{fallback(selectedCandidate.experiencia)}</p></div>
               <div className="rounded-2xl bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">LinkedIn</p>
-                <a href={selectedCandidate.linkedinUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-slate-700 underline decoration-slate-200 underline-offset-4 hover:text-slate-900">{selectedCandidate.linkedinUrl}</a>
+                <p className="text-sm font-medium text-slate-700">{fallback(selectedCandidate.linkedinUrl)}</p>
               </div>
             </div>
 
             <div className="mt-6 rounded-2xl border border-slate-100 bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Skills</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {selectedCandidate.skills.map((skill) => (
+                {(selectedCandidate.skills?.length ? selectedCandidate.skills : ["Não informado"]).map((skill) => (
                   <span key={skill} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{skill}</span>
                 ))}
               </div>

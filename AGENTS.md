@@ -50,6 +50,7 @@ Todos os endpoints de recursos são versionados sob `/api`.
 - `POST /` — cria candidato (obrigatório: `guid_id`)
 - `GET /` — lista candidatos (query: `limit` 1–100, `lastKey`)
 - `GET /:id` — detalhe de candidato
+- `GET /:by-job-guids` - lista candidatos por guid da vaga(query: `guid_vaga`)
 - `PUT /:id` — atualiza candidato
 - `DELETE /:id` — remove candidato
 
