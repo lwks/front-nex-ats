@@ -210,7 +210,10 @@ function normalizeJob(job: ApiJob, index: number): JobCard {
     job.candidatura_url,
     job.candidatura_link,
   )
-  const fallbackHref = `/candidaturas?vaga=${encodeURIComponent(idSource)}`
+  const jobGuid = pickString(job.guid_id, job.uuid, job.id, job.codigo)
+  const fallbackHref = jobGuid
+    ? `/candidaturas?vagaGuid=${encodeURIComponent(jobGuid)}`
+    : `/candidaturas?vaga=${encodeURIComponent(idSource)}`
   const applyHref = applyCandidate ?? fallbackHref
   const isExternal = !!applyCandidate && /^https?:\/\//.test(applyHref)
 

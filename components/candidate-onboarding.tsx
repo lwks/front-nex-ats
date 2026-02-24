@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useMemo, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { CheckCircle2, CircleAlert } from "lucide-react"
 
 import { Header } from "./header"
@@ -45,6 +45,16 @@ type SubmissionFeedback = {
 
 export function CandidateOnboarding() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const jobGuid = useMemo(() => {
+    const guidFromQuery = searchParams.get("vagaGuid")
+    if (guidFromQuery && guidFromQuery.trim().length > 0) {
+      return guidFromQuery.trim()
+    }
+
+    const legacyGuid = searchParams.get("vaga")
+    return legacyGuid && legacyGuid.trim().length > 0 ? legacyGuid.trim() : null
+  }, [searchParams])
   const [currentStep, setCurrentStep] = useState(1)
   const [candidateData, setCandidateData] = useState<Partial<CandidateData>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -79,9 +89,20 @@ export function CandidateOnboarding() {
 
     setIsSubmitting(true)
 
+    if (!jobGuid) {
+      setFeedbackModal({
+        type: "error",
+        title: "Vaga não identificada",
+        message: "Não conseguimos identificar a vaga para esta candidatura. Volte à listagem e tente novamente.",
+      })
+      setIsSubmitting(false)
+      return
+    }
+
     const payload: CandidateProfilePayload = {
       ...(mergedData as CandidateData),
       guid_id: crypto.randomUUID(),
+      guid_vaga: jobGuid,
       cd_cnpj: generateRandomCnpj(),
     }
 
