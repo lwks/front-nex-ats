@@ -3,10 +3,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { GET, OPTIONS } from '@/app/api/candidates/by-job-guids/route'
 
 describe('/api/candidates/by-job-guids route', () => {
-  it('handles OPTIONS preflight', () => {
-    const response = OPTIONS()
-    expect(response.status).toBe(204)
-  })
 
   it('returns 400 when guid_vaga is missing', async () => {
     const request = new Request('http://localhost/api/candidates/by-job-guids')

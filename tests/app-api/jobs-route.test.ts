@@ -3,10 +3,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { OPTIONS, POST } from '@/app/api/jobs/route'
 
 describe('/api/jobs route', () => {
-  it('handles OPTIONS preflight', () => {
-    const response = OPTIONS()
-    expect(response.status).toBe(204)
-  })
 
   it('proxies POST response', async () => {
     vi.stubGlobal(

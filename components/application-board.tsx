@@ -278,18 +278,19 @@ export function ApplicationBoard({
   }
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
-      {colunas.map((column) => (
-        <div
-          key={column.id}
-          className={cn(
-            "flex min-h-[320px] flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm transition",
-            draggable && activeColumn === column.id && "border-primary/70 bg-primary/5",
-          )}
-          onDragOver={handleDragOver(column.id)}
-          onDrop={handleDrop(column.id)}
-          onDragLeave={() => draggable && setActiveColumn(null)}
-        >
+    <div className="overflow-x-auto pb-2">
+      <section className="flex min-w-max gap-6">
+        {colunas.map((column) => (
+          <div
+            key={column.id}
+            className={cn(
+              "flex min-h-[320px] w-[260px] shrink-0 flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm transition",
+              draggable && activeColumn === column.id && "border-primary/70 bg-primary/5",
+            )}
+            onDragOver={handleDragOver(column.id)}
+            onDrop={handleDrop(column.id)}
+            onDragLeave={() => draggable && setActiveColumn(null)}
+          >
           <header className="space-y-1">
             <h3 className="text-sm font-semibold text-foreground">{column.titulo}</h3>
             {column.descricao ? (
@@ -353,9 +354,10 @@ export function ApplicationBoard({
               </div>
             ) : null}
           </div>
-        </div>
-      ))}
-    </section>
+          </div>
+        ))}
+      </section>
+    </div>
   )
 }
 

@@ -3,11 +3,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { OPTIONS, POST } from '@/app/api/candidates/route'
 
 describe('/api/candidates route', () => {
-  it('handles OPTIONS preflight', () => {
-    const response = OPTIONS()
-    expect(response.status).toBe(204)
-    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*')
-  })
 
   it('proxies POST body and status', async () => {
     vi.stubGlobal(

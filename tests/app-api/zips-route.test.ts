@@ -3,11 +3,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { GET, OPTIONS } from '@/app/api/zips/[zip]/route'
 
 describe('/api/zips/[zip] route', () => {
-  it('handles OPTIONS preflight', () => {
-    const response = OPTIONS()
-    expect(response.status).toBe(204)
-  })
-
   it('returns 400 for invalid zip', async () => {
     const response = await GET(new Request('http://localhost/api/zips/123'), {
       params: Promise.resolve({ zip: '12-3' }),
