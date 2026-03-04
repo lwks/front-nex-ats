@@ -14,9 +14,13 @@ export async function OPTIONS() {
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url)
-    const guidVaga = url.searchParams.get("guid_vaga")?.trim()
+    const guidVagas = url.searchParams
+      .getAll("guid_vaga")
+      .flatMap((value) => value.split(","))
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
 
-    if (!guidVaga) {
+    if (guidVagas.length === 0) {
       return NextResponse.json(
         { message: "O parâmetro guid_vaga é obrigatório." },
         {
@@ -26,7 +30,9 @@ export async function GET(request: Request) {
       )
     }
 
-    const query = new URLSearchParams({ guid_vaga: guidVaga })
+    const query = new URLSearchParams()
+    guidVagas.forEach((guidVaga) => query.append("guid_vaga", guidVaga))
+
     const upstreamResponse = await fetch(`${CANDIDATES_BY_JOB_GUIDS_API_URL}?${query.toString()}`, {
       method: "GET",
       headers: {
