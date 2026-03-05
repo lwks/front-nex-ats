@@ -43,6 +43,13 @@ http://localhost:3000
 2. O formulário multi-etapas coleta dados pessoais, profissionais (em duas etapas, incluindo upload de CV em PDF) e interesses.
 3. Ao final, os dados são apenas exibidos no console e via `alert` (não há integração com backend).
 
+## Contratos de API utilizados no front-end
+
+- `GET /api/candidates/by-job-guids`: consulta candidatos por uma ou mais vagas usando o parâmetro `guid_vaga`.
+  - Formatos aceitos pelo front-end proxy: `?guid_vaga=a,b,c` **ou** `?guid_vaga=a&guid_vaga=b&guid_vaga=c`.
+  - O proxy normaliza os GUIDs recebidos e encaminha ao upstream no formato com múltiplos `guid_vaga`.
+  - Quando nenhum GUID válido é informado, a rota retorna `400` com a mensagem `O parâmetro guid_vaga é obrigatório.`.
+
 ## Observações e pontos de atenção
 
 - **Textos em UTF-8**: revisamos os arquivos da interface para garantir que os textos em português estejam com a acentuação correta.
