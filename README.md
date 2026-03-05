@@ -57,6 +57,41 @@ http://localhost:3000
 - **Dependências enxutas**: o `package.json` foi limpo para conter apenas os pacotes realmente utilizados, reduzindo tempo de instalação e superfície de manutenção.
 - **Persistência ausente**: o fluxo continua apenas exibindo os dados no console. Para uso real, será necessário integrar com uma API ou serviço de armazenamento.
 
+
+## Autenticação com AWS Cognito
+
+Foi adicionado um fluxo de login/logout no front-end usando **OAuth2 Hosted UI do AWS Cognito**.
+
+### Variáveis de ambiente
+
+Configure no `.env.local`:
+
+```bash
+NEXT_PUBLIC_COGNITO_DOMAIN=<seu-dominio-cognito>
+NEXT_PUBLIC_COGNITO_CLIENT_ID=<app-client-id>
+NEXT_PUBLIC_COGNITO_REDIRECT_URI=http://localhost:3000/auth/callback
+NEXT_PUBLIC_COGNITO_LOGOUT_URI=http://localhost:3000
+# opcional
+NEXT_PUBLIC_COGNITO_SCOPE=openid email profile
+NEXT_PUBLIC_COGNITO_RESPONSE_TYPE=token
+```
+
+### Rotas adicionadas
+
+- `GET /login`: tela de login do front com ação para redirecionar ao Cognito.
+- `GET /auth/callback`: captura os tokens retornados no fragmento da URL e conclui a sessão local.
+
+### Comportamento
+
+1. Usuário clica em **Login** no cabeçalho ou entra em `/login`.
+2. Front redireciona para `https://<domain>/oauth2/authorize`.
+3. Cognito autentica e redireciona para `/auth/callback` com `access_token` e `id_token`.
+4. Front persiste os tokens no `localStorage`, valida expiração e extrai os perfis (`cognito:groups`) do `id_token`.
+5. O cabeçalho passa a exibir usuário autenticado, perfis disponíveis e ação de **Logout**.
+6. No logout, a sessão local é limpa e o usuário é redirecionado para `https://<domain>/logout` (ou `/` como fallback).
+
+> Observação: a validação implementada no front é de expiração e parsing do JWT para UX/roteamento. Para autorização sensível, valide tokens também no backend.
+
 ## Deploy
 
 - Hospedagem atual no Vercel: [https://vercel.com/lraposoia-6118s-projects/v0-nex-people-solutions](https://vercel.com/lraposoia-6118s-projects/v0-nex-people-solutions)
