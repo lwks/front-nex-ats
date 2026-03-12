@@ -73,24 +73,46 @@ NEXT_PUBLIC_COGNITO_REDIRECT_URI=http://localhost:3000/auth/callback
 NEXT_PUBLIC_COGNITO_LOGOUT_URI=http://localhost:3000
 # opcional
 NEXT_PUBLIC_COGNITO_SCOPE=openid email profile
-NEXT_PUBLIC_COGNITO_RESPONSE_TYPE=token
+NEXT_PUBLIC_COGNITO_RESPONSE_TYPE=code
 ```
 
 ### Rotas adicionadas
 
 - `GET /login`: tela de login do front com ação para redirecionar ao Cognito.
-- `GET /auth/callback`: captura os tokens retornados no fragmento da URL e conclui a sessão local.
+- `GET /auth/callback`: valida o retorno (`code/state`) e finaliza a troca de token via PKCE.
 
 ### Comportamento
 
 1. Usuário clica em **Login** no cabeçalho ou entra em `/login`.
 2. Front redireciona para `https://<domain>/oauth2/authorize`.
-3. Cognito autentica e redireciona para `/auth/callback` com `access_token` e `id_token`.
-4. Front persiste os tokens no `localStorage`, valida expiração e extrai os perfis (`cognito:groups`) do `id_token`.
-5. O cabeçalho passa a exibir usuário autenticado, perfis disponíveis e ação de **Logout**.
-6. No logout, a sessão local é limpa e o usuário é redirecionado para `https://<domain>/logout` (ou `/` como fallback).
+3. Cognito autentica e redireciona para `/auth/callback` com `code` e `state`.
+4. O front valida `state`/`nonce`, troca o `code` em `/oauth2/token` usando **PKCE (S256)** e persiste os tokens no `localStorage`.
+5. O app valida expiração e extrai os perfis (`cognito:groups`) do `id_token`.
+6. O cabeçalho passa a exibir usuário autenticado, perfis disponíveis e ação de **Logout**.
+7. No logout, a sessão local é limpa e o usuário é redirecionado para `https://<domain>/logout` (ou `/` como fallback).
 
-> Observação: a validação implementada no front é de expiração e parsing do JWT para UX/roteamento. Para autorização sensível, valide tokens também no backend.
+> Observação: a validação implementada no front é para UX/roteamento (expiração, `state` e `nonce`). Para autorização sensível, valide tokens também no backend.
+
+
+### Como validar se o token chegou no front
+
+1. Faça login e aguarde o redirecionamento para `/`.
+2. Abra o DevTools > **Application** > **Local Storage** > chave `nexjob.auth.tokens`.
+3. Verifique se há `accessToken`, `idToken`, `expiresAt` e (quando aplicável) `refreshToken`.
+4. No console, você pode validar rapidamente:
+
+```js
+const raw = localStorage.getItem('nexjob.auth.tokens')
+const tokens = raw ? JSON.parse(raw) : null
+console.log('tokens', tokens)
+```
+
+5. Para validar o perfil extraído do token (`cognito:groups`), decodifique o payload do `idToken` no console:
+
+```js
+const payload = JSON.parse(atob(tokens.idToken.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')))
+console.log(payload['cognito:groups'])
+```
 
 ## Deploy
 

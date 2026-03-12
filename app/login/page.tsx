@@ -26,7 +26,9 @@ export default function LoginPage() {
       {!isAuthenticated && (
         <button
           type="button"
-          onClick={login}
+          onClick={() => {
+            void login()
+          }}
           disabled={isLoading}
           className="mt-8 rounded-full bg-primary px-6 py-3 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >

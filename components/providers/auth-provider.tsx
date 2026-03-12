@@ -2,15 +2,14 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import {
-  buildAuthorizeUrl,
   buildLogoutUrl,
   clearTokens,
-  createState,
   extractAuthProfile,
   getCognitoConfig,
   hasValidSession,
   loadTokens,
   persistTokens,
+  createAuthorizeRequest,
   type CognitoTokens,
 } from '@/lib/auth/cognito'
 
@@ -22,7 +21,7 @@ type AuthContextValue = {
   username?: string
   accessToken?: string
   saveSession: (tokens: CognitoTokens) => void
-  login: () => void
+  login: () => Promise<void>
   logout: () => void
 }
 
@@ -49,9 +48,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTokens(nextTokens)
   }, [])
 
-  const login = useCallback(() => {
+  const login = useCallback(async () => {
     const config = getCognitoConfig()
-    const url = buildAuthorizeUrl(config, createState())
+    const url = await createAuthorizeRequest(config)
     window.location.assign(url)
   }, [])
 

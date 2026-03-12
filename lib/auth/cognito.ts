@@ -10,6 +10,7 @@ export type CognitoConfig = {
 export type CognitoTokens = {
   accessToken: string
   idToken: string
+  refreshToken?: string
   expiresAt: number
   tokenType?: string
 }
@@ -21,9 +22,17 @@ export type AuthProfile = {
   availableProfiles: string[]
 }
 
-const DEFAULT_RESPONSE_TYPE = 'token'
+type AuthTransaction = {
+  state: string
+  nonce: string
+  codeVerifier: string
+  createdAt: number
+}
+
+const DEFAULT_RESPONSE_TYPE = 'code'
 const DEFAULT_SCOPE = 'openid email profile'
 const TOKEN_STORAGE_KEY = 'nexjob.auth.tokens'
+const AUTH_TRANSACTION_KEY = 'nexjob.auth.transaction'
 
 function ensureHttpsDomain(rawDomain: string) {
   const trimmed = rawDomain.trim().replace(/\/+$/, '')
@@ -55,6 +64,40 @@ function decodeBase64Url(value: string) {
   }
 
   return Buffer.from(padded, 'base64').toString('utf-8')
+}
+
+function encodeBase64Url(bytes: Uint8Array) {
+  let binary = ''
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte)
+  })
+
+  const encoded = typeof btoa === 'function' ? btoa(binary) : Buffer.from(binary, 'binary').toString('base64')
+
+  return encoded.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+}
+
+function createRandomString(length = 64) {
+  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~'
+  const randomValues = crypto.getRandomValues(new Uint8Array(length))
+  let result = ''
+
+  for (let i = 0; i < length; i += 1) {
+    result += charset[randomValues[i] % charset.length]
+  }
+
+  return result
+}
+
+async function createCodeChallenge(codeVerifier: string) {
+  const bytes = new TextEncoder().encode(codeVerifier)
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  return encodeBase64Url(new Uint8Array(digest))
+}
+
+function parseQueryParams(queryOrUrl: string) {
+  const value = queryOrUrl.startsWith('?') ? queryOrUrl.slice(1) : queryOrUrl
+  return new URLSearchParams(value)
 }
 
 export function parseJwtPayload(token?: string): Record<string, unknown> | null {
@@ -106,21 +149,21 @@ export function extractAuthProfile(idToken?: string): AuthProfile {
   }
 }
 
-export function buildAuthorizeUrl(config: CognitoConfig, state: string) {
+export function buildAuthorizeUrl(config: CognitoConfig, params: Record<string, string>) {
   if (!config.domain || !config.clientId || !config.redirectUri) {
     throw new Error('Configuração do Cognito incompleta para login.')
   }
 
   const domain = ensureHttpsDomain(config.domain)
-  const params = new URLSearchParams({
+  const searchParams = new URLSearchParams({
     client_id: config.clientId,
     response_type: config.responseType ?? DEFAULT_RESPONSE_TYPE,
     scope: normalizeScope(config.scope),
     redirect_uri: config.redirectUri,
-    state,
+    ...params,
   })
 
-  return `${domain}/oauth2/authorize?${params.toString()}`
+  return `${domain}/oauth2/authorize?${searchParams.toString()}`
 }
 
 export function buildLogoutUrl(config: CognitoConfig) {
@@ -160,26 +203,137 @@ export function getCognitoConfig(): CognitoConfig {
   }
 }
 
-export function createState() {
-  return crypto.randomUUID()
+function saveAuthTransaction(transaction: AuthTransaction) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.sessionStorage.setItem(AUTH_TRANSACTION_KEY, JSON.stringify(transaction))
 }
 
-export function parseTokensFromHash(hash: string): CognitoTokens | null {
-  const normalizedHash = hash.startsWith('#') ? hash.slice(1) : hash
-  const params = new URLSearchParams(normalizedHash)
-  const accessToken = params.get('access_token')
-  const idToken = params.get('id_token')
-  const expiresIn = Number.parseInt(params.get('expires_in') ?? '', 10)
-
-  if (!accessToken || !idToken || Number.isNaN(expiresIn)) {
+function loadAuthTransaction() {
+  if (typeof window === 'undefined') {
     return null
   }
 
+  const raw = window.sessionStorage.getItem(AUTH_TRANSACTION_KEY)
+  if (!raw) {
+    return null
+  }
+
+  try {
+    return JSON.parse(raw) as AuthTransaction
+  } catch {
+    return null
+  }
+}
+
+function clearAuthTransaction() {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.sessionStorage.removeItem(AUTH_TRANSACTION_KEY)
+}
+
+export async function createAuthorizeRequest(config: CognitoConfig) {
+  const state = createRandomString(32)
+  const nonce = createRandomString(32)
+  const codeVerifier = createRandomString(96)
+  const codeChallenge = await createCodeChallenge(codeVerifier)
+
+  saveAuthTransaction({
+    state,
+    nonce,
+    codeVerifier,
+    createdAt: Date.now(),
+  })
+
+  return buildAuthorizeUrl(config, {
+    state,
+    nonce,
+    code_challenge_method: 'S256',
+    code_challenge: codeChallenge,
+  })
+}
+
+export function parseAuthCallbackParams(query: string) {
+  const params = parseQueryParams(query)
+
   return {
-    accessToken,
-    idToken,
-    tokenType: params.get('token_type') ?? undefined,
-    expiresAt: Date.now() + expiresIn * 1000,
+    code: params.get('code') ?? undefined,
+    state: params.get('state') ?? undefined,
+    error: params.get('error') ?? undefined,
+    errorDescription: params.get('error_description') ?? undefined,
+  }
+}
+
+export async function exchangeCodeForTokens(config: CognitoConfig, callbackQuery: string): Promise<CognitoTokens> {
+  if (!config.domain || !config.clientId || !config.redirectUri) {
+    throw new Error('Configuração do Cognito incompleta para troca de código.')
+  }
+
+  const callback = parseAuthCallbackParams(callbackQuery)
+
+  if (callback.error) {
+    throw new Error(callback.errorDescription ?? callback.error)
+  }
+
+  if (!callback.code || !callback.state) {
+    throw new Error('Parâmetros inválidos no callback do Cognito.')
+  }
+
+  const transaction = loadAuthTransaction()
+  clearAuthTransaction()
+
+  if (!transaction || callback.state !== transaction.state) {
+    throw new Error('Falha de segurança no login (state inválido).')
+  }
+
+  const domain = ensureHttpsDomain(config.domain)
+  const body = new URLSearchParams({
+    grant_type: 'authorization_code',
+    client_id: config.clientId,
+    code: callback.code,
+    redirect_uri: config.redirectUri,
+    code_verifier: transaction.codeVerifier,
+  })
+
+  const response = await fetch(`${domain}/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body,
+  })
+
+  if (!response.ok) {
+    throw new Error('Falha ao trocar código por token no Cognito.')
+  }
+
+  const data = (await response.json()) as {
+    access_token?: string
+    id_token?: string
+    refresh_token?: string
+    expires_in?: number
+    token_type?: string
+  }
+
+  if (!data.access_token || !data.id_token || typeof data.expires_in !== 'number') {
+    throw new Error('Resposta inválida do endpoint de token do Cognito.')
+  }
+
+  const payload = parseJwtPayload(data.id_token)
+  if (!payload || payload.nonce !== transaction.nonce) {
+    throw new Error('Falha de segurança no login (nonce inválido).')
+  }
+
+  return {
+    accessToken: data.access_token,
+    idToken: data.id_token,
+    refreshToken: data.refresh_token,
+    tokenType: data.token_type,
+    expiresAt: Date.now() + data.expires_in * 1000,
   }
 }
 

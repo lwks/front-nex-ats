@@ -3,22 +3,25 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/components/providers/auth-provider'
-import { parseTokensFromHash } from '@/lib/auth/cognito'
+import { exchangeCodeForTokens, getCognitoConfig } from '@/lib/auth/cognito'
 
 export default function AuthCallbackPage() {
   const { saveSession } = useAuth()
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const tokens = parseTokensFromHash(window.location.hash)
-
-    if (!tokens) {
-      setError('Não foi possível concluir o login. Tokens inválidos.')
-      return
+    async function completeLogin() {
+      try {
+        const tokens = await exchangeCodeForTokens(getCognitoConfig(), window.location.search)
+        saveSession(tokens)
+        window.location.replace('/')
+      } catch (reason) {
+        const message = reason instanceof Error ? reason.message : 'Não foi possível concluir o login.'
+        setError(message)
+      }
     }
 
-    saveSession(tokens)
-    window.location.replace('/')
+    void completeLogin()
   }, [saveSession])
 
   return (
