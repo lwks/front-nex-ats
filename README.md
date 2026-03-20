@@ -61,6 +61,16 @@ Defina as variáveis abaixo para habilitar o fluxo OAuth2/PKCE com Amazon Cognit
 
 ## Contratos de API utilizados no front-end
 
+### Autenticação Cognito
+
+- `GET /api/auth/login`: inicia o fluxo Authorization Code, gera `state` + `code_verifier` em cookies HTTP-only curtos e redireciona para `https://<cognito-domain>/oauth2/authorize` com `response_type=code`, `client_id`, `redirect_uri`, `scope`, `state`, `code_challenge` e `code_challenge_method=S256`.
+- `GET /api/auth/callback`: recebe `code` e `state` da query string, valida o `state` salvo em cookie HTTP-only, faz `POST https://<cognito-domain>/oauth2/token` com `application/x-www-form-urlencoded` e persiste `access_token`, `id_token`, `refresh_token` e a expiração em cookies HTTP-only.
+- Variáveis de ambiente relevantes:
+  - `COGNITO_DOMAIN` ou `NEXT_PUBLIC_COGNITO_DOMAIN` (default atual: `https://us-east-1sa8vsmupy.auth.us-east-1.amazoncognito.com`)
+  - `COGNITO_CLIENT_ID` ou `NEXT_PUBLIC_COGNITO_CLIENT_ID`
+  - `COGNITO_REDIRECT_URI` ou `NEXT_PUBLIC_COGNITO_REDIRECT_URI` (default: `<origin>/api/auth/callback`)
+  - `COGNITO_SCOPE` ou `NEXT_PUBLIC_COGNITO_SCOPE` (default: `openid email profile`)
+
 
 - `GET /api/auth/callback`: endpoint server-side do App Router para concluir login OAuth com Authorization Code + PKCE.
   - Lê `code`, `state`, `error` e `error_description` da URL de retorno do provedor.
@@ -68,6 +78,8 @@ Defina as variáveis abaixo para habilitar o fluxo OAuth2/PKCE com Amazon Cognit
   - Faz a troca no backend para `${AUTH_BASE_URL}/oauth2/token`, sem expor `client_secret` no navegador.
   - Em sucesso, persiste `auth_access_token`, `auth_refresh_token` e `auth_id_token` em cookies `httpOnly`, `secure`, `sameSite=lax` e `path=/`, e redireciona para `AUTH_SUCCESS_REDIRECT_PATH` (default: `/`).
   - Em falha, limpa cookies transitórios/de autenticação e redireciona para `AUTH_ERROR_REDIRECT_PATH` (default: `/login`) com `?message=` amigável.
+
+### Lista de candidatos 
 - `GET /api/candidates/by-job-guids`: consulta candidatos por uma ou mais vagas usando o parâmetro `guid_vaga`.
   - Formatos aceitos pelo front-end proxy: `?guid_vaga=a,b,c` **ou** `?guid_vaga=a&guid_vaga=b&guid_vaga=c`.
   - O proxy normaliza os GUIDs recebidos e encaminha ao upstream no formato com múltiplos `guid_vaga`.

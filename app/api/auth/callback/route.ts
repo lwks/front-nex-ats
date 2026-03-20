@@ -1,71 +1,119 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from 'next/server.js'
+import {
+  ACCESS_TOKEN_COOKIE,
+  AUTH_CODE_VERIFIER_COOKIE,
+  AUTH_STATE_COOKIE,
+  ID_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  TOKEN_EXPIRES_AT_COOKIE,
+  buildTokenRequestBody,
+  clearAuthFlowCookies,
+  getCognitoClientId,
+  getCognitoDomain,
+  getCookieBaseOptions,
+  getRedirectUri,
+} from '../../../../lib/auth/cognito.ts'
 
-import { exchangeCodeForToken } from "@/services/auth-service"
+export async function GET(request: NextRequest) {
+  const code = request.nextUrl.searchParams.get('code')
+  const returnedState = request.nextUrl.searchParams.get('state')
+  const savedState = request.cookies.get(AUTH_STATE_COOKIE)?.value
+  const codeVerifier = request.cookies.get(AUTH_CODE_VERIFIER_COOKIE)?.value
+  const clientId = getCognitoClientId()
+  const secure = request.nextUrl.protocol === 'https:' || process.env.NODE_ENV === 'production'
 
-const STATE_COOKIE_NAME = "auth_state"
-const CODE_VERIFIER_COOKIE_NAME = "auth_code_verifier"
-const ACCESS_TOKEN_COOKIE_NAME = "auth_access_token"
-const ID_TOKEN_COOKIE_NAME = "auth_id_token"
-const REFRESH_TOKEN_COOKIE_NAME = "auth_refresh_token"
-const CALLBACK_ERROR_REDIRECT = "/login?error=auth_callback_failed"
-const SUCCESS_REDIRECT = "/"
-
-function buildSessionCookieOptions(request: Request, maxAge?: number) {
-  return {
-    httpOnly: true,
-    maxAge,
-    path: "/",
-    sameSite: "lax" as const,
-    secure: new URL(request.url).protocol === "https:",
-  }
-}
-
-export async function GET(request: Request) {
-  const url = new URL(request.url)
-  const code = url.searchParams.get("code")
-  const state = url.searchParams.get("state")
-
-  if (!code || !state) {
-    return NextResponse.redirect(new URL(CALLBACK_ERROR_REDIRECT, request.url))
-  }
-
-  const stateCookie = request.headers.get("cookie")
-    ?.split(/;\s*/)
-    .find((value) => value.startsWith(`${STATE_COOKIE_NAME}=`))
-    ?.split("=")[1]
-  const codeVerifier = request.headers.get("cookie")
-    ?.split(/;\s*/)
-    .find((value) => value.startsWith(`${CODE_VERIFIER_COOKIE_NAME}=`))
-    ?.split("=")[1]
-
-  if (!stateCookie || !codeVerifier || stateCookie !== state) {
-    return NextResponse.redirect(new URL(CALLBACK_ERROR_REDIRECT, request.url))
+  if (!code || !returnedState) {
+    return NextResponse.json(
+      { message: 'Parâmetros code e state são obrigatórios no callback.' },
+      { status: 400 },
+    )
   }
 
-  try {
-    const tokens = await exchangeCodeForToken(code, codeVerifier)
-    const response = NextResponse.redirect(new URL(SUCCESS_REDIRECT, request.url))
-    const cookieOptions = buildSessionCookieOptions(request, tokens.expires_in)
-
-    response.cookies.set(ACCESS_TOKEN_COOKIE_NAME, tokens.access_token, cookieOptions)
-
-    if (tokens.id_token) {
-      response.cookies.set(ID_TOKEN_COOKIE_NAME, tokens.id_token, cookieOptions)
-    }
-
-    if (tokens.refresh_token) {
-      response.cookies.set(REFRESH_TOKEN_COOKIE_NAME, tokens.refresh_token, {
-        ...cookieOptions,
-        maxAge: 60 * 60 * 24 * 30,
-      })
-    }
-
-    response.cookies.delete(STATE_COOKIE_NAME)
-    response.cookies.delete(CODE_VERIFIER_COOKIE_NAME)
-
-    return response
-  } catch (error) {
-    console.error("Erro ao concluir callback do Cognito:", error)
-    return NextResponse.redirect(new URL(CALLBACK_ERROR_REDIRECT, request.url))
+  if (!savedState || returnedState !== savedState) {
+    return NextResponse.json(
+      { message: 'State inválido ou expirado.' },
+      { status: 400 },
+    )
   }
+
+  if (!codeVerifier) {
+    return NextResponse.json(
+      { message: 'Code verifier ausente ou expirado.' },
+      { status: 400 },
+    )
+  }
+
+  if (!clientId) {
+    return NextResponse.json(
+      { message: 'COGNITO_CLIENT_ID não configurado.' },
+      { status: 500 },
+    )
+  }
+
+  const redirectUri = getRedirectUri(request.nextUrl.origin)
+  const tokenResponse = await fetch(`${getCognitoDomain()}/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: buildTokenRequestBody({
+      clientId,
+      code,
+      redirectUri,
+      codeVerifier,
+    }).toString(),
+    cache: 'no-store',
+  }).catch(async (error: unknown) => {
+    console.error('Erro ao trocar authorization code por tokens no Cognito.', error)
+    return NextResponse.json({ message: 'Falha ao comunicar com o Cognito.' }, { status: 502 })
+  })
+
+  if (tokenResponse instanceof NextResponse) {
+    clearAuthFlowCookies(tokenResponse, secure)
+    return tokenResponse
+  }
+
+  const responseBody = await tokenResponse.json().catch(() => null)
+
+  if (!tokenResponse.ok || !responseBody?.access_token || !responseBody?.id_token) {
+    const errorResponse = NextResponse.json(
+      {
+        message: 'Falha ao obter tokens do Cognito.',
+        details: responseBody,
+      },
+      { status: tokenResponse.status || 502 },
+    )
+
+    clearAuthFlowCookies(errorResponse, secure)
+    return errorResponse
+  }
+
+  const expiresIn = Number(responseBody.expires_in ?? 0)
+  const expiresAt = expiresIn > 0 ? new Date(Date.now() + expiresIn * 1000).toISOString() : ''
+  const response = NextResponse.redirect(new URL('/', request.nextUrl))
+  const baseOptions = getCookieBaseOptions(secure)
+
+  response.cookies.set(ACCESS_TOKEN_COOKIE, responseBody.access_token, {
+    ...baseOptions,
+    maxAge: expiresIn > 0 ? expiresIn : undefined,
+  })
+  response.cookies.set(ID_TOKEN_COOKIE, responseBody.id_token, {
+    ...baseOptions,
+    maxAge: expiresIn > 0 ? expiresIn : undefined,
+  })
+
+  if (responseBody.refresh_token) {
+    response.cookies.set(REFRESH_TOKEN_COOKIE, responseBody.refresh_token, baseOptions)
+  }
+
+  if (expiresAt) {
+    response.cookies.set(TOKEN_EXPIRES_AT_COOKIE, expiresAt, {
+      ...baseOptions,
+      maxAge: expiresIn,
+    })
+  }
+
+  clearAuthFlowCookies(response, secure)
+
+  return response
 }
