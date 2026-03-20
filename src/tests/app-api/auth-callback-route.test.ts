@@ -1,83 +1,156 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/services/auth-service', () => ({
-  exchangeCodeForToken: vi.fn(),
-}))
+import { AUTH_CALLBACK_COOKIE_NAMES, GET } from '@/app/api/auth/callback/route'
 
 describe('/api/auth/callback route', () => {
+  const originalEnv = { ...process.env }
+
   beforeEach(() => {
-    vi.resetAllMocks()
+    vi.restoreAllMocks()
+    process.env.AUTH_BASE_URL = 'https://auth.example.com/'
+    process.env.AUTH_CLIENT_ID = 'client-id'
+    process.env.AUTH_CLIENT_SECRET = 'client-secret'
+    process.env.AUTH_SUCCESS_REDIRECT_PATH = '/'
+    process.env.AUTH_ERROR_REDIRECT_PATH = '/login'
+    delete process.env.AUTH_REDIRECT_URI
   })
 
-  it('redirects to login when code or state is missing', async () => {
-    const { GET } = await import('@/app/api/auth/callback/route')
-
-    const response = await GET(new Request('https://example.com/api/auth/callback?code=only-code'))
-
-    expect(response.status).toBe(307)
-    expect(response.headers.get('location')).toBe('https://example.com/login?error=auth_callback_failed')
+  afterEach(() => {
+    process.env = { ...originalEnv }
   })
 
-  it('redirects to login when state cookie does not match', async () => {
-    const { GET } = await import('@/app/api/auth/callback/route')
-
-    const response = await GET(
-      new Request('https://example.com/api/auth/callback?code=auth-code&state=expected-state', {
-        headers: {
-          cookie: 'auth_state=other-state; auth_code_verifier=pkce-value',
-        },
+  it('troca o authorization code por tokens, persiste cookies seguros e redireciona para a home', async () => {
+    const fetchSpy = vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          access_token: 'access-token',
+          refresh_token: 'refresh-token',
+          id_token: 'id-token',
+          expires_in: 3600,
+          refresh_expires_in: 7200,
+        }),
       }),
     )
 
-    expect(response.headers.get('location')).toBe('https://example.com/login?error=auth_callback_failed')
-  })
-
-  it('stores tokens in cookies and clears transient PKCE cookies', async () => {
-    const authService = await import('@/services/auth-service')
-    vi.mocked(authService.exchangeCodeForToken).mockResolvedValue({
-      access_token: 'access-token',
-      expires_in: 3600,
-      id_token: 'id-token',
-      refresh_token: 'refresh-token',
-      token_type: 'Bearer',
+    const request = new Request('https://app.example.com/api/auth/callback?code=valid-code&state=expected-state', {
+      headers: {
+        cookie: `${AUTH_CALLBACK_COOKIE_NAMES.state}=expected-state; ${AUTH_CALLBACK_COOKIE_NAMES.codeVerifier}=code-verifier-value`,
+      },
     })
 
-    const { GET } = await import('@/app/api/auth/callback/route')
+    const response = await GET(request)
 
-    const response = await GET(
-      new Request('https://example.com/api/auth/callback?code=auth-code&state=expected-state', {
-        headers: {
-          cookie: 'auth_state=expected-state; auth_code_verifier=pkce-value',
-        },
-      }),
-    )
-
-    expect(authService.exchangeCodeForToken).toHaveBeenCalledWith('auth-code', 'pkce-value')
+    expect(fetchSpy).toHaveBeenCalledWith('https://auth.example.com/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Accept: 'application/json',
+      },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: 'client-id',
+        client_secret: 'client-secret',
+        code: 'valid-code',
+        redirect_uri: 'https://app.example.com/api/auth/callback',
+        code_verifier: 'code-verifier-value',
+      }).toString(),
+      cache: 'no-store',
+    })
     expect(response.status).toBe(307)
-    expect(response.headers.get('location')).toBe('https://example.com/')
-    const cookies = response.headers.get('set-cookie') ?? ''
-    expect(cookies).toContain('auth_access_token=access-token')
-    expect(cookies).toContain('auth_id_token=id-token')
-    expect(cookies).toContain('auth_refresh_token=refresh-token')
-    expect(cookies).toContain('auth_state=;')
-    expect(cookies).toContain('auth_code_verifier=;')
+    expect(response.headers.get('location')).toBe('https://app.example.com/')
+
+    const setCookieHeader = response.headers.get('set-cookie')
+    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.accessToken}=access-token`)
+    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.refreshToken}=refresh-token`)
+    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.idToken}=id-token`)
+    expect(setCookieHeader).toContain('HttpOnly')
+    expect(setCookieHeader).toContain('Secure')
+    expect(setCookieHeader).toContain('SameSite=Lax')
+    expect(setCookieHeader).toContain('Path=/')
+    expect(setCookieHeader).toContain('Max-Age=3600')
+    expect(setCookieHeader).toContain('Max-Age=7200')
+    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.state}=;`)
+    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.codeVerifier}=;`)
   })
 
-  it('redirects to login when token exchange fails', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
-    const authService = await import('@/services/auth-service')
-    vi.mocked(authService.exchangeCodeForToken).mockRejectedValue(new Error('token exchange failed'))
+  it('limpa cookies e redireciona com mensagem amigável quando o state não confere', async () => {
+    const fetchSpy = vi.stubGlobal('fetch', vi.fn())
 
-    const { GET } = await import('@/app/api/auth/callback/route')
-    const response = await GET(
-      new Request('https://example.com/api/auth/callback?code=auth-code&state=expected-state', {
-        headers: {
-          cookie: 'auth_state=expected-state; auth_code_verifier=pkce-value',
-        },
-      }),
+    const request = new Request('https://app.example.com/api/auth/callback?code=valid-code&state=unexpected-state', {
+      headers: {
+        cookie: `${AUTH_CALLBACK_COOKIE_NAMES.state}=expected-state; ${AUTH_CALLBACK_COOKIE_NAMES.codeVerifier}=code-verifier-value`,
+      },
+    })
+
+    const response = await GET(request)
+
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe(
+      'https://app.example.com/login?message=A+valida%C3%A7%C3%A3o+de+seguran%C3%A7a+do+login+falhou.+Fa%C3%A7a+login+novamente.',
     )
 
-    expect(response.headers.get('location')).toBe('https://example.com/login?error=auth_callback_failed')
+    const setCookieHeader = response.headers.get('set-cookie')
+    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.state}=;`)
+    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.codeVerifier}=;`)
+    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.accessToken}=;`)
+    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.refreshToken}=;`)
+    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.idToken}=;`)
+    expect(setCookieHeader).toContain('Max-Age=0')
+  })
+
+
+  it('redireciona com mensagem amigável quando o provedor retorna error na callback', async () => {
+    const fetchSpy = vi.stubGlobal('fetch', vi.fn())
+
+    const request = new Request(
+      'https://app.example.com/api/auth/callback?error=access_denied&error_description=Usu%C3%A1rio+cancelou+o+login',
+      {
+        headers: {
+          cookie: `${AUTH_CALLBACK_COOKIE_NAMES.state}=expected-state; ${AUTH_CALLBACK_COOKIE_NAMES.codeVerifier}=code-verifier-value`,
+        },
+      },
+    )
+
+    const response = await GET(request)
+
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe(
+      'https://app.example.com/login?message=Usu%C3%A1rio+cancelou+o+login',
+    )
+  })
+
+  it('limpa cookies transitórios e redireciona para login quando o provedor devolve erro', async () => {
+    const fetchSpy = vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        text: async () => 'invalid_grant',
+      }),
+    )
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    const request = new Request('https://app.example.com/api/auth/callback?code=valid-code&state=expected-state', {
+      headers: {
+        cookie: `${AUTH_CALLBACK_COOKIE_NAMES.state}=expected-state; ${AUTH_CALLBACK_COOKIE_NAMES.codeVerifier}=code-verifier-value`,
+      },
+    })
+
+    const response = await GET(request)
+
+    expect(fetchSpy).toHaveBeenCalledOnce()
     expect(consoleSpy).toHaveBeenCalled()
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe(
+      'https://app.example.com/login?message=N%C3%A3o+foi+poss%C3%ADvel+concluir+o+login+agora.+Tente+novamente.',
+    )
+
+    const setCookieHeader = response.headers.get('set-cookie')
+    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.state}=;`)
+    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.codeVerifier}=;`)
   })
 })
