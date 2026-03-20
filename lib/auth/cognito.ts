@@ -95,7 +95,10 @@ export function getCookieBaseOptions(secure: boolean) {
   }
 }
 
-export function clearAuthFlowCookies(response: Response & { cookies?: { set: (...args: unknown[]) => unknown } }, secure: boolean) {
+export function clearAuthFlowCookies(
+  response: { cookies?: { set: (name: string, value: string, options?: Record<string, unknown>) => unknown } },
+  secure: boolean,
+) {
   const baseOptions = getCookieBaseOptions(secure)
 
   response.cookies?.set(AUTH_STATE_COOKIE, '', { ...baseOptions, maxAge: 0 })

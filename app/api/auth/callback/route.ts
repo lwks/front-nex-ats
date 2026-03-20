@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server.js'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import {
   ACCESS_TOKEN_COOKIE,
   AUTH_CODE_VERIFIER_COOKIE,
@@ -12,7 +12,7 @@ import {
   getCognitoDomain,
   getCookieBaseOptions,
   getRedirectUri,
-} from '../../../../lib/auth/cognito.ts'
+} from '../../../../lib/auth/cognito'
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code')
