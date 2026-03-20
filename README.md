@@ -26,6 +26,22 @@ http://localhost:3000
 - `npm run start`: executa a aplicação em modo produção (`next start`).
 - `npm run lint`: roda as verificações do `next lint`. (Com a configuração atual, a build falha caso haja erros de lint ou TypeScript.)
 
+
+## Configuração de autenticação Cognito
+
+Defina as variáveis abaixo para habilitar o fluxo OAuth2/PKCE com Amazon Cognito:
+
+- `COGNITO_DOMAIN`: domínio base do Hosted UI do Cognito, por exemplo `https://seu-dominio.auth.us-east-1.amazoncognito.com`.
+- `COGNITO_CLIENT_ID`: client id da aplicação Cognito.
+- `COGNITO_REDIRECT_URI`: URL absoluta de callback, por exemplo `http://localhost:3000/api/auth/callback`.
+- `COGNITO_SCOPES`: escopos separados por espaço, por exemplo `openid profile email`.
+- `COGNITO_CLIENT_SECRET` *(opcional e somente server-side)*: necessário apenas para clientes confidenciais.
+
+### Rotas de autenticação
+
+- `GET /api/auth/login`: inicia o fluxo PKCE, grava cookies temporários de `state` e `code_verifier`, e redireciona para o Cognito Hosted UI.
+- `GET /api/auth/callback`: valida `code` e `state`, troca o authorization code por tokens no Cognito e persiste cookies HTTP-only de sessão (`auth_access_token`, `auth_id_token` e `auth_refresh_token` quando disponível).
+
 ## Estrutura do projeto
 
 - `app/` – entrypoint do Next.js com `layout.tsx`, `page.tsx` e os estilos globais (`globals.css`).
