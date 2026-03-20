@@ -45,6 +45,13 @@ http://localhost:3000
 
 ## Contratos de API utilizados no front-end
 
+
+- `GET /api/auth/callback`: endpoint server-side do App Router para concluir login OAuth com Authorization Code + PKCE.
+  - Lê `code`, `state`, `error` e `error_description` da URL de retorno do provedor.
+  - Valida o `state` e a presença do cookie HTTP-only `auth_code_verifier` (além do cookie `auth_state`) antes de trocar o código por tokens.
+  - Faz a troca no backend para `${AUTH_BASE_URL}/oauth2/token`, sem expor `client_secret` no navegador.
+  - Em sucesso, persiste `auth_access_token`, `auth_refresh_token` e `auth_id_token` em cookies `httpOnly`, `secure`, `sameSite=lax` e `path=/`, e redireciona para `AUTH_SUCCESS_REDIRECT_PATH` (default: `/`).
+  - Em falha, limpa cookies transitórios/de autenticação e redireciona para `AUTH_ERROR_REDIRECT_PATH` (default: `/login`) com `?message=` amigável.
 - `GET /api/candidates/by-job-guids`: consulta candidatos por uma ou mais vagas usando o parâmetro `guid_vaga`.
   - Formatos aceitos pelo front-end proxy: `?guid_vaga=a,b,c` **ou** `?guid_vaga=a&guid_vaga=b&guid_vaga=c`.
   - O proxy normaliza os GUIDs recebidos e encaminha ao upstream no formato com múltiplos `guid_vaga`.
@@ -63,3 +70,12 @@ http://localhost:3000
 - Projeto original no v0.app: [https://v0.app/chat/projects/XQ8P5ft3O69](https://v0.app/chat/projects/XQ8P5ft3O69)
 
 > Caso precise ajustar a estrutura do projeto, combine previamente a alteração.
+
+## Variáveis de ambiente adicionais para OAuth
+
+- `AUTH_BASE_URL`: URL base do provedor OAuth/OIDC. A rota usa `${AUTH_BASE_URL}/oauth2/token`.
+- `AUTH_CLIENT_ID`: client id usado na troca do authorization code.
+- `AUTH_CLIENT_SECRET`: client secret usado apenas no servidor, nunca no browser.
+- `AUTH_REDIRECT_URI` (opcional): sobrescreve a redirect URI; por padrão usa a própria rota `/api/auth/callback`.
+- `AUTH_SUCCESS_REDIRECT_PATH` (opcional): rota de redirecionamento após login bem-sucedido. Default: `/`.
+- `AUTH_ERROR_REDIRECT_PATH` (opcional): rota de redirecionamento em falha. Default: `/login`.
