@@ -35,8 +35,8 @@ export function Header() {
           <h1 className="text-xl md:text-2xl font-bold text-foreground">NexJob</h1>
         </div>
 
-        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6">
-          Login / Usuário
+        <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6">
+          <a href="/api/auth/login">Login / Usuário</a>
         </Button>
       </div>
     </header>
