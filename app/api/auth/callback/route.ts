@@ -1,17 +1,14 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import {
-  ACCESS_TOKEN_COOKIE,
+  buildTokenRequestBody,
   AUTH_CODE_VERIFIER_COOKIE,
   AUTH_STATE_COOKIE,
-  ID_TOKEN_COOKIE,
-  REFRESH_TOKEN_COOKIE,
-  TOKEN_EXPIRES_AT_COOKIE,
-  buildTokenRequestBody,
   clearAuthFlowCookies,
+  clearSessionCookies,
   getCognitoClientId,
   getCognitoDomain,
-  getCookieBaseOptions,
   getRedirectUri,
+  setSessionCookies,
 } from '../../../../lib/auth/cognito'
 
 export async function GET(request: NextRequest) {
@@ -70,6 +67,7 @@ export async function GET(request: NextRequest) {
 
   if (tokenResponse instanceof NextResponse) {
     clearAuthFlowCookies(tokenResponse, secure)
+    clearSessionCookies(tokenResponse, secure)
     return tokenResponse
   }
 
@@ -85,34 +83,13 @@ export async function GET(request: NextRequest) {
     )
 
     clearAuthFlowCookies(errorResponse, secure)
+    clearSessionCookies(errorResponse, secure)
     return errorResponse
   }
 
-  const expiresIn = Number(responseBody.expires_in ?? 0)
-  const expiresAt = expiresIn > 0 ? new Date(Date.now() + expiresIn * 1000).toISOString() : ''
   const response = NextResponse.redirect(new URL('/', request.nextUrl))
-  const baseOptions = getCookieBaseOptions(secure)
 
-  response.cookies.set(ACCESS_TOKEN_COOKIE, responseBody.access_token, {
-    ...baseOptions,
-    maxAge: expiresIn > 0 ? expiresIn : undefined,
-  })
-  response.cookies.set(ID_TOKEN_COOKIE, responseBody.id_token, {
-    ...baseOptions,
-    maxAge: expiresIn > 0 ? expiresIn : undefined,
-  })
-
-  if (responseBody.refresh_token) {
-    response.cookies.set(REFRESH_TOKEN_COOKIE, responseBody.refresh_token, baseOptions)
-  }
-
-  if (expiresAt) {
-    response.cookies.set(TOKEN_EXPIRES_AT_COOKIE, expiresAt, {
-      ...baseOptions,
-      maxAge: expiresIn,
-    })
-  }
-
+  setSessionCookies(response, secure, responseBody)
   clearAuthFlowCookies(response, secure)
 
   return response

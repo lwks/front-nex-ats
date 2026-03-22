@@ -1,18 +1,29 @@
+import { NextRequest } from 'next/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { AUTH_CALLBACK_COOKIE_NAMES, GET } from '@/app/api/auth/callback/route'
+import {
+  ACCESS_TOKEN_COOKIE,
+  AUTH_CODE_VERIFIER_COOKIE,
+  AUTH_STATE_COOKIE,
+  ID_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  TOKEN_EXPIRES_AT_COOKIE,
+} from '@/lib/auth/cognito'
+
+function getSetCookieHeader(response: Response) {
+  return response.headers.get('set-cookie') ?? ''
+}
 
 describe('/api/auth/callback route', () => {
   const originalEnv = { ...process.env }
 
   beforeEach(() => {
     vi.restoreAllMocks()
-    process.env.AUTH_BASE_URL = 'https://auth.example.com/'
-    process.env.AUTH_CLIENT_ID = 'client-id'
-    process.env.AUTH_CLIENT_SECRET = 'client-secret'
-    process.env.AUTH_SUCCESS_REDIRECT_PATH = '/'
-    process.env.AUTH_ERROR_REDIRECT_PATH = '/login'
-    delete process.env.AUTH_REDIRECT_URI
+    process.env = {
+      ...originalEnv,
+      COGNITO_CLIENT_ID: 'client-id',
+      COGNITO_DOMAIN: 'https://tenant.auth.us-east-1.amazoncognito.com',
+    }
   })
 
   afterEach(() => {
@@ -29,29 +40,27 @@ describe('/api/auth/callback route', () => {
           refresh_token: 'refresh-token',
           id_token: 'id-token',
           expires_in: 3600,
-          refresh_expires_in: 7200,
         }),
       }),
     )
 
-    const request = new Request('https://app.example.com/api/auth/callback?code=valid-code&state=expected-state', {
+    const { GET } = await import('@/app/api/auth/callback/route')
+    const request = new NextRequest('https://app.example.com/api/auth/callback?code=valid-code&state=expected-state', {
       headers: {
-        cookie: `${AUTH_CALLBACK_COOKIE_NAMES.state}=expected-state; ${AUTH_CALLBACK_COOKIE_NAMES.codeVerifier}=code-verifier-value`,
+        cookie: `${AUTH_STATE_COOKIE}=expected-state; ${AUTH_CODE_VERIFIER_COOKIE}=code-verifier-value`,
       },
     })
 
-    const response = await GET(request)
+    const response = await GET(request as never)
 
-    expect(fetchSpy).toHaveBeenCalledWith('https://auth.example.com/oauth2/token', {
+    expect(fetchSpy).toHaveBeenCalledWith('https://tenant.auth.us-east-1.amazoncognito.com/oauth2/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        Accept: 'application/json',
       },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         client_id: 'client-id',
-        client_secret: 'client-secret',
         code: 'valid-code',
         redirect_uri: 'https://app.example.com/api/auth/callback',
         code_verifier: 'code-verifier-value',
@@ -61,96 +70,64 @@ describe('/api/auth/callback route', () => {
     expect(response.status).toBe(307)
     expect(response.headers.get('location')).toBe('https://app.example.com/')
 
-    const setCookieHeader = response.headers.get('set-cookie')
-    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.accessToken}=access-token`)
-    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.refreshToken}=refresh-token`)
-    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.idToken}=id-token`)
+    const setCookieHeader = getSetCookieHeader(response)
+    expect(setCookieHeader).toContain(`${ACCESS_TOKEN_COOKIE}=access-token`)
+    expect(setCookieHeader).toContain(`${REFRESH_TOKEN_COOKIE}=refresh-token`)
+    expect(setCookieHeader).toContain(`${ID_TOKEN_COOKIE}=id-token`)
+    expect(setCookieHeader).toContain(`${AUTH_STATE_COOKIE}=;`)
+    expect(setCookieHeader).toContain(`${AUTH_CODE_VERIFIER_COOKIE}=;`)
     expect(setCookieHeader).toContain('HttpOnly')
     expect(setCookieHeader).toContain('Secure')
     expect(setCookieHeader).toContain('SameSite=Lax')
     expect(setCookieHeader).toContain('Path=/')
     expect(setCookieHeader).toContain('Max-Age=3600')
-    expect(setCookieHeader).toContain('Max-Age=7200')
-    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.state}=;`)
-    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.codeVerifier}=;`)
+    expect(setCookieHeader).toContain(`${TOKEN_EXPIRES_AT_COOKIE}=`)
   })
 
-  it('limpa cookies e redireciona com mensagem amigável quando o state não confere', async () => {
+  it('returns 400 when state does not match', async () => {
     const fetchSpy = vi.stubGlobal('fetch', vi.fn())
+    const { GET } = await import('@/app/api/auth/callback/route')
 
-    const request = new Request('https://app.example.com/api/auth/callback?code=valid-code&state=unexpected-state', {
+    const request = new NextRequest('https://app.example.com/api/auth/callback?code=valid-code&state=unexpected-state', {
       headers: {
-        cookie: `${AUTH_CALLBACK_COOKIE_NAMES.state}=expected-state; ${AUTH_CALLBACK_COOKIE_NAMES.codeVerifier}=code-verifier-value`,
+        cookie: `${AUTH_STATE_COOKIE}=expected-state; ${AUTH_CODE_VERIFIER_COOKIE}=code-verifier-value`,
       },
     })
 
-    const response = await GET(request)
+    const response = await GET(request as never)
 
     expect(fetchSpy).not.toHaveBeenCalled()
-    expect(response.status).toBe(307)
-    expect(response.headers.get('location')).toBe(
-      'https://app.example.com/login?message=A+valida%C3%A7%C3%A3o+de+seguran%C3%A7a+do+login+falhou.+Fa%C3%A7a+login+novamente.',
-    )
-
-    const setCookieHeader = response.headers.get('set-cookie')
-    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.state}=;`)
-    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.codeVerifier}=;`)
-    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.accessToken}=;`)
-    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.refreshToken}=;`)
-    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.idToken}=;`)
-    expect(setCookieHeader).toContain('Max-Age=0')
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ message: 'State inválido ou expirado.' })
   })
 
-
-  it('redireciona com mensagem amigável quando o provedor retorna error na callback', async () => {
-    const fetchSpy = vi.stubGlobal('fetch', vi.fn())
-
-    const request = new Request(
-      'https://app.example.com/api/auth/callback?error=access_denied&error_description=Usu%C3%A1rio+cancelou+o+login',
-      {
-        headers: {
-          cookie: `${AUTH_CALLBACK_COOKIE_NAMES.state}=expected-state; ${AUTH_CALLBACK_COOKIE_NAMES.codeVerifier}=code-verifier-value`,
-        },
-      },
-    )
-
-    const response = await GET(request)
-
-    expect(fetchSpy).not.toHaveBeenCalled()
-    expect(response.status).toBe(307)
-    expect(response.headers.get('location')).toBe(
-      'https://app.example.com/login?message=Usu%C3%A1rio+cancelou+o+login',
-    )
-  })
-
-  it('limpa cookies transitórios e redireciona para login quando o provedor devolve erro', async () => {
-    const fetchSpy = vi.stubGlobal(
+  it('cleans auth cookies when Cognito returns an error', async () => {
+    vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
         ok: false,
         status: 400,
-        text: async () => 'invalid_grant',
+        json: async () => ({ error: 'invalid_grant' }),
       }),
     )
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
 
-    const request = new Request('https://app.example.com/api/auth/callback?code=valid-code&state=expected-state', {
+    const { GET } = await import('@/app/api/auth/callback/route')
+    const request = new NextRequest('https://app.example.com/api/auth/callback?code=valid-code&state=expected-state', {
       headers: {
-        cookie: `${AUTH_CALLBACK_COOKIE_NAMES.state}=expected-state; ${AUTH_CALLBACK_COOKIE_NAMES.codeVerifier}=code-verifier-value`,
+        cookie: `${AUTH_STATE_COOKIE}=expected-state; ${AUTH_CODE_VERIFIER_COOKIE}=code-verifier-value`,
       },
     })
 
-    const response = await GET(request)
+    const response = await GET(request as never)
+    const setCookieHeader = getSetCookieHeader(response)
 
-    expect(fetchSpy).toHaveBeenCalledOnce()
-    expect(consoleSpy).toHaveBeenCalled()
-    expect(response.status).toBe(307)
-    expect(response.headers.get('location')).toBe(
-      'https://app.example.com/login?message=N%C3%A3o+foi+poss%C3%ADvel+concluir+o+login+agora.+Tente+novamente.',
-    )
-
-    const setCookieHeader = response.headers.get('set-cookie')
-    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.state}=;`)
-    expect(setCookieHeader).toContain(`${AUTH_CALLBACK_COOKIE_NAMES.codeVerifier}=;`)
+    expect(response.status).toBe(400)
+    expect(setCookieHeader).toContain(`${AUTH_STATE_COOKIE}=;`)
+    expect(setCookieHeader).toContain(`${AUTH_CODE_VERIFIER_COOKIE}=;`)
+    expect(setCookieHeader).toContain(`${ACCESS_TOKEN_COOKIE}=;`)
+    expect(setCookieHeader).toContain(`${REFRESH_TOKEN_COOKIE}=;`)
+    expect(setCookieHeader).toContain(`${ID_TOKEN_COOKIE}=;`)
+    expect(setCookieHeader).toContain(`${TOKEN_EXPIRES_AT_COOKIE}=;`)
+    expect(setCookieHeader).toContain('Max-Age=0')
   })
 })

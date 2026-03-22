@@ -31,16 +31,19 @@ http://localhost:3000
 
 Defina as variáveis abaixo para habilitar o fluxo OAuth2/PKCE com Amazon Cognito:
 
-- `COGNITO_DOMAIN`: domínio base do Hosted UI do Cognito, por exemplo `https://seu-dominio.auth.us-east-1.amazoncognito.com`.
-- `COGNITO_CLIENT_ID`: client id da aplicação Cognito.
-- `COGNITO_REDIRECT_URI`: URL absoluta de callback, por exemplo `http://localhost:3000/api/auth/callback`.
-- `COGNITO_SCOPES`: escopos separados por espaço, por exemplo `openid profile email`.
-- `COGNITO_CLIENT_SECRET` *(opcional e somente server-side)*: necessário apenas para clientes confidenciais.
+- `COGNITO_DOMAIN` ou `NEXT_PUBLIC_COGNITO_DOMAIN`: domínio base do Hosted UI do Cognito, por exemplo `https://seu-dominio.auth.us-east-1.amazoncognito.com`.
+- `COGNITO_CLIENT_ID` ou `NEXT_PUBLIC_COGNITO_CLIENT_ID`: client id da aplicação Cognito.
+- `COGNITO_REDIRECT_URI` ou `NEXT_PUBLIC_COGNITO_REDIRECT_URI`: URL absoluta de callback, por exemplo `http://localhost:3000/api/auth/callback`. Quando ausente, o front usa `<origin>/api/auth/callback`.
+- `COGNITO_SCOPE` ou `NEXT_PUBLIC_COGNITO_SCOPE`: escopos separados por espaço, por exemplo `openid profile email`. Default: `openid email profile`.
+- `COGNITO_LOGOUT_URI` ou `NEXT_PUBLIC_COGNITO_LOGOUT_URI` *(opcional)*: URL absoluta usada no logout do Hosted UI do Cognito. Quando ausente, `GET /api/auth/logout` faz apenas logout local e redireciona para `/`.
 
 ### Rotas de autenticação
 
-- `GET /api/auth/login`: inicia o fluxo PKCE, grava cookies temporários de `state` e `code_verifier`, e redireciona para o Cognito Hosted UI.
-- `GET /api/auth/callback`: valida `code` e `state`, troca o authorization code por tokens no Cognito e persiste cookies HTTP-only de sessão (`auth_access_token`, `auth_id_token` e `auth_refresh_token` quando disponível).
+- `GET /api/auth/login`: inicia o fluxo PKCE, grava cookies temporários `nexjob_auth_state` e `nexjob_code_verifier` e redireciona para o Cognito Hosted UI.
+- `GET /api/auth/callback`: valida `code` e `state`, troca o authorization code por tokens no Cognito e persiste cookies HTTP-only de sessão `nexjob_access_token`, `nexjob_id_token`, `nexjob_refresh_token` e `nexjob_token_expires_at`.
+- `GET /api/auth/logout`: limpa todos os cookies de autenticação e redireciona para `/` ou, quando configurado, para o logout do Hosted UI do Cognito.
+- `POST /api/auth/refresh`: usa o `nexjob_refresh_token` em cookie HTTP-only para renovar a sessão sem expor tokens no corpo da resposta.
+- `GET /api/auth/session`: retorna um resumo seguro da sessão atual para a UI, sem expor access token nem refresh token.
 
 ## Estrutura do projeto
 
@@ -63,21 +66,77 @@ Defina as variáveis abaixo para habilitar o fluxo OAuth2/PKCE com Amazon Cognit
 
 ### Autenticação Cognito
 
-- `GET /api/auth/login`: inicia o fluxo Authorization Code, gera `state` + `code_verifier` em cookies HTTP-only curtos e redireciona para `https://<cognito-domain>/oauth2/authorize` com `response_type=code`, `client_id`, `redirect_uri`, `scope`, `state`, `code_challenge` e `code_challenge_method=S256`.
-- `GET /api/auth/callback`: recebe `code` e `state` da query string, valida o `state` salvo em cookie HTTP-only, faz `POST https://<cognito-domain>/oauth2/token` com `application/x-www-form-urlencoded` e persiste `access_token`, `id_token`, `refresh_token` e a expiração em cookies HTTP-only.
-- Variáveis de ambiente relevantes:
-  - `COGNITO_DOMAIN` ou `NEXT_PUBLIC_COGNITO_DOMAIN` (default atual: `https://us-east-1sa8vsmupy.auth.us-east-1.amazoncognito.com`)
-  - `COGNITO_CLIENT_ID` ou `NEXT_PUBLIC_COGNITO_CLIENT_ID`
-  - `COGNITO_REDIRECT_URI` ou `NEXT_PUBLIC_COGNITO_REDIRECT_URI` (default: `<origin>/api/auth/callback`)
-  - `COGNITO_SCOPE` ou `NEXT_PUBLIC_COGNITO_SCOPE` (default: `openid email profile`)
+#### Cookies utilizados
 
+Todos os cookies de autenticação são `httpOnly`, `sameSite=lax`, `path=/` e usam `secure` em HTTPS/produção.
 
-- `GET /api/auth/callback`: endpoint server-side do App Router para concluir login OAuth com Authorization Code + PKCE.
-  - Lê `code`, `state`, `error` e `error_description` da URL de retorno do provedor.
-  - Valida o `state` e a presença do cookie HTTP-only `auth_code_verifier` (além do cookie `auth_state`) antes de trocar o código por tokens.
-  - Faz a troca no backend para `${AUTH_BASE_URL}/oauth2/token`, sem expor `client_secret` no navegador.
-  - Em sucesso, persiste `auth_access_token`, `auth_refresh_token` e `auth_id_token` em cookies `httpOnly`, `secure`, `sameSite=lax` e `path=/`, e redireciona para `AUTH_SUCCESS_REDIRECT_PATH` (default: `/`).
-  - Em falha, limpa cookies transitórios/de autenticação e redireciona para `AUTH_ERROR_REDIRECT_PATH` (default: `/login`) com `?message=` amigável.
+- Transitórios do fluxo PKCE:
+  - `nexjob_auth_state`
+  - `nexjob_code_verifier`
+- Persistência de sessão:
+  - `nexjob_access_token`
+  - `nexjob_id_token`
+  - `nexjob_refresh_token`
+  - `nexjob_token_expires_at`
+
+#### Endpoints
+
+- `GET /api/auth/login`
+  - Inicia o fluxo Authorization Code + PKCE.
+  - Gera `state` e `code_verifier` em cookies HTTP-only temporários.
+  - Redireciona para `https://<cognito-domain>/oauth2/authorize` com `response_type=code`, `client_id`, `redirect_uri`, `scope`, `state`, `code_challenge` e `code_challenge_method=S256`.
+  - Status esperados: `307` em sucesso, `500` quando `COGNITO_CLIENT_ID` não estiver configurado.
+
+- `GET /api/auth/callback`
+  - Recebe `code` e `state` da query string.
+  - Valida o `state` salvo em cookie e a presença do `nexjob_code_verifier`.
+  - Faz `POST https://<cognito-domain>/oauth2/token` com `grant_type=authorization_code`.
+  - Em sucesso, persiste `nexjob_access_token`, `nexjob_id_token`, `nexjob_refresh_token` (quando disponível) e `nexjob_token_expires_at`; depois limpa os cookies transitórios e redireciona para `/`.
+  - Em falha, limpa cookies transitórios e de sessão.
+  - Status esperados: `307`, `400`, `500` e `502`.
+
+- `GET /api/auth/logout`
+  - Sempre limpa `nexjob_access_token`, `nexjob_id_token`, `nexjob_refresh_token`, `nexjob_token_expires_at`, `nexjob_auth_state` e `nexjob_code_verifier`.
+  - Quando `COGNITO_LOGOUT_URI` (ou `NEXT_PUBLIC_COGNITO_LOGOUT_URI`) estiver configurado junto com `COGNITO_CLIENT_ID`, redireciona para `https://<cognito-domain>/logout?client_id=...&logout_uri=...`.
+  - Sem essa configuração, executa logout local e redireciona para `/`.
+  - Status esperados: `307`.
+
+- `POST /api/auth/refresh`
+  - Lê `nexjob_refresh_token` do cookie HTTP-only.
+  - Faz `POST https://<cognito-domain>/oauth2/token` com `grant_type=refresh_token`.
+  - Atualiza `nexjob_access_token`, `nexjob_token_expires_at` e `nexjob_id_token` quando o Cognito devolver um novo `id_token`.
+  - Só atualiza `nexjob_refresh_token` quando o Cognito retornar um novo valor.
+  - Nunca expõe tokens no JSON da resposta.
+  - Em falha de refresh, limpa os cookies de sessão.
+  - Status esperados: `200`, `401`, `500` e `502`.
+
+- `GET /api/auth/session`
+  - Lê os cookies de sessão atuais.
+  - Considera a sessão autenticada apenas quando `nexjob_access_token`, `nexjob_id_token` e `nexjob_token_expires_at` estiverem presentes e não expirados.
+  - Decodifica claims básicas do `id_token` de forma defensiva para retornar apenas um resumo útil à UI.
+  - Nunca expõe `access_token` nem `refresh_token` no corpo da resposta.
+  - Status esperados: `200`.
+
+Exemplo de resposta de `GET /api/auth/session`:
+
+```json
+{
+  "authenticated": true,
+  "expiresAt": "2026-03-20T15:30:00.000Z",
+  "user": {
+    "sub": "0d90d88a-0000-0000-0000-000000000000",
+    "email": "pessoa@empresa.com",
+    "name": "Pessoa Exemplo"
+  }
+}
+```
+
+Variáveis de ambiente relevantes:
+- `COGNITO_DOMAIN` ou `NEXT_PUBLIC_COGNITO_DOMAIN` (default atual: `https://us-east-1sa8vsmupy.auth.us-east-1.amazoncognito.com`)
+- `COGNITO_CLIENT_ID` ou `NEXT_PUBLIC_COGNITO_CLIENT_ID`
+- `COGNITO_REDIRECT_URI` ou `NEXT_PUBLIC_COGNITO_REDIRECT_URI` (default: `<origin>/api/auth/callback`)
+- `COGNITO_SCOPE` ou `NEXT_PUBLIC_COGNITO_SCOPE` (default: `openid email profile`)
+- `COGNITO_LOGOUT_URI` ou `NEXT_PUBLIC_COGNITO_LOGOUT_URI` (opcional; habilita logout no Hosted UI)
 
 ### Lista de candidatos 
 - `GET /api/candidates/by-job-guids`: consulta candidatos por uma ou mais vagas usando o parâmetro `guid_vaga`.
@@ -98,12 +157,3 @@ Defina as variáveis abaixo para habilitar o fluxo OAuth2/PKCE com Amazon Cognit
 - Projeto original no v0.app: [https://v0.app/chat/projects/XQ8P5ft3O69](https://v0.app/chat/projects/XQ8P5ft3O69)
 
 > Caso precise ajustar a estrutura do projeto, combine previamente a alteração.
-
-## Variáveis de ambiente adicionais para OAuth
-
-- `AUTH_BASE_URL`: URL base do provedor OAuth/OIDC. A rota usa `${AUTH_BASE_URL}/oauth2/token`.
-- `AUTH_CLIENT_ID`: client id usado na troca do authorization code.
-- `AUTH_CLIENT_SECRET`: client secret usado apenas no servidor, nunca no browser.
-- `AUTH_REDIRECT_URI` (opcional): sobrescreve a redirect URI; por padrão usa a própria rota `/api/auth/callback`.
-- `AUTH_SUCCESS_REDIRECT_PATH` (opcional): rota de redirecionamento após login bem-sucedido. Default: `/`.
-- `AUTH_ERROR_REDIRECT_PATH` (opcional): rota de redirecionamento em falha. Default: `/login`.
