@@ -20,18 +20,16 @@ describe('/api/auth/refresh route', () => {
   })
 
   it('refreshes the session with a valid refresh token', async () => {
-    const fetchSpy = vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          access_token: 'new-access-token',
-          id_token: 'new-id-token',
-          refresh_token: 'new-refresh-token',
-          expires_in: 1800,
-        }),
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        access_token: 'new-access-token',
+        id_token: 'new-id-token',
+        refresh_token: 'new-refresh-token',
+        expires_in: 1800,
       }),
-    )
+    })
+    vi.stubGlobal('fetch', fetchSpy)
 
     const { POST } = await import('@/app/api/auth/refresh/route')
     const response = await POST(new NextRequest('https://app.example.com/api/auth/refresh', {
@@ -65,7 +63,8 @@ describe('/api/auth/refresh route', () => {
   })
 
   it('returns 401 when the refresh token cookie is missing', async () => {
-    const fetchSpy = vi.stubGlobal('fetch', vi.fn())
+    const fetchSpy = vi.fn()
+    vi.stubGlobal('fetch', fetchSpy)
     const { POST } = await import('@/app/api/auth/refresh/route')
     const response = await POST(new NextRequest('http://localhost/api/auth/refresh', { method: 'POST' }))
 
@@ -128,6 +127,41 @@ describe('/api/auth/refresh route', () => {
     expect(setCookieHeader).toContain(`${ID_TOKEN_COOKIE}=;`)
     expect(setCookieHeader).toContain(`${REFRESH_TOKEN_COOKIE}=;`)
     expect(setCookieHeader).toContain(`${TOKEN_EXPIRES_AT_COOKIE}=;`)
+  })
+
+  it('sends basic auth header when COGNITO_CLIENT_SECRET is configured', async () => {
+    process.env.COGNITO_CLIENT_SECRET = 'secret-123'
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        access_token: 'new-access-token',
+        id_token: 'new-id-token',
+        expires_in: 1800,
+      }),
+    })
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const { POST } = await import('@/app/api/auth/refresh/route')
+    await POST(new NextRequest('https://app.example.com/api/auth/refresh', {
+      method: 'POST',
+      headers: {
+        cookie: `${REFRESH_TOKEN_COOKIE}=refresh-token; ${ID_TOKEN_COOKIE}=previous-id-token`,
+      },
+    }))
+
+    expect(fetchSpy).toHaveBeenCalledWith('https://tenant.auth.us-east-1.amazoncognito.com/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: 'Basic Y2xpZW50LWlkOnNlY3JldC0xMjM=',
+      },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        client_id: 'client-id',
+        refresh_token: 'refresh-token',
+      }).toString(),
+      cache: 'no-store',
+    })
   })
 
 })

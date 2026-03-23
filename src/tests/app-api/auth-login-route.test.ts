@@ -31,7 +31,7 @@ describe('/api/auth/login route', () => {
     expect(cookies).toContain(`${AUTH_CODE_VERIFIER_COOKIE}=`)
     expect(cookies).toContain('HttpOnly')
     expect(cookies).toContain('Secure')
-    expect(cookies).toContain('SameSite=Lax')
+    expect(cookies).toContain('SameSite=lax')
     expect(cookies).toContain('Path=/')
     expect(cookies).toContain('Max-Age=600')
   })

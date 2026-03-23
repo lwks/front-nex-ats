@@ -53,6 +53,10 @@ export function getCognitoClientId(): string | undefined {
   return process.env.COGNITO_CLIENT_ID ?? process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID
 }
 
+export function getCognitoClientSecret(): string | undefined {
+  return process.env.COGNITO_CLIENT_SECRET ?? process.env.NEXT_PUBLIC_COGNITO_CLIENT_SECRET
+}
+
 export function getCognitoScope(): string {
   return (process.env.COGNITO_SCOPE ?? process.env.NEXT_PUBLIC_COGNITO_SCOPE ?? DEFAULT_SCOPE).trim()
 }
@@ -133,6 +137,24 @@ export function buildRefreshTokenRequestBody(params: {
     client_id: params.clientId,
     refresh_token: params.refreshToken,
   })
+}
+
+export function buildCognitoTokenHeaders(params: {
+  clientId: string
+  clientSecret?: string
+}): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+  }
+
+  if (!params.clientSecret) {
+    return headers
+  }
+
+  const basicAuthValue = Buffer.from(`${params.clientId}:${params.clientSecret}`, 'utf8').toString('base64')
+  headers.Authorization = `Basic ${basicAuthValue}`
+
+  return headers
 }
 
 export function getCookieBaseOptions(secure: boolean) {

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
+  buildCognitoTokenHeaders,
   buildRefreshTokenRequestBody,
   ID_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
   clearSessionCookies,
   getCognitoClientId,
+  getCognitoClientSecret,
   getCognitoDomain,
   getSessionState,
   setSessionCookies,
@@ -14,6 +16,7 @@ export async function POST(request: NextRequest) {
   const secure = request.nextUrl.protocol === 'https:' || process.env.NODE_ENV === 'production'
   const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value
   const clientId = getCognitoClientId()
+  const clientSecret = getCognitoClientSecret()
 
   if (!refreshToken) {
     const response = NextResponse.json({ authenticated: false, message: 'Refresh token ausente.' }, { status: 401 })
@@ -30,9 +33,7 @@ export async function POST(request: NextRequest) {
 
   const tokenResponse = await fetch(`${getCognitoDomain()}/oauth2/token`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
+    headers: buildCognitoTokenHeaders({ clientId, clientSecret }),
     body: buildRefreshTokenRequestBody({
       clientId,
       refreshToken,

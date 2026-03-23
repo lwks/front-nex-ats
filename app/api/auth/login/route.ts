@@ -15,7 +15,6 @@ import {
 
 export async function GET(request: NextRequest) {
   const clientId = getCognitoClientId()
-
   if (!clientId) {
     return NextResponse.json(
       { message: 'COGNITO_CLIENT_ID não configurado.' },
@@ -36,6 +35,7 @@ export async function GET(request: NextRequest) {
     codeChallenge: createCodeChallenge(codeVerifier),
   })
 
+  console.log('Redirecting to Cognito authorize URL:', authorizeUrl)
   const secure = request.nextUrl.protocol === 'https:' || process.env.NODE_ENV === 'production'
   const response = NextResponse.redirect(authorizeUrl)
   const cookieOptions = {

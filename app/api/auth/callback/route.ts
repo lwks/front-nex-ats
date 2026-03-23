@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
   buildTokenRequestBody,
+  buildCognitoTokenHeaders,
   AUTH_CODE_VERIFIER_COOKIE,
   AUTH_STATE_COOKIE,
   clearAuthFlowCookies,
   clearSessionCookies,
   getCognitoClientId,
+  getCognitoClientSecret,
   getCognitoDomain,
   getRedirectUri,
   setSessionCookies,
@@ -17,6 +19,7 @@ export async function GET(request: NextRequest) {
   const savedState = request.cookies.get(AUTH_STATE_COOKIE)?.value
   const codeVerifier = request.cookies.get(AUTH_CODE_VERIFIER_COOKIE)?.value
   const clientId = getCognitoClientId()
+  const clientSecret = getCognitoClientSecret()
   const secure = request.nextUrl.protocol === 'https:' || process.env.NODE_ENV === 'production'
 
   if (!code || !returnedState) {
@@ -50,9 +53,7 @@ export async function GET(request: NextRequest) {
   const redirectUri = getRedirectUri(request.nextUrl.origin)
   const tokenResponse = await fetch(`${getCognitoDomain()}/oauth2/token`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
+    headers: buildCognitoTokenHeaders({ clientId, clientSecret }),
     body: buildTokenRequestBody({
       clientId,
       code,

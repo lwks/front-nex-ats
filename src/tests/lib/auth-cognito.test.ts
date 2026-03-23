@@ -7,6 +7,7 @@ import {
   ID_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
   TOKEN_EXPIRES_AT_COOKIE,
+  buildCognitoTokenHeaders,
   buildLogoutUrl,
   clearAllAuthCookies,
   getSessionState,
@@ -30,6 +31,17 @@ describe('lib/auth/cognito helpers', () => {
     })).toBe(
       'https://tenant.auth.us-east-1.amazoncognito.com/logout?client_id=client-id&logout_uri=https%3A%2F%2Fapp.example.com%2F',
     )
+  })
+
+  it('builds token headers with optional basic auth', () => {
+    expect(buildCognitoTokenHeaders({ clientId: 'client-id' })).toEqual({
+      'Content-Type': 'application/x-www-form-urlencoded',
+    })
+
+    expect(buildCognitoTokenHeaders({ clientId: 'client-id', clientSecret: 'secret-123' })).toEqual({
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: 'Basic Y2xpZW50LWlkOnNlY3JldC0xMjM=',
+    })
   })
 
   it('sets and clears session cookies consistently', () => {

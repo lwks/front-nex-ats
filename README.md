@@ -33,6 +33,7 @@ Defina as variáveis abaixo para habilitar o fluxo OAuth2/PKCE com Amazon Cognit
 
 - `COGNITO_DOMAIN` ou `NEXT_PUBLIC_COGNITO_DOMAIN`: domínio base do Hosted UI do Cognito, por exemplo `https://seu-dominio.auth.us-east-1.amazoncognito.com`.
 - `COGNITO_CLIENT_ID` ou `NEXT_PUBLIC_COGNITO_CLIENT_ID`: client id da aplicação Cognito.
+- `COGNITO_CLIENT_SECRET` ou `NEXT_PUBLIC_COGNITO_CLIENT_SECRET` *(opcional)*: secret do app client para autenticar chamadas de token via header `Authorization: Basic <base64(client_id:client_secret)>`.
 - `COGNITO_REDIRECT_URI` ou `NEXT_PUBLIC_COGNITO_REDIRECT_URI`: URL absoluta de callback, por exemplo `http://localhost:3000/api/auth/callback`. Quando ausente, o front usa `<origin>/api/auth/callback`.
 - `COGNITO_SCOPE` ou `NEXT_PUBLIC_COGNITO_SCOPE`: escopos separados por espaço, por exemplo `openid profile email`. Default: `openid email profile`.
 - `COGNITO_LOGOUT_URI` ou `NEXT_PUBLIC_COGNITO_LOGOUT_URI` *(opcional)*: URL absoluta usada no logout do Hosted UI do Cognito. Quando ausente, `GET /api/auth/logout` faz apenas logout local e redireciona para `/`.
@@ -134,6 +135,7 @@ Exemplo de resposta de `GET /api/auth/session`:
 Variáveis de ambiente relevantes:
 - `COGNITO_DOMAIN` ou `NEXT_PUBLIC_COGNITO_DOMAIN` (default atual: `https://us-east-1sa8vsmupy.auth.us-east-1.amazoncognito.com`)
 - `COGNITO_CLIENT_ID` ou `NEXT_PUBLIC_COGNITO_CLIENT_ID`
+- `COGNITO_CLIENT_SECRET` ou `NEXT_PUBLIC_COGNITO_CLIENT_SECRET` (opcional; usado para `Authorization: Basic` em `/oauth2/token`)
 - `COGNITO_REDIRECT_URI` ou `NEXT_PUBLIC_COGNITO_REDIRECT_URI` (default: `<origin>/api/auth/callback`)
 - `COGNITO_SCOPE` ou `NEXT_PUBLIC_COGNITO_SCOPE` (default: `openid email profile`)
 - `COGNITO_LOGOUT_URI` ou `NEXT_PUBLIC_COGNITO_LOGOUT_URI` (opcional; habilita logout no Hosted UI)

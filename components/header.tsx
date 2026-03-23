@@ -1,8 +1,32 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { Menu } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { fetchAuthSession } from "@/services/auth-session-service"
 
 export function Header() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  useEffect(() => {
+    let active = true
+
+    void fetchAuthSession().then((session) => {
+      if (active) {
+        setIsAuthenticated(session.authenticated)
+      }
+    })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const authLabel = isAuthenticated ? "Sair" : "Login / Usuario"
+  const authHref = isAuthenticated ? "/api/auth/logout" : "/api/auth/login"
+
   return (
     <header className="border-b border-border bg-card">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -36,7 +60,7 @@ export function Header() {
         </div>
 
         <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6">
-          <a href="/api/auth/login">Login / Usuário</a>
+          <a href={authHref}>{authLabel}</a>
         </Button>
       </div>
     </header>
