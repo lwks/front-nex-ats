@@ -6,10 +6,17 @@ import { FormEvent, useEffect, useRef, useState } from "react"
 import { JOBS_API_PROXY_URL, ZIPS_API_PROXY_URL } from "@/config"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
+import {
+  formatZipSummary,
+  isRecord,
+  normalizeZipResponse,
+  pickFirstStringValue,
+  type ZipLookupResponse,
+} from "@/lib/zip-utils"
 import { cn } from "@/lib/utils"
 
 type JobFormState = {
@@ -55,23 +62,6 @@ const CONTRACT_FORMAT_OPTIONS = [
 const CEP_LENGTH = 8
 const MIN_TITLE_LENGTH = 5
 const MIN_DESCRIPTION_LENGTH = 30
-
-
-type ZipLookupResponse = {
-  cep?: string
-  logradouro?: string
-  bairro?: string
-  localidade?: string
-  uf?: string
-  cidade?: string
-  estado?: string
-  street?: string
-  neighborhood?: string
-  city?: string
-  state?: string
-  data?: Record<string, unknown>
-  [key: string]: unknown
-}
 
 function createDefaultFormState(): JobFormState {
   return {
@@ -129,75 +119,6 @@ function generateGuid(): string {
   }
 
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
-}
-
-function pickFirstStringValue(data: ZipLookupResponse, keys: string[]): string | undefined {
-  for (const key of keys) {
-    const rawValue = data[key]
-    if (typeof rawValue === "string") {
-      const trimmed = rawValue.trim()
-      if (trimmed.length > 0) {
-        return trimmed
-      }
-    }
-  }
-
-  return undefined
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object"
-}
-
-function normalizeZipResponse(rawData: ZipLookupResponse | null, cep: string): ZipLookupResponse {
-  const normalizedData: ZipLookupResponse = rawData ? { ...rawData } : {}
-  const nestedData = isRecord(rawData?.data) ? (rawData?.data as Record<string, unknown>) : null
-
-  if (nestedData) {
-    for (const [key, value] of Object.entries(nestedData)) {
-      if (normalizedData[key] === undefined) {
-        normalizedData[key] = value
-      }
-    }
-  }
-
-  if (typeof normalizedData.cep !== "string" && cep.length > 0) {
-    normalizedData.cep = cep
-  }
-
-  return normalizedData
-}
-
-function formatZipSummary(data: ZipLookupResponse): string | null {
-  const street = pickFirstStringValue(data, ["logradouro", "street", "address"])
-  const neighborhood = pickFirstStringValue(data, ["bairro", "neighborhood"])
-  const city = pickFirstStringValue(data, ["localidade", "cidade", "city"])
-  const state = pickFirstStringValue(data, ["uf", "estado", "state"])
-
-  const segments: string[] = []
-
-  if (street) {
-    segments.push(street)
-  }
-
-  if (neighborhood) {
-    segments.push(neighborhood)
-  }
-
-  if (city && state) {
-    segments.push(`${city}/${state}`)
-  } else if (city) {
-    segments.push(city)
-  } else if (state) {
-    segments.push(state)
-  }
-
-  if (segments.length === 0) {
-    const cep = pickFirstStringValue(data, ["cep"])
-    return cep ?? null
-  }
-
-  return segments.join(" · ")
 }
 
 type ToastState = {
@@ -910,3 +831,4 @@ export default function CreateJobPage() {
     </div>
   )
 }
+
