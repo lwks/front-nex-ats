@@ -1,58 +1,129 @@
-# NEX People Solutions
+# NEX ATS Frontend (Next.js)
 
-Aplicação front-end construída com Next.js para conduzir o onboarding de candidatos do ATS (Applicant Tracking System) da NEX People Solutions. O projeto foi originalmente gerado pelo [v0.app](https://v0.app) e adaptado para desenvolvimento local.
+Aplicacao web do fluxo ATS da NEX, com:
+
+- Listagem de vagas
+- Candidatura de candidatos (onboarding em etapas)
+- Criacao de novas vagas
+- Painel de candidaturas por vaga (visao empresa)
+- Autenticacao Cognito via OAuth2 + PKCE
+- Rotas internas `/api/*` para proxy e sessao
+
+## Stack
+
+- Next.js `16.0.10` (App Router)
+- React `19.2.3`
+- TypeScript `5.x`
+- Tailwind CSS `4.x` + componentes baseados em Radix
+- Vitest `2.x` para testes
 
 ## Requisitos
 
-- Node.js 20 LTS (ou versão compatível com Next.js 15)
-- npm 9 ou superior (o repositório acompanha `package-lock.json`)
+- Node.js 20 LTS ou superior
+- npm 9 ou superior
 
-## Como começar
+## Setup local
 
 ```bash
-# 1. Instalar dependências
 npm install
-
-# 2. Subir o ambiente de desenvolvimento
+cp .env.example .env.local
 npm run dev
-
-# 3. Acessar no navegador
-http://localhost:3000
 ```
 
-### Scripts úteis
+Aplicacao local: `http://localhost:3000`
 
-- `npm run build`: gera o bundle de produção (`next build`).
-- `npm run start`: executa a aplicação em modo produção (`next start`).
-- `npm run lint`: roda as verificações do `next lint`. (Com a configuração atual, a build falha caso haja erros de lint ou TypeScript.)
+## Scripts
 
-## Estrutura do projeto
+- `npm run dev`: desenvolvimento
+- `npm run build`: build de producao
+- `npm run start`: sobe build de producao
+- `npm run lint`: lint via ESLint
+- `npm run test`: executa testes (Vitest)
+- `npm run test:watch`: testes em modo watch
 
-- `app/` – entrypoint do Next.js com `layout.tsx`, `page.tsx` e os estilos globais (`globals.css`).
-- `components/` – componentes reutilizáveis, incluindo:
-  - `candidate-onboarding.tsx` e `progress-indicator.tsx`: orquestram as etapas do formulário.
-  - `steps/`: telas de formulário (`Dados Pessoais`, `Dados Profissionais`, upload de CV em PDF, `Interesses Profissionais`).
-  - `ui/`: componentes baseados em Radix UI/ShadCN (botão, select, sheet etc.).
-  - `header.tsx`: cabeçalho da aplicação.
-- `lib/` – utilitários (por exemplo, o helper `cn` para composição de classes).
-- `public/` – assets estáticos (logos e imagens de placeholder).
+## Variaveis de ambiente
 
-## Fluxo atual da aplicação
+### API externa
 
-1. A página inicial (`/`) exibe o cabeçalho e o indicador de progresso.
-2. O formulário multi-etapas coleta dados pessoais, profissionais (em duas etapas, incluindo upload de CV em PDF) e interesses.
-3. Ao final, os dados são apenas exibidos no console e via `alert` (não há integração com backend).
+- `NEXT_PUBLIC_API_BASE_URL`:
+  - Base da API ATS consumida pelo front e pelos proxies.
+  - Exemplo: `https://seu-endpoint.lambda-url.../api`
+  - Se ausente, o projeto usa um endpoint default definido em `config.ts`.
 
-## Observações e pontos de atenção
+### Cognito (OAuth2/PKCE)
 
-- **Textos em UTF-8**: revisamos os arquivos da interface para garantir que os textos em português estejam com a acentuação correta.
-- **Build mais rígido**: com a remoção de `ignoreDuringBuilds`/`ignoreBuildErrors`, erros de lint e TypeScript agora interrompem a build, reduzindo risco de regressões.
-- **Dependências enxutas**: o `package.json` foi limpo para conter apenas os pacotes realmente utilizados, reduzindo tempo de instalação e superfície de manutenção.
-- **Persistência ausente**: o fluxo continua apenas exibindo os dados no console. Para uso real, será necessário integrar com uma API ou serviço de armazenamento.
+- `COGNITO_CLIENT_ID` ou `NEXT_PUBLIC_COGNITO_CLIENT_ID` (obrigatorio para login)
+- `COGNITO_DOMAIN` ou `NEXT_PUBLIC_COGNITO_DOMAIN` (opcional; possui default no projeto)
+- `COGNITO_CLIENT_SECRET` ou `NEXT_PUBLIC_COGNITO_CLIENT_SECRET` (opcional)
+- `COGNITO_REDIRECT_URI` ou `NEXT_PUBLIC_COGNITO_REDIRECT_URI` (opcional; fallback para `<origin>/api/auth/callback`)
+- `COGNITO_SCOPE` ou `NEXT_PUBLIC_COGNITO_SCOPE` (opcional; default `openid email profile`)
+- `COGNITO_LOGOUT_URI` ou `NEXT_PUBLIC_COGNITO_LOGOUT_URI` (opcional; habilita logout no Hosted UI)
 
-## Deploy
+Importante: nao versione segredos reais em `.env.local`.
 
-- Hospedagem atual no Vercel: [https://vercel.com/lraposoia-6118s-projects/v0-nex-people-solutions](https://vercel.com/lraposoia-6118s-projects/v0-nex-people-solutions)
-- Projeto original no v0.app: [https://v0.app/chat/projects/XQ8P5ft3O69](https://v0.app/chat/projects/XQ8P5ft3O69)
+## Rotas de pagina (UI)
 
-> Caso precise ajustar a estrutura do projeto, combine previamente a alteração.
+- `/`: listagem de vagas (dados vindos da API)
+- `/candidaturas`: onboarding do candidato em 4 etapas
+- `/jobs/create`: formulario de criacao de vaga com validacoes e consulta de CEP
+- `/empresa/candidaturas`: quadro de candidaturas por vaga (`guid_vaga`)
+
+## Rotas internas da aplicacao (`app/api`)
+
+### Proxy para API ATS
+
+- `POST /api/jobs`: cria vaga no backend
+- `POST /api/candidates`: cria candidatura no backend
+- `GET /api/candidates/by-job-guids?guid_vaga=...`: busca candidatos por vaga
+- `GET /api/zips/:zip`: consulta CEP (8 digitos)
+- `OPTIONS` nas rotas acima para preflight CORS
+
+### Autenticacao
+
+- `GET /api/auth/login`: inicia fluxo PKCE no Cognito
+- `GET /api/auth/callback`: troca `code` por tokens e grava cookies de sessao
+- `POST /api/auth/refresh`: renova sessao com refresh token (cookie httpOnly)
+- `GET /api/auth/session`: retorna resumo da sessao autenticada
+- `GET /api/auth/logout`: limpa cookies e redireciona (local ou Hosted UI)
+
+Cookies usados no fluxo de auth:
+
+- Fluxo PKCE: `nexjob_auth_state`, `nexjob_code_verifier`
+- Sessao: `nexjob_access_token`, `nexjob_id_token`, `nexjob_refresh_token`, `nexjob_token_expires_at`
+
+## Endpoints externos esperados (backend ATS)
+
+Com `NEXT_PUBLIC_API_BASE_URL=<base>/api`, o front espera estes recursos:
+
+- `GET /jobs` (listagem de vagas)
+- `POST /jobs` (criacao de vaga)
+- `POST /candidates` (envio de candidatura)
+- `GET /candidates/by-job-guids` (filtro por `guid_vaga`)
+- `GET /zips/:zip` (consulta de localizacao por CEP)
+
+## Estrutura resumida
+
+- `app/`: paginas e rotas server (`app/api/*`)
+- `components/`: UI e fluxos (vagas, onboarding, board)
+- `services/`: chamadas HTTP usadas pelo front
+- `lib/auth/cognito.ts`: utilitarios de auth, cookies e sessao
+- `src/tests/`: testes de rotas e services
+
+## Testes
+
+```bash
+npm run test
+```
+
+A configuracao de cobertura em `vitest.config.mjs` aplica threshold global de `90%` para:
+
+- lines
+- functions
+- branches
+- statements
+
+## Observacoes atuais
+
+- O quadro de candidaturas em `/empresa/candidaturas` esta com drag-and-drop desabilitado (`draggable={false}`), sem persistencia de mudanca de status no backend.
+- O onboarding de candidato ainda gera `guid_id` e `cd_cnpj` no front para envio de payload.
+- O projeto possui servicos/testes legados de auth em `services/auth-service.ts`; o runtime principal de autenticacao usa `lib/auth/cognito.ts` + rotas em `app/api/auth/*`.

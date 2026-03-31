@@ -3,6 +3,7 @@ import { CANDIDATES_API_PROXY_URL } from "@/config"
 
 export type CandidateProfilePayload = CandidateData & {
   guid_id: string
+  guid_vaga: string
   cd_cnpj: string
 }
 
