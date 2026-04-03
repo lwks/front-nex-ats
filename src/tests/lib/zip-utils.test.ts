@@ -7,34 +7,35 @@ describe("zip utils", () => {
     const normalized = normalizeZipResponse(
       {
         data: {
-          localidade: "São Paulo",
+          localidade: "S\u00E3o Paulo",
           uf: "SP",
         },
       },
       "01310100",
     )
 
-    expect(normalized.localidade).toBe("São Paulo")
+    expect(normalized.localidade).toBe("S\u00E3o Paulo")
     expect(normalized.uf).toBe("SP")
     expect(normalized.cep).toBe("01310100")
   })
 
   it("extrai cidade e estado quando a API devolve data como string", () => {
+    const address = "Rua Exemplo - Centro - S\u00E3o Paulo/SP"
     const normalized = normalizeZipResponse(
       {
-        data: "Rua Exemplo - Centro - São Paulo/SP",
+        data: address,
       },
       "01310100",
     )
 
-    expect(normalized.localidade).toBe("São Paulo")
-    expect(normalized.cidade).toBe("São Paulo")
+    expect(normalized.localidade).toBe("S\u00E3o Paulo")
+    expect(normalized.cidade).toBe("S\u00E3o Paulo")
     expect(normalized.uf).toBe("SP")
     expect(normalized.estado).toBe("SP")
-    expect(formatZipSummary(normalized)).toBe("São Paulo/SP")
+    expect(formatZipSummary(normalized)).toBe(address)
   })
 
-  it("mantem cidade e estado vazios quando data string nao possui Cidade/UF", () => {
+  it("usa o endereco bruto quando data string nao possui Cidade/UF", () => {
     const normalized = normalizeZipResponse(
       {
         data: "Rua Exemplo - Centro",
@@ -44,6 +45,12 @@ describe("zip utils", () => {
 
     expect(normalized.localidade).toBeUndefined()
     expect(normalized.uf).toBeUndefined()
+    expect(formatZipSummary(normalized)).toBe("Rua Exemplo - Centro")
+  })
+
+  it("mantem fallback para o CEP quando nao ha endereco retornado", () => {
+    const normalized = normalizeZipResponse(null, "01310100")
+
     expect(formatZipSummary(normalized)).toBe("01310100")
   })
 })

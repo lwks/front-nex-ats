@@ -9,6 +9,13 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import { ZIPS_API_PROXY_URL } from "@/config"
+import {
+  formatZipSummary,
+  isRecord,
+  normalizeZipResponse,
+  pickFirstStringValue,
+  type ZipLookupResponse,
+} from "@/lib/zip-utils"
 import type { CandidateData } from "../candidate-onboarding"
 
 interface PersonalDataStepProps {
@@ -69,91 +76,6 @@ const getDocumentError = (value: string) => {
   }
 
   return `Informe um CPF com ${CPF_LENGTH} dígitos ou um RG entre ${RG_MIN_LENGTH} e ${RG_MAX_LENGTH} dígitos.`
-}
-
-type ZipLookupResponse = {
-  cep?: string
-  logradouro?: string
-  bairro?: string
-  localidade?: string
-  uf?: string
-  cidade?: string
-  estado?: string
-  street?: string
-  neighborhood?: string
-  city?: string
-  state?: string
-  data?: Record<string, unknown>
-  [key: string]: unknown
-}
-
-function pickFirstStringValue(data: ZipLookupResponse, keys: string[]): string | undefined {
-  for (const key of keys) {
-    const rawValue = data[key]
-    if (typeof rawValue === "string") {
-      const trimmed = rawValue.trim()
-      if (trimmed.length > 0) {
-        return trimmed
-      }
-    }
-  }
-
-  return undefined
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object"
-}
-
-function normalizeZipResponse(rawData: ZipLookupResponse | null, cep: string): ZipLookupResponse {
-  const normalizedData: ZipLookupResponse = rawData ? { ...rawData } : {}
-  const nestedData = isRecord(rawData?.data) ? (rawData?.data as Record<string, unknown>) : null
-
-  if (nestedData) {
-    for (const [key, value] of Object.entries(nestedData)) {
-      if (normalizedData[key] === undefined) {
-        normalizedData[key] = value
-      }
-    }
-  }
-
-  if (typeof normalizedData.cep !== "string" && cep.length > 0) {
-    normalizedData.cep = cep
-  }
-
-  return normalizedData
-}
-
-function formatZipSummary(data: ZipLookupResponse): string | null {
-  const street = pickFirstStringValue(data, ["logradouro", "street", "address"])
-  const neighborhood = pickFirstStringValue(data, ["bairro", "neighborhood"])
-  const city = pickFirstStringValue(data, ["localidade", "cidade", "city"])
-  const state = pickFirstStringValue(data, ["uf", "estado", "state"])
-
-  const segments: string[] = []
-
-  if (street) {
-    segments.push(street)
-  }
-
-  if (neighborhood) {
-    segments.push(neighborhood)
-  }
-
-  if (city && state) {
-    segments.push(`${city}/${state}`)
-  } else if (city) {
-    segments.push(city)
-  } else if (state) {
-    segments.push(state)
-  }
-
-  if (segments.length === 0) {
-    const cepValue = pickFirstStringValue(data, ["cep"])
-    return cepValue ?? null
-  }
-
-  return segments.join(" - ")
 }
 
 export function PersonalDataStep({ data, onUpdate, onNext }: PersonalDataStepProps) {
