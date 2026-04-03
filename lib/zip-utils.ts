@@ -95,6 +95,11 @@ export function normalizeZipResponse(rawData: ZipLookupResponse | null, cep: str
 }
 
 export function formatZipSummary(data: ZipLookupResponse): string | null {
+  const rawLocation = typeof data.data === "string" ? data.data.trim() : ""
+  if (rawLocation.length > 0) {
+    return rawLocation
+  }
+
   const street = pickFirstStringValue(data, ["logradouro", "street", "address"])
   const neighborhood = pickFirstStringValue(data, ["bairro", "neighborhood"])
   const city = pickFirstStringValue(data, ["localidade", "cidade", "city"])
