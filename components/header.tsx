@@ -9,12 +9,14 @@ import { fetchAuthSession } from "@/services/auth-session-service"
 
 export function Header() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authEnabled, setAuthEnabled] = useState(true)
 
   useEffect(() => {
     let active = true
 
     void fetchAuthSession().then((session) => {
       if (active) {
+        setAuthEnabled(session.authEnabled)
         setIsAuthenticated(session.authenticated)
       }
     })
@@ -58,10 +60,11 @@ export function Header() {
 
           <h1 className="text-xl md:text-2xl font-bold text-foreground">NexJob</h1>
         </div>
-
-        <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6">
-          <a href={authHref}>{authLabel}</a>
-        </Button>
+        {authEnabled ? (
+          <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6">
+            <a href={authHref}>{authLabel}</a>
+          </Button>
+        ) : null}
       </div>
     </header>
   )

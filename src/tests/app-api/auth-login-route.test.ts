@@ -9,8 +9,11 @@ function getSetCookieHeader(response: Response) {
 
 describe('/api/auth/login route', () => {
   beforeEach(() => {
+    vi.resetModules()
     vi.restoreAllMocks()
     process.env.COGNITO_CLIENT_ID = 'client-id'
+    delete process.env.COGNITO_ENABLED
+    delete process.env.NEXT_PUBLIC_COGNITO_ENABLED
     delete process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID
     delete process.env.COGNITO_REDIRECT_URI
     delete process.env.NEXT_PUBLIC_COGNITO_REDIRECT_URI
@@ -40,9 +43,19 @@ describe('/api/auth/login route', () => {
     delete process.env.COGNITO_CLIENT_ID
 
     const { GET } = await import('@/app/api/auth/login/route')
-    const response = await GET(new NextRequest('http://localhost/api/auth/login'))
+    const response = await GET(new NextRequest('https://example.com/api/auth/login'))
 
     expect(response.status).toBe(500)
     await expect(response.json()).resolves.toEqual({ message: 'COGNITO_CLIENT_ID não configurado.' })
+  })
+
+  it('redirects back to home when auth is disabled for localhost', async () => {
+    const { GET } = await import('@/app/api/auth/login/route')
+
+    const response = await GET(new NextRequest('http://localhost:3000/api/auth/login'))
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('http://localhost:3000/')
+    expect(getSetCookieHeader(response)).toBe('')
   })
 })

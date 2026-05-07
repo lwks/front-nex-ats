@@ -25,12 +25,38 @@ describe('app/page route guard', () => {
       cookies: vi.fn().mockResolvedValue({
         get: vi.fn().mockReturnValue(undefined),
       }),
+      headers: vi.fn().mockResolvedValue(new Headers({
+        host: 'app.example.com',
+      })),
     }))
 
     const { default: HomePage } = await import('@/app/page')
 
     await expect(HomePage()).rejects.toThrow('NEXT_REDIRECT:/api/auth/login')
     expect(redirectMock).toHaveBeenCalledWith('/api/auth/login')
+  })
+
+  it('does not redirect when auth is disabled for localhost', async () => {
+    const redirectMock = vi.fn()
+
+    vi.doMock('next/navigation', () => ({
+      redirect: redirectMock,
+    }))
+
+    vi.doMock('next/headers', () => ({
+      cookies: vi.fn().mockResolvedValue({
+        get: vi.fn().mockReturnValue(undefined),
+      }),
+      headers: vi.fn().mockResolvedValue(new Headers({
+        host: 'localhost:3000',
+      })),
+    }))
+
+    const { default: HomePage } = await import('@/app/page')
+    const page = await HomePage()
+
+    expect(page).toBeTruthy()
+    expect(redirectMock).not.toHaveBeenCalled()
   })
 
   it('renders home when session is authenticated', async () => {
@@ -59,6 +85,9 @@ describe('app/page route guard', () => {
           return undefined
         }),
       }),
+      headers: vi.fn().mockResolvedValue(new Headers({
+        host: 'app.example.com',
+      })),
     }))
 
     const { default: HomePage } = await import('@/app/page')
