@@ -25,6 +25,8 @@ type ApiJob = {
   estado?: string
   uf?: string
   state?: string
+  regiao?: string
+  region?: string
   modalidade?: string
   modelo_trabalho?: string
   tipoContratacao?: string
@@ -64,6 +66,12 @@ type ApiJob = {
   contactEmail?: string
   email_contato?: string
   contato_email?: string
+  skills?: unknown
+  habilidades?: unknown
+  habilidades_tecnicas?: unknown
+  technicalSkills?: unknown
+  tecnologias?: unknown
+  stack?: unknown
 } & Record<string, unknown>
 
 type JobCard = {
@@ -72,6 +80,9 @@ type JobCard = {
   title: string
   company: string
   location: string
+  region?: string
+  state?: string
+  technicalSkills: string[]
   workType: string
   description: string
   applyHref: string
@@ -108,6 +119,34 @@ function pickString(...values: Array<unknown>) {
   }
 
   return undefined
+}
+
+function pickStringArray(...values: Array<unknown>) {
+  for (const value of values) {
+    if (Array.isArray(value)) {
+      const items = value
+        .flatMap((item) => pickString(item)?.split(/[,;\n]/) ?? [])
+        .map((item) => item.trim())
+        .filter((item): item is string => Boolean(item))
+
+      if (items.length > 0) {
+        return items
+      }
+    }
+
+    if (typeof value === "string") {
+      const items = value
+        .split(/[,;\n]/)
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0)
+
+      if (items.length > 0) {
+        return items
+      }
+    }
+  }
+
+  return []
 }
 
 function isZipLocation(value?: string) {
@@ -168,6 +207,7 @@ function normalizeJob(job: ApiJob, index: number): JobCard {
     pickString(job.id, job.slug, job.codigo, job.uuid, job.guid_id, job.pk) ?? `vaga-${index}`
   const city = pickString(job.cidade, job.city)
   const state = pickString(job.estado, job.uf, job.state)
+  const region = pickString(job.regiao, job["região"], job.region)
   const cityState = city && state ? `${city}/${state}` : city ?? state
 
   const title = pickString(job.titulo, job.title, job.nome) ?? "Vaga sem título"
@@ -194,6 +234,14 @@ function normalizeJob(job: ApiJob, index: number): JobCard {
   const description =
     pickString(job.descricao, job.description, job.resumo, job.summary) ??
     "Descrição indisponível no momento." // todo: check descrição em /jobs
+  const technicalSkills = pickStringArray(
+    job.skills,
+    job.habilidades,
+    job.habilidades_tecnicas,
+    job.technicalSkills,
+    job.tecnologias,
+    job.stack,
+  )
   const companyDetails = {
     segment: pickString(job.segmento, job.segment, job.setor, job.sector),
     industry: pickString(job.ramo_atuacao, job.ramoAtuacao, job.industry, job.area_atuacao),
@@ -223,6 +271,9 @@ function normalizeJob(job: ApiJob, index: number): JobCard {
     title,
     company,
     location,
+    region,
+    state,
+    technicalSkills,
     workType,
     description,
     applyHref,

@@ -39,6 +39,9 @@ export type JobCard = {
   title: string
   company: string
   location: string
+  region?: string
+  state?: string
+  technicalSkills: string[]
   workType: string
   description: string
   applyHref: string
@@ -61,7 +64,7 @@ type CandidateCountState = CandidateMetrics & {
   status: "idle" | "loading" | "ready" | "error"
 }
 
-export const JOBS_PER_PAGE = 3
+export const JOBS_PER_PAGE = 2
 export const BLOCKED_MODULE_LABELS = ["Performance", "Estudos", "Parceiros"] as const
 
 const blockedModules = [
@@ -141,6 +144,40 @@ export function getPaginatedJobs<T>(jobs: T[], page: number, pageSize = JOBS_PER
   return jobs.slice(start, start + pageSize)
 }
 
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+}
+
+export function filterJobs(jobs: JobCard[], query: string) {
+  const normalizedQuery = normalizeSearchText(query.trim())
+
+  if (!normalizedQuery) {
+    return jobs
+  }
+
+  return jobs.filter((job) => {
+    const searchableText = normalizeSearchText(
+      [
+        job.title,
+        job.description,
+        job.company,
+        job.location,
+        job.region,
+        job.state,
+        job.workType,
+        ...job.technicalSkills,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    )
+
+    return searchableText.includes(normalizedQuery)
+  })
+}
+
 export function deriveCandidateMetrics(payload: unknown, jobs: JobCard[]): CandidateMetrics {
   const candidates = extractCandidateItems(payload)
   const guidToJobId = new Map(
@@ -166,7 +203,7 @@ export function deriveCandidateMetrics(payload: unknown, jobs: JobCard[]): Candi
 export function JobListingsClient({ jobs, error, showEmptyState = false }: JobListingsClientProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const [selectedJobId, setSelectedJobId] = useState(jobs[0]?.id ?? "")
+  const [searchQuery, setSearchQuery] = useState("")
   const [modalJob, setModalJob] = useState<JobCard | null>(null)
   const [candidateCounts, setCandidateCounts] = useState<CandidateCountState>({
     totalCandidates: 0,
@@ -174,10 +211,12 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
     status: "idle",
   })
 
-  const pageCount = getPageCount(jobs.length)
-  const visibleJobs = useMemo(() => getPaginatedJobs(jobs, currentPage), [jobs, currentPage])
-  const selectedJob =
-    jobs.find((job) => job.id === selectedJobId) ?? visibleJobs[0] ?? jobs[0] ?? null
+  const filteredJobs = useMemo(() => filterJobs(jobs, searchQuery), [jobs, searchQuery])
+  const pageCount = getPageCount(filteredJobs.length)
+  const visibleJobs = useMemo(
+    () => getPaginatedJobs(filteredJobs, currentPage),
+    [filteredJobs, currentPage],
+  )
   const jobGuidSignature = jobs
     .map((job) => job.jobGuid?.trim())
     .filter(Boolean)
@@ -185,14 +224,7 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
 
   useEffect(() => {
     setCurrentPage(1)
-    setSelectedJobId(jobs[0]?.id ?? "")
-  }, [jobs])
-
-  useEffect(() => {
-    if (!visibleJobs.some((job) => job.id === selectedJobId)) {
-      setSelectedJobId(visibleJobs[0]?.id ?? jobs[0]?.id ?? "")
-    }
-  }, [jobs, selectedJobId, visibleJobs])
+  }, [jobs, searchQuery])
 
   useEffect(() => {
     const jobGuids = jobs
@@ -230,6 +262,10 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
     setCurrentPage(Math.min(Math.max(page, 1), pageCount))
   }
 
+  const handleSearchInput: React.ChangeEventHandler<HTMLInputElement> = (event) => {
+    setSearchQuery(event.currentTarget.value)
+  }
+
   return (
     <div className="flex min-h-screen bg-gray-50 text-black">
       <aside
@@ -240,7 +276,7 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
         <div className={`flex items-center justify-between border-b border-[#333333] p-5 ${isSidebarCollapsed ? "flex-col gap-4" : ""}`}>
           <div className="min-w-0">
             <h1 className={`font-semibold ${isSidebarCollapsed ? "text-center text-sm" : "text-xl"}`}>
-              {isSidebarCollapsed ? "RH" : "Sistema RH"}
+              {isSidebarCollapsed ? "CHR" : "ClusterHR"}
             </h1>
             {!isSidebarCollapsed ? (
               <p className="mt-1 text-sm text-gray-400">Gestão de Talentos</p>
@@ -360,10 +396,12 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
                 <input
-                  disabled
                   type="text"
-                  placeholder="Buscar vagas... (em breve)"
-                  className="w-full cursor-not-allowed rounded-lg border-2 border-gray-200 bg-gray-50 py-2 pl-10 pr-4 text-sm text-gray-500 outline-none"
+                  value={searchQuery}
+                  onChange={handleSearchInput}
+                  onInput={handleSearchInput}
+                  placeholder="Buscar por vaga ou descrição..."
+                  className="w-full rounded-lg border-2 border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-700 outline-none transition focus:border-[#FF6B00] focus:ring-2 focus:ring-orange-100"
                 />
               </div>
               <button
@@ -375,6 +413,11 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
                 Filtros
               </button>
             </div>
+            {searchQuery.trim() ? (
+              <p className="mt-3 text-sm font-medium text-gray-600">
+                {filteredJobs.length} vaga{filteredJobs.length === 1 ? "" : "s"} encontrada{filteredJobs.length === 1 ? "" : "s"}.
+              </p>
+            ) : null}
           </section>
 
           {error ? (
@@ -389,36 +432,91 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
             </div>
           ) : null}
 
-          {jobs.length > 0 ? (
-            <section className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-              <div className="space-y-3">
+          {jobs.length > 0 && filteredJobs.length === 0 ? (
+            <div className="rounded-lg border-2 border-dashed border-gray-200 bg-white p-10 text-center text-sm text-gray-600">
+              Nenhuma vaga encontrada para a busca informada.
+            </div>
+          ) : null}
+
+          {filteredJobs.length > 0 ? (
+            <section className="space-y-4">
+              <div className="grid gap-6">
                 {visibleJobs.map((job) => {
-                  const isSelected = selectedJob?.id === job.id
                   const candidateCount = candidateCounts.byJobId[job.id] ?? 0
                   return (
-                    <button
+                    <article
                       key={job.id}
-                      type="button"
-                      onClick={() => setSelectedJobId(job.id)}
-                      className={`w-full rounded-lg border-2 bg-white p-4 text-left shadow-sm transition ${
-                        isSelected
-                          ? "border-[#FF6B00] bg-orange-50"
-                          : "border-gray-200 hover:border-[#FF6B00] hover:shadow-md"
-                      }`}
+                      className="flex min-h-[360px] flex-col rounded-lg border-2 border-gray-200 bg-white p-6 shadow-sm"
                     >
-                      <h3 className="font-semibold text-black">{job.title}</h3>
-                      <p className="mt-1 text-sm font-medium text-gray-600">{job.company}</p>
-                      <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
-                        <MapPin className="size-3" />
-                        {job.location}
-                      </div>
-                      <div className="mt-3 flex items-center justify-between gap-3">
-                        <span className="rounded bg-[#FF6B00] px-2 py-1 text-xs font-semibold text-white">
-                          {candidateCounts.status === "error" ? "N/D" : candidateCount} candidatos
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-[#FF6B00]">{job.company}</p>
+                          <h3 className="mt-1 text-2xl font-semibold text-black">{job.title}</h3>
+                          <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                            <span className="inline-flex items-center gap-1">
+                              <MapPin className="size-4" />
+                              {job.location}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <Briefcase className="size-4" />
+                              {job.workType}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="w-fit rounded-full border border-green-300 bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
+                          Aberta
                         </span>
-                        <span className="text-xs font-semibold text-gray-600">{job.workType}</span>
                       </div>
-                    </button>
+
+                      <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-5">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <h4 className="font-semibold text-black">Descricao da vaga</h4>
+                          <span className="w-fit rounded bg-[#FF6B00] px-2 py-1 text-xs font-semibold text-white">
+                            {candidateCounts.status === "error" ? "N/D" : candidateCount} candidatos
+                          </span>
+                        </div>
+                        <div className="mt-4 grid gap-3 text-sm text-gray-600 md:grid-cols-2">
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Regiao / Estado</p>
+                            <p className="mt-1 font-medium text-gray-700">
+                              {[job.region, job.state].filter(Boolean).join(" / ") || job.location}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Skills tecnicas</p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {(job.technicalSkills.length > 0 ? job.technicalSkills : ["Nao informado"]).map((skill) => (
+                                <span key={skill} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-700 ring-1 ring-gray-200">
+                                  {skill}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-gray-600">
+                          {job.description}
+                        </p>
+                      </div>
+
+                      <div className="mt-auto flex flex-col-reverse gap-3 pt-6 sm:flex-row sm:justify-end">
+                        <Button type="button" variant="outline" onClick={() => setModalJob(job)}>
+                          Ver detalhes
+                        </Button>
+                        <Button asChild className="rounded-lg bg-[#FF6B00] text-white hover:bg-[#FF8C00]">
+                          <Link
+                            href={job.applyHref}
+                            {...(job.isExternal
+                              ? {
+                                target: "_blank",
+                                rel: "noopener noreferrer",
+                              }
+                              : undefined)}
+                          >
+                            Candidatar-se
+                          </Link>
+                        </Button>
+                      </div>
+                    </article>
                   )
                 })}
 
@@ -449,55 +547,6 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
                 </div>
               </div>
 
-              {selectedJob ? (
-                <article className="rounded-lg border-2 border-gray-200 bg-white p-6 shadow-sm">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-[#FF6B00]">{selectedJob.company}</p>
-                      <h3 className="mt-1 text-2xl font-semibold text-black">{selectedJob.title}</h3>
-                      <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                        <span className="inline-flex items-center gap-1">
-                          <MapPin className="size-4" />
-                          {selectedJob.location}
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <Briefcase className="size-4" />
-                          {selectedJob.workType}
-                        </span>
-                      </div>
-                    </div>
-                    <span className="w-fit rounded-full border border-green-300 bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
-                      Aberta
-                    </span>
-                  </div>
-
-                  <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-5">
-                    <h4 className="font-semibold text-black">Descrição da vaga</h4>
-                    <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-gray-600">
-                      {selectedJob.description}
-                    </p>
-                  </div>
-
-                  <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                    <Button type="button" variant="outline" onClick={() => setModalJob(selectedJob)}>
-                      Ver detalhes
-                    </Button>
-                    <Button asChild className="rounded-lg bg-[#FF6B00] text-white hover:bg-[#FF8C00]">
-                      <Link
-                        href={selectedJob.applyHref}
-                        {...(selectedJob.isExternal
-                          ? {
-                            target: "_blank",
-                            rel: "noopener noreferrer",
-                          }
-                          : undefined)}
-                      >
-                        Candidatar-se
-                      </Link>
-                    </Button>
-                  </div>
-                </article>
-              ) : null}
             </section>
           ) : null}
         </div>

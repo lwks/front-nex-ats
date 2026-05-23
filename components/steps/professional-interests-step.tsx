@@ -265,7 +265,7 @@ export function ProfessionalInterestsStep({
               Confirmação de Compartilhamento
             </Label>
             <p className="text-xs text-muted-foreground">
-              Autorizo o compartilhamento dos meus dados profissionais com empresas parceiras da plataforma NexJob para
+              Autorizo o compartilhamento dos meus dados profissionais com empresas parceiras da plataforma ClusterHR para
               fins de recrutamento e seleção
             </p>
             {shareError ? <p className="text-xs text-destructive">{shareError}</p> : null}

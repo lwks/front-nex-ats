@@ -1,6 +1,6 @@
-# NEX ATS Frontend (Next.js)
+# ClusterHR ATS Frontend (Next.js)
 
-Aplicacao web do fluxo ATS da NEX, com:
+Aplicacao web do fluxo ATS da ClusterHR, com:
 
 - Listagem de vagas
 - Candidatura de candidatos (onboarding em etapas)
