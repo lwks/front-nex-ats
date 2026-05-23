@@ -6,6 +6,7 @@ import {
   buildAuthorizeUrl,
   createCodeChallenge,
   generateRandomBase64Url,
+  isAuthEnabled,
   getCognitoClientId,
   getCognitoDomain,
   getCognitoScope,
@@ -14,6 +15,10 @@ import {
 } from '../../../../lib/auth/cognito'
 
 export async function GET(request: NextRequest) {
+  if (!isAuthEnabled(request.nextUrl.hostname)) {
+    return NextResponse.redirect(new URL('/', request.nextUrl.origin))
+  }
+
   const clientId = getCognitoClientId()
   if (!clientId) {
     return NextResponse.json(

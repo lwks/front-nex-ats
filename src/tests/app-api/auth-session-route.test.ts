@@ -23,6 +23,7 @@ describe('/api/auth/session route', () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
+      authEnabled: true,
       authenticated: true,
       expiresAt,
       user: {
@@ -39,6 +40,7 @@ describe('/api/auth/session route', () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
+      authEnabled: false,
       authenticated: false,
       expiresAt: null,
       user: null,
@@ -58,9 +60,27 @@ describe('/api/auth/session route', () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
+      authEnabled: false,
       authenticated: false,
       expiresAt,
       user: null,
     })
+  })
+
+  it('keeps auth enabled on localhost when explicitly configured', async () => {
+    process.env.COGNITO_ENABLED = 'true'
+    const { GET } = await import('@/app/api/auth/session/route')
+
+    const response = await GET(new NextRequest('http://localhost/api/auth/session'))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({
+      authEnabled: true,
+      authenticated: false,
+      expiresAt: null,
+      user: null,
+    })
+
+    delete process.env.COGNITO_ENABLED
   })
 })

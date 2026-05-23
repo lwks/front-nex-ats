@@ -45,6 +45,47 @@ function sanitizeUrl(rawUrl?: string): string | undefined {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
 }
 
+function parseBooleanEnv(rawValue?: string): boolean | undefined {
+  if (!rawValue) {
+    return undefined
+  }
+
+  const normalized = rawValue.trim().toLowerCase()
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+    return true
+  }
+
+  if (['0', 'false', 'no', 'off'].includes(normalized)) {
+    return false
+  }
+
+  return undefined
+}
+
+function isLocalHostname(hostname?: string | null): boolean {
+  if (!hostname) {
+    return false
+  }
+
+  const trimmed = hostname.trim().toLowerCase()
+  const normalized = trimmed.startsWith('[')
+    ? trimmed.replace(/^\[([^\]]+)\](?::\d+)?$/, '$1')
+    : trimmed.replace(/:\d+$/, '')
+
+  return normalized === 'localhost'
+    || normalized === '127.0.0.1'
+    || normalized === '::1'
+}
+
+export function isAuthEnabled(hostname?: string | null): boolean {
+  const configured = parseBooleanEnv(process.env.COGNITO_ENABLED ?? process.env.NEXT_PUBLIC_COGNITO_ENABLED)
+  if (configured !== undefined) {
+    return configured
+  }
+
+  return !isLocalHostname(hostname)
+}
+
 export function getCognitoDomain(): string {
   return sanitizeUrl(process.env.COGNITO_DOMAIN ?? process.env.NEXT_PUBLIC_COGNITO_DOMAIN) ?? DEFAULT_COGNITO_DOMAIN
 }

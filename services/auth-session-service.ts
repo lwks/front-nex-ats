@@ -5,12 +5,14 @@ export type AuthSessionUser = {
 }
 
 export type AuthSessionState = {
+  authEnabled: boolean
   authenticated: boolean
   expiresAt: string | null
   user: AuthSessionUser | null
 }
 
 const ANONYMOUS_SESSION: AuthSessionState = {
+  authEnabled: true,
   authenticated: false,
   expiresAt: null,
   user: null,
@@ -41,11 +43,21 @@ function normalizeUser(value: unknown): AuthSessionUser | null {
 }
 
 function normalizeSession(payload: unknown): AuthSessionState {
-  if (!isRecord(payload) || payload.authenticated !== true) {
+  if (!isRecord(payload)) {
     return ANONYMOUS_SESSION
   }
 
+  const authEnabled = payload.authEnabled === false ? false : true
+
+  if (payload.authenticated !== true) {
+    return {
+      ...ANONYMOUS_SESSION,
+      authEnabled,
+    }
+  }
+
   return {
+    authEnabled,
     authenticated: true,
     expiresAt: readString(payload.expiresAt) ?? null,
     user: normalizeUser(payload.user),

@@ -1,6 +1,5 @@
 import { JOBS_API_URL } from "@/config"
 
-import { Header } from "./header"
 import { JobListingsClient } from "./job-listings-client"
 
 type ApiJob = {
@@ -69,6 +68,7 @@ type ApiJob = {
 
 type JobCard = {
   id: string
+  jobGuid?: string
   title: string
   company: string
   location: string
@@ -219,6 +219,7 @@ function normalizeJob(job: ApiJob, index: number): JobCard {
 
   return {
     id: idSource,
+    jobGuid,
     title,
     company,
     location,
@@ -257,40 +258,5 @@ export async function JobListings() {
   const { jobs, error } = await fetchJobs()
   const showEmptyState = !error && jobs.length === 0
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
-
-      <main className="container mx-auto max-w-5xl px-4 py-12">
-        <header className="mb-12 text-center md:text-left">
-          <p className="text-sm font-medium uppercase tracking-widest text-primary">
-            Encontre sua próxima oportunidade
-          </p>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            Vagas em destaque na NexJob
-          </h2>
-          <p className="mt-4 text-base text-muted-foreground md:w-2/3">
-            Explore as oportunidades disponíveis e escolha aquela que mais combina com o seu momento
-            profissional. Ao se candidatar você será redirecionado para completar o cadastro.
-          </p>
-        </header>
-
-        {error ? (
-          <div className="mb-8 rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
-            {error}
-          </div>
-        ) : null}
-
-        {jobs.length > 0 ? (
-          <JobListingsClient jobs={jobs} />
-        ) : null}
-
-        {showEmptyState ? (
-          <p className="text-center text-sm text-muted-foreground md:text-left">
-            Nenhuma vaga disponível no momento. Volte em breve para conferir novas oportunidades.
-          </p>
-        ) : null}
-      </main>
-    </div>
-  )
+  return <JobListingsClient jobs={jobs} error={error} showEmptyState={showEmptyState} />
 }
