@@ -10,6 +10,7 @@ describe("auth-session-service", () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
+        authEnabled: true,
         authenticated: true,
         expiresAt: "2026-03-22T12:00:00.000Z",
         user: {
@@ -25,6 +26,7 @@ describe("auth-session-service", () => {
     const session = await fetchAuthSession()
 
     expect(session).toEqual({
+      authEnabled: true,
       authenticated: true,
       expiresAt: "2026-03-22T12:00:00.000Z",
       user: {
@@ -46,13 +48,33 @@ describe("auth-session-service", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 401,
-        json: async () => ({ authenticated: false }),
+        json: async () => ({ authEnabled: true, authenticated: false }),
       }),
     )
 
     const { fetchAuthSession } = await import("@/services/auth-session-service")
 
     await expect(fetchAuthSession()).resolves.toEqual({
+      authEnabled: true,
+      authenticated: false,
+      expiresAt: null,
+      user: null,
+    })
+  })
+
+  it("preserves auth disabled state from the endpoint", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ authEnabled: false, authenticated: false }),
+      }),
+    )
+
+    const { fetchAuthSession } = await import("@/services/auth-session-service")
+
+    await expect(fetchAuthSession()).resolves.toEqual({
+      authEnabled: false,
       authenticated: false,
       expiresAt: null,
       user: null,
@@ -67,6 +89,7 @@ describe("auth-session-service", () => {
     const session = await fetchAuthSession()
 
     expect(session).toEqual({
+      authEnabled: true,
       authenticated: false,
       expiresAt: null,
       user: null,

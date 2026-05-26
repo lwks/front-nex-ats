@@ -18,6 +18,9 @@ type JobDetails = {
   title: string
   company: string
   location: string
+  region?: string
+  state?: string
+  technicalSkills: string[]
   workType: string
   description: string
   applyHref: string
@@ -102,6 +105,24 @@ export function JobDetailsModal({ job, onClose }: JobDetailsModalProps) {
           <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <div>
             <h4 className="text-lg font-semibold text-foreground">Descrição da vaga</h4>
+            <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Regiao / Estado</dt>
+                <dd className="mt-1 font-medium text-foreground">
+                  {[job.region, job.state].filter(Boolean).join(" / ") || job.location}
+                </dd>
+              </div>
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Skills tecnicas</dt>
+                <dd className="mt-2 flex flex-wrap gap-2">
+                  {(job.technicalSkills.length > 0 ? job.technicalSkills : ["Nao informado"]).map((skill) => (
+                    <span key={skill} className="rounded-full bg-background px-3 py-1 text-xs font-semibold text-foreground">
+                      {skill}
+                    </span>
+                  ))}
+                </dd>
+              </div>
+            </dl>
             <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
               {job.description}
             </p>

@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation"
 import { FormEvent, useEffect, useRef, useState } from "react"
 
 import { JOBS_API_PROXY_URL, ZIPS_API_PROXY_URL } from "@/config"
-import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -498,15 +497,13 @@ export default function CreateJobPage() {
         </div>
       ) : null}
 
-      <Header />
-
       <main className="container mx-auto max-w-3xl px-4 py-12">
         <div className="rounded-3xl border border-border bg-card px-6 py-8 shadow-sm md:px-10">
           <div className="mb-8">
             <p className="text-sm font-medium uppercase tracking-widest text-primary">Cadastro de vaga</p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground">Abertura de nova vaga</h1>
             <p className="mt-4 text-base text-muted-foreground">
-              Preencha os campos abaixo para cadastrar uma nova oportunidade diretamente na NexJobs.
+              Preencha os campos abaixo para cadastrar uma nova oportunidade diretamente na ClusterHR.
             </p>
           </div>
 

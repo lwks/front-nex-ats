@@ -4,7 +4,6 @@ import { useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { CheckCircle2, CircleAlert } from "lucide-react"
 
-import { Header } from "./header"
 import { PersonalDataStep } from "./steps/personal-data-step"
 import { ProfessionalDataStep } from "./steps/professional-data-step"
 import { ProfessionalCvStep } from "./steps/professional-cv-step"
@@ -139,8 +138,6 @@ export function CandidateOnboarding() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <ProgressIndicator currentStep={currentStep} totalSteps={4} />
 

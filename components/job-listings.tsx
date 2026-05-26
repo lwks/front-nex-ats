@@ -1,6 +1,5 @@
 import { JOBS_API_URL } from "@/config"
 
-import { Header } from "./header"
 import { JobListingsClient } from "./job-listings-client"
 
 type ApiJob = {
@@ -26,6 +25,8 @@ type ApiJob = {
   estado?: string
   uf?: string
   state?: string
+  regiao?: string
+  region?: string
   modalidade?: string
   modelo_trabalho?: string
   tipoContratacao?: string
@@ -65,13 +66,23 @@ type ApiJob = {
   contactEmail?: string
   email_contato?: string
   contato_email?: string
+  skills?: unknown
+  habilidades?: unknown
+  habilidades_tecnicas?: unknown
+  technicalSkills?: unknown
+  tecnologias?: unknown
+  stack?: unknown
 } & Record<string, unknown>
 
 type JobCard = {
   id: string
+  jobGuid?: string
   title: string
   company: string
   location: string
+  region?: string
+  state?: string
+  technicalSkills: string[]
   workType: string
   description: string
   applyHref: string
@@ -108,6 +119,34 @@ function pickString(...values: Array<unknown>) {
   }
 
   return undefined
+}
+
+function pickStringArray(...values: Array<unknown>) {
+  for (const value of values) {
+    if (Array.isArray(value)) {
+      const items = value
+        .flatMap((item) => pickString(item)?.split(/[,;\n]/) ?? [])
+        .map((item) => item.trim())
+        .filter((item): item is string => Boolean(item))
+
+      if (items.length > 0) {
+        return items
+      }
+    }
+
+    if (typeof value === "string") {
+      const items = value
+        .split(/[,;\n]/)
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0)
+
+      if (items.length > 0) {
+        return items
+      }
+    }
+  }
+
+  return []
 }
 
 function isZipLocation(value?: string) {
@@ -168,6 +207,7 @@ function normalizeJob(job: ApiJob, index: number): JobCard {
     pickString(job.id, job.slug, job.codigo, job.uuid, job.guid_id, job.pk) ?? `vaga-${index}`
   const city = pickString(job.cidade, job.city)
   const state = pickString(job.estado, job.uf, job.state)
+  const region = pickString(job.regiao, job["região"], job.region)
   const cityState = city && state ? `${city}/${state}` : city ?? state
 
   const title = pickString(job.titulo, job.title, job.nome) ?? "Vaga sem título"
@@ -194,6 +234,14 @@ function normalizeJob(job: ApiJob, index: number): JobCard {
   const description =
     pickString(job.descricao, job.description, job.resumo, job.summary) ??
     "Descrição indisponível no momento." // todo: check descrição em /jobs
+  const technicalSkills = pickStringArray(
+    job.skills,
+    job.habilidades,
+    job.habilidades_tecnicas,
+    job.technicalSkills,
+    job.tecnologias,
+    job.stack,
+  )
   const companyDetails = {
     segment: pickString(job.segmento, job.segment, job.setor, job.sector),
     industry: pickString(job.ramo_atuacao, job.ramoAtuacao, job.industry, job.area_atuacao),
@@ -219,9 +267,13 @@ function normalizeJob(job: ApiJob, index: number): JobCard {
 
   return {
     id: idSource,
+    jobGuid,
     title,
     company,
     location,
+    region,
+    state,
+    technicalSkills,
     workType,
     description,
     applyHref,
@@ -257,40 +309,5 @@ export async function JobListings() {
   const { jobs, error } = await fetchJobs()
   const showEmptyState = !error && jobs.length === 0
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
-
-      <main className="container mx-auto max-w-5xl px-4 py-12">
-        <header className="mb-12 text-center md:text-left">
-          <p className="text-sm font-medium uppercase tracking-widest text-primary">
-            Encontre sua próxima oportunidade
-          </p>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            Vagas em destaque na NexJob
-          </h2>
-          <p className="mt-4 text-base text-muted-foreground md:w-2/3">
-            Explore as oportunidades disponíveis e escolha aquela que mais combina com o seu momento
-            profissional. Ao se candidatar você será redirecionado para completar o cadastro.
-          </p>
-        </header>
-
-        {error ? (
-          <div className="mb-8 rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
-            {error}
-          </div>
-        ) : null}
-
-        {jobs.length > 0 ? (
-          <JobListingsClient jobs={jobs} />
-        ) : null}
-
-        {showEmptyState ? (
-          <p className="text-center text-sm text-muted-foreground md:text-left">
-            Nenhuma vaga disponível no momento. Volte em breve para conferir novas oportunidades.
-          </p>
-        ) : null}
-      </main>
-    </div>
-  )
+  return <JobListingsClient jobs={jobs} error={error} showEmptyState={showEmptyState} />
 }

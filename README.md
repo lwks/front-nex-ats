@@ -1,6 +1,6 @@
-# NEX ATS Frontend (Next.js)
+# ClusterHR ATS Frontend (Next.js)
 
-Aplicacao web do fluxo ATS da NEX, com:
+Aplicacao web do fluxo ATS da ClusterHR, com:
 
 - Listagem de vagas
 - Candidatura de candidatos (onboarding em etapas)
@@ -52,6 +52,10 @@ Aplicacao local: `http://localhost:3000`
 
 ### Cognito (OAuth2/PKCE)
 
+- `COGNITO_ENABLED` ou `NEXT_PUBLIC_COGNITO_ENABLED`:
+  - Liga/desliga a autenticacao no runtime.
+  - Aceita `true/false`, `1/0`, `yes/no`, `on/off`.
+  - Se ausente, o projeto desabilita auth automaticamente em `localhost`/`127.0.0.1`/`::1` e mantem habilitado nos demais hosts.
 - `COGNITO_CLIENT_ID` ou `NEXT_PUBLIC_COGNITO_CLIENT_ID` (obrigatorio para login)
 - `COGNITO_DOMAIN` ou `NEXT_PUBLIC_COGNITO_DOMAIN` (opcional; possui default no projeto)
 - `COGNITO_CLIENT_SECRET` ou `NEXT_PUBLIC_COGNITO_CLIENT_SECRET` (opcional)
