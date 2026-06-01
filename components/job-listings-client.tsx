@@ -7,19 +7,14 @@ import {
   Briefcase,
   ChevronLeft,
   ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   Filter,
-  GraduationCap,
-  Handshake,
-  LineChart,
-  Lock,
   MapPin,
   Plus,
   Search,
   Users,
 } from "lucide-react"
 
+import { AtsSidebar, BLOCKED_MODULE_LABELS } from "@/components/ats-sidebar"
 import { fetchCandidatesByJobGuids } from "@/services/candidates-by-job-guids-service"
 
 import { JobDetailsModal } from "./modals/job-details-modal"
@@ -65,13 +60,7 @@ type CandidateCountState = CandidateMetrics & {
 }
 
 export const JOBS_PER_PAGE = 2
-export const BLOCKED_MODULE_LABELS = ["Performance", "Estudos", "Parceiros"] as const
-
-const blockedModules = [
-  { label: "Performance", description: "Análise de Desempenho", icon: LineChart },
-  { label: "Estudos", description: "Central de Estudos", icon: GraduationCap },
-  { label: "Parceiros", description: "Recrutamento Externo", icon: Handshake },
-]
+export { BLOCKED_MODULE_LABELS }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object"
@@ -201,7 +190,6 @@ export function deriveCandidateMetrics(payload: unknown, jobs: JobCard[]): Candi
 }
 
 export function JobListingsClient({ jobs, error, showEmptyState = false }: JobListingsClientProps) {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState("")
   const [modalJob, setModalJob] = useState<JobCard | null>(null)
@@ -268,79 +256,7 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
 
   return (
     <div className="flex min-h-screen bg-gray-50 text-black">
-      <aside
-        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-[#333333] bg-[#1a1a1a] text-white transition-all duration-300 md:flex ${
-          isSidebarCollapsed ? "w-20" : "w-72"
-        }`}
-      >
-        <div className={`flex items-center justify-between border-b border-[#333333] p-5 ${isSidebarCollapsed ? "flex-col gap-4" : ""}`}>
-          <div className="min-w-0">
-            <h1 className={`font-semibold ${isSidebarCollapsed ? "text-center text-sm" : "text-xl"}`}>
-              {isSidebarCollapsed ? "CHR" : "ClusterHR"}
-            </h1>
-            {!isSidebarCollapsed ? (
-              <p className="mt-1 text-sm text-gray-400">Gestão de Talentos</p>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsSidebarCollapsed((previous) => !previous)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#333333] text-gray-300 transition hover:border-[#FF6B00] hover:text-white"
-            aria-label={isSidebarCollapsed ? "Expandir sidebar" : "Minimizar sidebar"}
-            aria-expanded={!isSidebarCollapsed}
-          >
-            {isSidebarCollapsed ? <ChevronsRight className="size-4" /> : <ChevronsLeft className="size-4" />}
-          </button>
-        </div>
-
-        <nav className="flex-1 space-y-2 p-4">
-          <button
-            type="button"
-            className="flex w-full items-center gap-3 rounded-lg bg-[#FF6B00] px-4 py-3 text-left text-white shadow-lg"
-          >
-            <Users className="size-5 shrink-0" />
-            {!isSidebarCollapsed ? (
-              <span>
-                <span className="block font-medium">ATS</span>
-                <span className="block text-xs opacity-80">Sistema de Rastreamento</span>
-              </span>
-            ) : null}
-          </button>
-
-          {blockedModules.map((module) => {
-            const Icon = module.icon
-            return (
-              <button
-                key={module.label}
-                type="button"
-                disabled
-                className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-4 py-3 text-left text-gray-500 opacity-70"
-                aria-disabled="true"
-                title={`${module.label} bloqueado`}
-              >
-                <Icon className="size-5 shrink-0" />
-                {!isSidebarCollapsed ? (
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-medium">{module.label}</span>
-                    <span className="block text-xs">{module.description}</span>
-                  </span>
-                ) : null}
-                {!isSidebarCollapsed ? <Lock className="size-4 shrink-0" /> : null}
-              </button>
-            )
-          })}
-        </nav>
-
-        {!isSidebarCollapsed ? (
-          <div className="border-t border-[#333333] p-4">
-            <div className="rounded-lg bg-gradient-to-r from-[#FF6B00] to-[#FF8C00] p-4 text-white shadow-xl">
-              <Lock className="mb-2 size-5" />
-              <p className="text-sm font-semibold">Módulos bloqueados</p>
-              <p className="mt-1 text-xs opacity-90">Disponíveis em uma próxima etapa.</p>
-            </div>
-          </div>
-        ) : null}
-      </aside>
+      <AtsSidebar activeItem="ats" />
 
       <main className="min-w-0 flex-1">
         <header className="border-b border-gray-200 bg-white p-6">
@@ -369,7 +285,7 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
                 candidateCounts.status === "loading"
                   ? "Atualizando contagem..."
                   : candidateCounts.status === "error"
-                    ? "Contagem indisponível"
+                    ? "Contagem indisponivel"
                     : "Candidatos nas vagas listadas"
               }
             />
@@ -400,7 +316,7 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
                   value={searchQuery}
                   onChange={handleSearchInput}
                   onInput={handleSearchInput}
-                  placeholder="Buscar por vaga ou descrição..."
+                  placeholder="Buscar por vaga ou descricao..."
                   className="w-full rounded-lg border-2 border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-700 outline-none transition focus:border-[#FF6B00] focus:ring-2 focus:ring-orange-100"
                 />
               </div>
@@ -428,7 +344,7 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
 
           {showEmptyState ? (
             <div className="rounded-lg border-2 border-dashed border-gray-200 bg-white p-10 text-center text-sm text-gray-600">
-              Nenhuma vaga disponível no momento. Volte em breve para conferir novas oportunidades.
+              Nenhuma vaga disponivel no momento. Volte em breve para conferir novas oportunidades.
             </div>
           ) : null}
 
@@ -507,9 +423,9 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
                             href={job.applyHref}
                             {...(job.isExternal
                               ? {
-                                target: "_blank",
-                                rel: "noopener noreferrer",
-                              }
+                                  target: "_blank",
+                                  rel: "noopener noreferrer",
+                                }
                               : undefined)}
                           >
                             Candidatar-se
@@ -532,7 +448,7 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
                     Anterior
                   </Button>
                   <span className="text-sm font-semibold text-gray-700">
-                    Página {currentPage} de {pageCount}
+                    Pagina {currentPage} de {pageCount}
                   </span>
                   <Button
                     type="button"
@@ -541,12 +457,11 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
                     disabled={currentPage === pageCount}
                     onClick={() => goToPage(currentPage + 1)}
                   >
-                    Próxima
+                    Proxima
                     <ChevronRight className="size-4" />
                   </Button>
                 </div>
               </div>
-
             </section>
           ) : null}
         </div>

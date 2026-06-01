@@ -3,7 +3,7 @@ import path from 'node:path'
 
 export default defineConfig({
   test: {
-    include: ['src/tests/**/*.test.ts'],
+    include: ['src/tests/**/*.test.ts', 'src/tests/**/*.test.tsx'],
     environment: 'node',
     globals: true,
     restoreMocks: true,
