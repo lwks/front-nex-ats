@@ -58,6 +58,9 @@ describe("PublicJobsBoardView", () => {
     expect(html).toContain("Encontre sua próxima oportunidade com a ClusterHR.")
     expect(html).toContain("Vaga job-1")
     expect(html).toContain("Vaga job-2")
+    expect(html).not.toContain("Criar perfil para candidatar")
+    expect(html).not.toContain("Iniciar candidatura")
+    expect(html).not.toContain("Publicar nova vaga")
     expect(html).toContain("Carregar mais vagas")
   })
 
