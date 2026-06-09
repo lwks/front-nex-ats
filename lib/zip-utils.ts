@@ -130,3 +130,14 @@ export function formatZipSummary(data: ZipLookupResponse): string | null {
 
   return segments.join(" · ")
 }
+
+export function hasZipCityAndState(data: ZipLookupResponse | null): boolean {
+  if (!data) {
+    return false
+  }
+
+  const city = pickFirstStringValue(data, ["localidade", "cidade", "city"])
+  const state = pickFirstStringValue(data, ["uf", "estado", "state"])
+
+  return Boolean(city && state)
+}

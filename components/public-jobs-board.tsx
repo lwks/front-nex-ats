@@ -181,7 +181,7 @@ export function PublicJobsBoardView({
             </nav>
             <div className="flex items-center gap-3">
               <Button asChild variant="outline" className="rounded-full border-[#FF6B00]/25 px-5 text-[#C44E00] hover:bg-[#FFF1E8] hover:text-[#C44E00]">
-                <Link href="/criar-usuario">
+                <Link href="/users/create">
                   <UserPlus className="size-4" />
                   Criar usuario
                 </Link>
@@ -421,7 +421,7 @@ export function PublicJobsBoardView({
             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-orange-200">Acesso rápido</p>
             <div className="mt-4 space-y-3 text-sm text-slate-400">
               <Link href="/jobs/list" className="block transition hover:text-[#FF6B00]">Todas as vagas</Link>
-              <Link href="/criar-usuario" className="block transition hover:text-[#FF6B00]">Criar usuario</Link>
+              <Link href="/users/create" className="block transition hover:text-[#FF6B00]">Criar usuario</Link>
               <Link href="/api/auth/login" className="block transition hover:text-[#FF6B00]">Entrar no ATS</Link>
             </div>
           </div>

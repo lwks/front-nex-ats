@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { formatZipSummary, normalizeZipResponse } from "@/lib/zip-utils"
+import { formatZipSummary, hasZipCityAndState, normalizeZipResponse } from "@/lib/zip-utils"
 
 describe("zip utils", () => {
   it("normaliza resposta com objeto aninhado e preenche cep", () => {
@@ -35,6 +35,19 @@ describe("zip utils", () => {
     expect(formatZipSummary(normalized)).toBe(address)
   })
 
+  it("valida a resposta textual do CEP 01001000 com cidade e UF", () => {
+    const address = "Pra\u00E7a da S\u00E9 - S\u00E9 - S\u00E3o Paulo/SP"
+    const normalized = normalizeZipResponse(
+      {
+        data: address,
+      },
+      "01001000",
+    )
+
+    expect(hasZipCityAndState(normalized)).toBe(true)
+    expect(formatZipSummary(normalized)).toBe(address)
+  })
+
   it("usa o endereco bruto quando data string nao possui Cidade/UF", () => {
     const normalized = normalizeZipResponse(
       {
@@ -45,6 +58,7 @@ describe("zip utils", () => {
 
     expect(normalized.localidade).toBeUndefined()
     expect(normalized.uf).toBeUndefined()
+    expect(hasZipCityAndState(normalized)).toBe(false)
     expect(formatZipSummary(normalized)).toBe("Rua Exemplo - Centro")
   })
 
