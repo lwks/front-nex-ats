@@ -11,9 +11,9 @@ import { cn } from "@/lib/utils"
 import { ZIPS_API_PROXY_URL } from "@/config"
 import {
   formatZipSummary,
+  hasZipCityAndState,
   isRecord,
   normalizeZipResponse,
-  pickFirstStringValue,
   type ZipLookupResponse,
 } from "@/lib/zip-utils"
 import type { CandidateData } from "../candidate-onboarding"
@@ -107,12 +107,7 @@ export function PersonalDataStep({ data, onUpdate, onNext }: PersonalDataStepPro
     }
   }, [])
 
-  const zipSummary = zipLookupResult ? formatZipSummary(zipLookupResult) : null
-  const zipCity = zipLookupResult
-    ? pickFirstStringValue(zipLookupResult, ["localidade", "cidade", "city"])
-    : undefined
-  const zipState = zipLookupResult ? pickFirstStringValue(zipLookupResult, ["uf", "estado", "state"]) : undefined
-  const hasZipCityState = Boolean(zipCity && zipState)
+  const hasZipCityState = hasZipCityAndState(zipLookupResult)
   const isCepMissing = formData.localResidencia.trim().length === 0
   const isCepIncomplete =
     formData.localResidencia.length > 0 && formData.localResidencia.length < CEP_LENGTH
@@ -217,7 +212,13 @@ export function PersonalDataStep({ data, onUpdate, onNext }: PersonalDataStepPro
 
       const parsedBody = isRecord(responseData) ? (responseData as ZipLookupResponse) : null
       const normalizedResult = normalizeZipResponse(parsedBody, cep)
+      const normalizedSummary = formatZipSummary(normalizedResult)
       setZipLookupResult(normalizedResult)
+      setFormData((previous) => ({
+        ...previous,
+        endereco: normalizedSummary ?? "",
+      }))
+      setErrors((previous) => ({ ...previous, localResidencia: "" }))
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return
@@ -284,10 +285,10 @@ export function PersonalDataStep({ data, onUpdate, onNext }: PersonalDataStepPro
     }
 
     const summary = formatZipSummary(zipLookupResult)
-    setFormData((previous) => ({
-      ...previous,
-      endereco: summary ?? "",
-    }))
+    setFormData((previous) => {
+      const nextEndereco = summary ?? ""
+      return previous.endereco === nextEndereco ? previous : { ...previous, endereco: nextEndereco }
+    })
   }, [zipLookupResult])
 
   return (

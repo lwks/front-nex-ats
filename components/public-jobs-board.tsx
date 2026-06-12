@@ -11,6 +11,7 @@ import {
   Search,
   Sparkles,
   X,
+  UserPlus,
 } from "lucide-react"
 
 import { filterJobBoardJobs, mergeJobBoardJobs, type JobBoardJob } from "@/lib/job-board"
@@ -178,12 +179,20 @@ export function PublicJobsBoardView({
               <a href="#como-funciona" className="transition hover:text-[#FF6B00]">Como funciona</a>
               <a href="#contato" className="transition hover:text-[#FF6B00]">Contato</a>
             </nav>
-            <Button asChild className="rounded-full bg-[#FF6B00] px-5 text-white hover:bg-[#E55F00]">
-              <Link href="/api/auth/login">
-                <LogIn className="size-4" />
-                Entrar no ATS
-              </Link>
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button asChild variant="outline" className="rounded-full border-[#FF6B00]/25 px-5 text-[#C44E00] hover:bg-[#FFF1E8] hover:text-[#C44E00]">
+                <Link href="/users/create">
+                  <UserPlus className="size-4" />
+                  Criar usuario
+                </Link>
+              </Button>
+              <Button asChild className="rounded-full bg-[#FF6B00] px-5 text-white hover:bg-[#E55F00]">
+                <Link href="/api/auth/login">
+                  <LogIn className="size-4" />
+                  Entrar no ATS
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -267,12 +276,6 @@ export function PublicJobsBoardView({
               {query.trim() ? " para a sua busca." : "."}
             </p>
           </div>
-          <Link
-            href="/jobs/create"
-            className="inline-flex items-center justify-center rounded-full border border-[#FF6B00] px-5 py-3 text-sm font-semibold text-[#FF6B00] transition hover:bg-[#FF6B00] hover:text-white"
-          >
-            Publicar nova vaga
-          </Link>
         </div>
 
         {error ? (
@@ -418,7 +421,7 @@ export function PublicJobsBoardView({
             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-orange-200">Acesso rápido</p>
             <div className="mt-4 space-y-3 text-sm text-slate-400">
               <Link href="/jobs/list" className="block transition hover:text-[#FF6B00]">Todas as vagas</Link>
-              <Link href="/jobs/create" className="block transition hover:text-[#FF6B00]">Cadastrar vaga</Link>
+              <Link href="/users/create" className="block transition hover:text-[#FF6B00]">Criar usuario</Link>
               <Link href="/api/auth/login" className="block transition hover:text-[#FF6B00]">Entrar no ATS</Link>
             </div>
           </div>
