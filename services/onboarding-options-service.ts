@@ -1,9 +1,12 @@
 import {
   defaultContractTypeOptions,
+  defaultCurrentBenefitOptions,
   defaultExperienceOptions,
   defaultIndustryOptions,
+  defaultLanguageOptions,
+  defaultProfessionalSkillOptions,
   defaultWorkTypeOptions,
-} from '@/lib/onboarding-options'
+} from "@/lib/onboarding-options"
 
 export function fetchExperienceOptions() {
   return Promise.resolve(defaultExperienceOptions)
@@ -19,4 +22,16 @@ export function fetchWorkTypeOptions() {
 
 export function fetchContractTypeOptions() {
   return Promise.resolve(defaultContractTypeOptions)
+}
+
+export function fetchLanguageOptions() {
+  return Promise.resolve(defaultLanguageOptions)
+}
+
+export function fetchProfessionalSkillOptions() {
+  return Promise.resolve(defaultProfessionalSkillOptions)
+}
+
+export function fetchCurrentBenefitOptions() {
+  return Promise.resolve(defaultCurrentBenefitOptions)
 }
