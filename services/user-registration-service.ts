@@ -1,95 +1,87 @@
-export type UserRegistrationRole = "candidate" | "recruiter" | "manager"
-
-export type CreateFakeUserInput = {
-  fullName: string
-  email: string
-  password: string
-  role: UserRegistrationRole
-  wantsJobAlerts: boolean
-  acceptTerms: boolean
+export type UserRegistrationData = {
+  nome: string
+  documento: string
+  localResidencia: string
+  endereco: string
+  contatoCel: string
+  contato: string
+  lgpdAccepted: boolean
+  experiencia: string
+  industria: string
+  salarioAtual: string
+  cargoAtual: string
+  industriaInteresse: string
+  cargoInteresse: string
+  tipoContratacao: string
+  modeloTrabalho: string[]
+  idiomas: string[]
+  skillsProfissionais: string[]
+  beneficiosAtuais: string[]
+  compartilhamentoAccepted: boolean
 }
 
-export type FakeUserAccount = {
-  id: string
-  fullName: string
-  email: string
-  role: UserRegistrationRole
-  wantsJobAlerts: boolean
-  status: "active"
-  createdAt: string
+export type UserRegistrationSubmission = {
+  nome: string
+  contato: string
+  submittedAt: string
 }
 
-type CreateFakeUserOptions = {
-  shouldFail?: boolean
-}
-
-const ROLE_SET = new Set<UserRegistrationRole>(["candidate", "recruiter", "manager"])
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-export function validateFakeUserInput(input: CreateFakeUserInput) {
-  if (input.fullName.trim().length < 3) {
-    throw new Error("Informe um nome com pelo menos 3 caracteres.")
-  }
-
-  if (!EMAIL_PATTERN.test(input.email.trim())) {
-    throw new Error("Informe um email valido.")
-  }
-
-  if (input.password.length < 8) {
-    throw new Error("A senha precisa ter pelo menos 8 caracteres.")
-  }
-
-  if (!/[A-Za-z]/.test(input.password) || !/\d/.test(input.password)) {
-    throw new Error("A senha precisa combinar letras e numeros.")
-  }
-
-  if (!ROLE_SET.has(input.role)) {
-    throw new Error("Selecione um perfil de usuario valido.")
-  }
-
-  if (input.acceptTerms !== true) {
-    throw new Error("Voce precisa aceitar os termos para criar o usuario.")
+function requireNonEmptyValue(value: string, message: string) {
+  if (value.trim().length === 0) {
+    throw new Error(message)
   }
 }
 
-function normalizeInput(input: CreateFakeUserInput): CreateFakeUserInput {
-  return {
-    ...input,
-    fullName: input.fullName.trim(),
-    email: input.email.trim().toLowerCase(),
-    password: input.password,
+function requireSelection(values: string[], message: string) {
+  if (values.length === 0) {
+    throw new Error(message)
   }
 }
 
-function generateFakeUserId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID()
+export function validateUserRegistrationData(data: UserRegistrationData) {
+  requireNonEmptyValue(data.nome, "Informe nome e sobrenome.")
+  requireNonEmptyValue(data.documento, "Informe seu CPF ou RG.")
+  requireNonEmptyValue(data.localResidencia, "Informe o CEP.")
+  requireNonEmptyValue(data.endereco, "Informe o endereco.")
+  requireNonEmptyValue(data.contatoCel, "Informe o celular.")
+  requireNonEmptyValue(data.contato, "Informe o email.")
+
+  if (!EMAIL_PATTERN.test(data.contato.trim())) {
+    throw new Error("Digite um e-mail valido.")
   }
 
-  return `fake-user-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  requireNonEmptyValue(data.experiencia, "Selecione seu nivel de experiencia.")
+  requireNonEmptyValue(data.industria, "Selecione a industria atual.")
+  requireNonEmptyValue(data.salarioAtual, "Informe o salario atual.")
+  requireNonEmptyValue(data.cargoAtual, "Informe o cargo atual.")
+  requireNonEmptyValue(data.industriaInteresse, "Selecione a industria de interesse.")
+  requireNonEmptyValue(data.cargoInteresse, "Informe o cargo de interesse.")
+  requireNonEmptyValue(data.tipoContratacao, "Selecione o tipo de contratacao.")
+
+  requireSelection(data.modeloTrabalho, "Selecione ao menos um modelo de trabalho.")
+  requireSelection(data.idiomas, "Selecione ao menos um idioma.")
+  requireSelection(data.skillsProfissionais, "Selecione ao menos uma skill profissional.")
+  requireSelection(data.beneficiosAtuais, "Selecione ao menos um beneficio atual.")
+
+  if (data.lgpdAccepted !== true) {
+    throw new Error("Aceite os termos de privacidade para continuar.")
+  }
+
+  if (data.compartilhamentoAccepted !== true) {
+    throw new Error("Confirme o compartilhamento de dados para continuar.")
+  }
 }
 
-export async function createFakeUserAccount(
-  input: CreateFakeUserInput,
-  options: CreateFakeUserOptions = {},
-): Promise<FakeUserAccount> {
-  const normalizedInput = normalizeInput(input)
-
-  validateFakeUserInput(normalizedInput)
-
-  if (options.shouldFail) {
-    throw new Error("Nao foi possivel criar o usuario fake no momento.")
-  }
+export async function submitUserRegistration(data: UserRegistrationData): Promise<UserRegistrationSubmission> {
+  validateUserRegistrationData(data)
 
   await Promise.resolve()
 
   return {
-    id: generateFakeUserId(),
-    fullName: normalizedInput.fullName,
-    email: normalizedInput.email,
-    role: normalizedInput.role,
-    wantsJobAlerts: normalizedInput.wantsJobAlerts,
-    status: "active",
-    createdAt: new Date().toISOString(),
+    nome: data.nome.trim(),
+    contato: data.contato.trim().toLowerCase(),
+    submittedAt: new Date().toISOString(),
   }
 }

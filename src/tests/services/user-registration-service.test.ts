@@ -1,51 +1,62 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  createFakeUserAccount,
-  validateFakeUserInput,
-  type CreateFakeUserInput,
+  submitUserRegistration,
+  validateUserRegistrationData,
+  type UserRegistrationData,
 } from "@/services/user-registration-service"
 
-function createInput(overrides: Partial<CreateFakeUserInput> = {}): CreateFakeUserInput {
+function createInput(overrides: Partial<UserRegistrationData> = {}): UserRegistrationData {
   return {
-    fullName: "Mariana Costa",
-    email: "mariana@clusterhr.com",
-    password: "Senha123",
-    role: "candidate",
-    wantsJobAlerts: true,
-    acceptTerms: true,
+    nome: "Mariana Costa",
+    documento: "12345678909",
+    localResidencia: "01310930",
+    endereco: "Sao Paulo, SP",
+    contatoCel: "11999999999",
+    contato: "mariana@clusterhr.com",
+    lgpdAccepted: true,
+    experiencia: "pleno",
+    industria: "tecnologia-informacao-ti",
+    salarioAtual: "8.000",
+    cargoAtual: "Pessoa desenvolvedora",
+    industriaInteresse: "desenvolvimento-software",
+    cargoInteresse: "Tech lead",
+    tipoContratacao: "clt",
+    modeloTrabalho: ["remoto", "hibrido"],
+    idiomas: ["portugues", "ingles"],
+    skillsProfissionais: ["react", "typescript"],
+    beneficiosAtuais: ["vale-refeicao", "plano-saude"],
+    compartilhamentoAccepted: true,
     ...overrides,
   }
 }
 
 describe("user-registration-service", () => {
-  it("creates a fake user account when the payload is valid", async () => {
-    const result = await createFakeUserAccount(createInput({ email: "MARIANA@clusterhr.com " }))
+  it("submits the official registration payload when the data is valid", async () => {
+    const result = await submitUserRegistration(createInput({ contato: "MARIANA@clusterhr.com " }))
 
-    expect(result.id).toBeTruthy()
-    expect(result.fullName).toBe("Mariana Costa")
-    expect(result.email).toBe("mariana@clusterhr.com")
-    expect(result.role).toBe("candidate")
-    expect(result.status).toBe("active")
+    expect(result.nome).toBe("Mariana Costa")
+    expect(result.contato).toBe("mariana@clusterhr.com")
+    expect(result.submittedAt).toBeTruthy()
   })
 
   it("throws validation errors for invalid payloads", () => {
     expect(() =>
-      validateFakeUserInput(
+      validateUserRegistrationData(
         createInput({
-          fullName: "Al",
-          email: "email-invalido",
-          password: "123",
+          contato: "email-invalido",
         }),
       ),
-    ).toThrow("Informe um nome com pelo menos 3 caracteres.")
+    ).toThrow("Digite um e-mail valido.")
   })
 
-  it("returns a controlled failure when the fake creation should simulate an error", async () => {
-    await expect(
-      createFakeUserAccount(createInput(), {
-        shouldFail: true,
-      }),
-    ).rejects.toThrow("Nao foi possivel criar o usuario fake no momento.")
+  it("requires fixed-list multi-select choices before completing the registration", () => {
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          modeloTrabalho: [],
+        }),
+      ),
+    ).toThrow("Selecione ao menos um modelo de trabalho.")
   })
 })
