@@ -5,6 +5,7 @@ import { useState } from "react"
 import { ArrowLeft, CheckCircle2, CircleAlert, UserRoundPlus } from "lucide-react"
 
 import { ProgressIndicator } from "@/components/progress-indicator"
+import { UserRegistrationCvStep } from "@/components/steps/user-registration-cv-step"
 import { UserRegistrationPersonalStep } from "@/components/steps/user-registration-personal-step"
 import { UserRegistrationPreferencesStep } from "@/components/steps/user-registration-preferences-step"
 import { UserRegistrationProfessionalStep } from "@/components/steps/user-registration-professional-step"
@@ -19,8 +20,9 @@ type SubmissionFeedback = {
 
 const REGISTRATION_STEPS = [
   { number: 1, label: "Dados pessoais" },
-  { number: 2, label: "Dados profissionais" },
+  { number: 2, label: "Experiencia profissional" },
   { number: 3, label: "Preferencias" },
+  { number: 4, label: "CV" },
 ]
 
 export function UserRegistrationPage() {
@@ -126,10 +128,13 @@ export function UserRegistrationPage() {
           <UserRegistrationPreferencesStep
             data={registrationData}
             onUpdate={updateData}
-            onSubmit={handleSubmit}
+            onNext={nextStep}
             onBack={prevStep}
-            isSubmitting={isSubmitting}
           />
+        ) : null}
+
+        {currentStep === 4 ? (
+          <UserRegistrationCvStep onSubmit={handleSubmit} onBack={prevStep} isSubmitting={isSubmitting} />
         ) : null}
       </main>
 
