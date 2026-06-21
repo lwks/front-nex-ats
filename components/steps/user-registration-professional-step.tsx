@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
+import { Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,11 +12,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   defaultExperienceOptions,
   defaultIndustryOptions,
+  defaultLanguageOptions,
+  defaultLanguageProficiencyOptions,
+  type LanguageProficiencyOption,
   type OnboardingOption,
 } from "@/lib/onboarding-options"
-import { fetchExperienceOptions, fetchIndustryOptions } from "@/services/onboarding-options-service"
-import type { UserRegistrationData } from "@/services/user-registration-service"
 import { cn } from "@/lib/utils"
+import {
+  fetchExperienceOptions,
+  fetchIndustryOptions,
+  fetchLanguageOptions,
+  fetchLanguageProficiencyOptions,
+} from "@/services/onboarding-options-service"
+import type { UserRegistrationData, UserRegistrationLanguage } from "@/services/user-registration-service"
 
 type UserRegistrationProfessionalStepProps = {
   data: Partial<UserRegistrationData>
@@ -40,6 +49,20 @@ function formatCurrencyInput(rawValue: string) {
   return BRL_NUMBER_FORMATTER.format(numericValue)
 }
 
+function createEmptyLanguage(): UserRegistrationLanguage {
+  return {
+    idioma: "",
+    fluencia: "",
+  }
+}
+
+function hasCompleteLanguages(languages: UserRegistrationLanguage[]) {
+  return (
+    languages.length > 0 &&
+    languages.every((language) => language.idioma.trim().length > 0 && language.fluencia.trim().length > 0)
+  )
+}
+
 export function UserRegistrationProfessionalStep({
   data,
   onBack,
@@ -50,40 +73,53 @@ export function UserRegistrationProfessionalStep({
     experiencia: data.experiencia || "",
     industria: data.industria || "",
     salarioAtual: data.salarioAtual || "",
-    cargoAtual: data.cargoAtual || "",
+    idiomas: data.idiomas && data.idiomas.length > 0 ? data.idiomas : [createEmptyLanguage()],
   })
   const [touched, setTouched] = useState({
     experiencia: false,
     industria: false,
     salarioAtual: false,
-    cargoAtual: false,
+    idiomas: false,
   })
   const [experienceOptions, setExperienceOptions] = useState<OnboardingOption[]>(defaultExperienceOptions)
   const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
+  const [languageOptions, setLanguageOptions] = useState<OnboardingOption[]>(defaultLanguageOptions)
+  const [languageProficiencyOptions, setLanguageProficiencyOptions] = useState<LanguageProficiencyOption[]>(
+    defaultLanguageProficiencyOptions,
+  )
 
   const isFormComplete =
     Boolean(formData.experiencia) &&
     Boolean(formData.industria) &&
     Boolean(formData.salarioAtual.trim()) &&
-    Boolean(formData.cargoAtual.trim())
+    hasCompleteLanguages(formData.idiomas)
 
   const experienceError =
     touched.experiencia && !formData.experiencia ? "Selecione seu nivel de experiencia." : ""
   const industryError = touched.industria && !formData.industria ? "Selecione a industria atual." : ""
   const salaryError =
     touched.salarioAtual && !formData.salarioAtual.trim() ? "Informe o salario atual." : ""
-  const roleError =
-    touched.cargoAtual && !formData.cargoAtual.trim() ? "Informe o cargo atual." : ""
+  const languageError =
+    touched.idiomas && !hasCompleteLanguages(formData.idiomas)
+      ? "Selecione ao menos um idioma e informe sua fluencia."
+      : ""
 
   useEffect(() => {
     let isMounted = true
 
     const loadOptions = async () => {
-      const [experiences, industries] = await Promise.all([fetchExperienceOptions(), fetchIndustryOptions()])
+      const [experiences, industries, languages, proficiencies] = await Promise.all([
+        fetchExperienceOptions(),
+        fetchIndustryOptions(),
+        fetchLanguageOptions(),
+        fetchLanguageProficiencyOptions(),
+      ])
 
       if (isMounted) {
         setExperienceOptions(experiences)
         setIndustryOptions(industries)
+        setLanguageOptions(languages)
+        setLanguageProficiencyOptions(proficiencies)
       }
     }
 
@@ -94,9 +130,47 @@ export function UserRegistrationProfessionalStep({
     }
   }, [])
 
+  const handleLanguageChange = (index: number, field: keyof UserRegistrationLanguage, value: string) => {
+    setFormData((previous) => ({
+      ...previous,
+      idiomas: previous.idiomas.map((language, currentIndex) =>
+        currentIndex === index ? { ...language, [field]: value } : language,
+      ),
+    }))
+
+    if (!touched.idiomas) {
+      setTouched((previous) => ({ ...previous, idiomas: true }))
+    }
+  }
+
+  const addLanguage = () => {
+    setFormData((previous) => ({
+      ...previous,
+      idiomas: [...previous.idiomas, createEmptyLanguage()],
+    }))
+    setTouched((previous) => ({ ...previous, idiomas: true }))
+  }
+
+  const removeLanguage = (index: number) => {
+    setFormData((previous) => {
+      const nextLanguages = previous.idiomas.filter((_, currentIndex) => currentIndex !== index)
+      return {
+        ...previous,
+        idiomas: nextLanguages.length > 0 ? nextLanguages : [createEmptyLanguage()],
+      }
+    })
+    setTouched((previous) => ({ ...previous, idiomas: true }))
+  }
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
     if (!isFormComplete) {
+      setTouched({
+        experiencia: true,
+        industria: true,
+        salarioAtual: true,
+        idiomas: true,
+      })
       return
     }
     onUpdate(formData)
@@ -107,9 +181,9 @@ export function UserRegistrationProfessionalStep({
     <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_rgba(15,23,42,0.08)] md:p-8">
       <div className="mb-8 text-center">
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#C44E00]">Cadastro oficial</p>
-        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Dados profissionais</h2>
+        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Experiencia profissional</h2>
         <p className="mt-3 text-sm leading-6 text-slate-600">
-          Conte seu momento atual para personalizar seu perfil na plataforma.
+          Conte sua experiencia atual e os idiomas com nivel de fluencia.
         </p>
       </div>
 
@@ -174,41 +248,101 @@ export function UserRegistrationProfessionalStep({
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="salarioAtual">Salario atual</Label>
-            <Input
-              id="salarioAtual"
-              inputMode="numeric"
-              value={formData.salarioAtual}
-              onChange={(event) => setFormData({ ...formData, salarioAtual: formatCurrencyInput(event.target.value) })}
-              onBlur={() => {
-                if (!touched.salarioAtual) {
-                  setTouched((previous) => ({ ...previous, salarioAtual: true }))
-                }
-              }}
-              className={cn(salaryError && "border-destructive focus-visible:ring-destructive/40")}
-              aria-invalid={salaryError ? "true" : "false"}
-            />
-            {salaryError ? <p className="text-xs text-destructive">{salaryError}</p> : null}
+        <div className="space-y-2">
+          <Label htmlFor="salarioAtual">Salario atual</Label>
+          <Input
+            id="salarioAtual"
+            inputMode="numeric"
+            value={formData.salarioAtual}
+            onChange={(event) => setFormData({ ...formData, salarioAtual: formatCurrencyInput(event.target.value) })}
+            onBlur={() => {
+              if (!touched.salarioAtual) {
+                setTouched((previous) => ({ ...previous, salarioAtual: true }))
+              }
+            }}
+            className={cn(salaryError && "border-destructive focus-visible:ring-destructive/40")}
+            aria-invalid={salaryError ? "true" : "false"}
+          />
+          {salaryError ? <p className="text-xs text-destructive">{salaryError}</p> : null}
+        </div>
+
+        <div className="space-y-4 rounded-[1.5rem] border border-slate-200 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <Label>Idiomas</Label>
+              <p className="mt-1 text-sm text-slate-500">Informe os idiomas e o nivel de fluencia de cada um.</p>
+            </div>
+            <Button type="button" variant="outline" onClick={addLanguage} className="rounded-full bg-transparent">
+              <Plus className="mr-2 size-4" />
+              Adicionar idioma
+            </Button>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cargoAtual">Cargo atual</Label>
-            <Input
-              id="cargoAtual"
-              value={formData.cargoAtual}
-              onChange={(event) => setFormData({ ...formData, cargoAtual: event.target.value })}
-              onBlur={() => {
-                if (!touched.cargoAtual) {
-                  setTouched((previous) => ({ ...previous, cargoAtual: true }))
-                }
-              }}
-              className={cn(roleError && "border-destructive focus-visible:ring-destructive/40")}
-              aria-invalid={roleError ? "true" : "false"}
-            />
-            {roleError ? <p className="text-xs text-destructive">{roleError}</p> : null}
+          <div className="space-y-4">
+            {formData.idiomas.map((language, index) => (
+              <div key={`${index}-${language.idioma}-${language.fluencia}`} className="grid gap-4 md:grid-cols-[1fr_1fr_auto]">
+                <div className="space-y-2">
+                  <Label htmlFor={`idioma-${index}`}>Idioma</Label>
+                  <Select
+                    value={language.idioma}
+                    onValueChange={(value) => handleLanguageChange(index, "idioma", value)}
+                  >
+                    <SelectTrigger
+                      id={`idioma-${index}`}
+                      className={cn("w-full", languageError && "border-destructive focus-visible:ring-destructive/40")}
+                      aria-invalid={languageError ? "true" : "false"}
+                    >
+                      <SelectValue placeholder="Selecione o idioma" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {languageOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor={`fluencia-${index}`}>Fluencia</Label>
+                  <Select
+                    value={language.fluencia}
+                    onValueChange={(value) => handleLanguageChange(index, "fluencia", value)}
+                  >
+                    <SelectTrigger
+                      id={`fluencia-${index}`}
+                      className={cn("w-full", languageError && "border-destructive focus-visible:ring-destructive/40")}
+                      aria-invalid={languageError ? "true" : "false"}
+                    >
+                      <SelectValue placeholder="Selecione a fluencia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {languageProficiencyOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => removeLanguage(index)}
+                    className="w-full rounded-full bg-transparent md:w-auto"
+                  >
+                    <Trash2 className="size-4" />
+                    <span className="sr-only">Remover idioma</span>
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
+
+          {languageError ? <p className="text-xs text-destructive">{languageError}</p> : null}
         </div>
 
         <div className="flex gap-4 pt-2">

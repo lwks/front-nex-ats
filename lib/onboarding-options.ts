@@ -3,6 +3,11 @@ export type OnboardingOption = {
   label: string
 }
 
+export type LanguageProficiencyOption = {
+  value: string
+  label: string
+}
+
 export const defaultExperienceOptions: OnboardingOption[] = [
   { value: "estagio", label: "Estagio" },
   { value: "junior", label: "1-3 anos" },
@@ -57,6 +62,15 @@ export const defaultContractTypeOptions: OnboardingOption[] = [
   { value: "freelancer", label: "Freelancer" },
 ]
 
+export const defaultSeniorityOptions: OnboardingOption[] = [
+  { value: "estagio", label: "Estagio" },
+  { value: "junior", label: "Junior" },
+  { value: "pleno", label: "Pleno" },
+  { value: "senior", label: "Senior" },
+  { value: "especialista", label: "Especialista" },
+  { value: "lideranca", label: "Lideranca" },
+]
+
 export const defaultLanguageOptions: OnboardingOption[] = [
   { value: "portugues", label: "Portugues" },
   { value: "ingles", label: "Ingles" },
@@ -88,4 +102,28 @@ export const defaultCurrentBenefitOptions: OnboardingOption[] = [
   { value: "plr", label: "PLR" },
   { value: "auxilio-home-office", label: "Auxilio home office" },
   { value: "vale-transporte", label: "Vale transporte" },
+]
+
+export const defaultInterestRoleOptions: OnboardingOption[] = [
+  { value: "analista-dados", label: "Analista de Dados" },
+  { value: "analista-produto", label: "Analista de Produto" },
+  { value: "designer-ux-ui", label: "Designer UX/UI" },
+  { value: "desenvolvedor-front-end", label: "Desenvolvedor Front-end" },
+  { value: "desenvolvedor-back-end", label: "Desenvolvedor Back-end" },
+  { value: "desenvolvedor-full-stack", label: "Desenvolvedor Full Stack" },
+  { value: "devops-sre", label: "DevOps / SRE" },
+  { value: "engenheiro-dados", label: "Engenheiro de Dados" },
+  { value: "gerente-produto", label: "Gerente de Produto" },
+  { value: "product-owner", label: "Product Owner" },
+  { value: "project-manager", label: "Project Manager" },
+  { value: "qa-teste", label: "QA / Testes" },
+  { value: "tech-lead", label: "Tech Lead" },
+]
+
+export const defaultLanguageProficiencyOptions: LanguageProficiencyOption[] = [
+  { value: "basico", label: "Basico" },
+  { value: "intermediario", label: "Intermediario" },
+  { value: "avancado", label: "Avancado" },
+  { value: "fluente", label: "Fluente" },
+  { value: "nativo", label: "Nativo" },
 ]
