@@ -21,12 +21,18 @@ export type UserRegistrationData = {
   industria: string
   salarioAtual: string
   cargoAtual: string
-  industriaInteresse: string
+  industriaInteresse: string[]
   cargoInteresse: string[]
   tipoContratacao: string[]
   modeloTrabalho: string[]
   idiomas: UserRegistrationLanguage[]
-  skillsProfissionais: string[]
+  hardSkills: string[]
+  softSkills: string[]
+  ferramentas: string[]
+  viagemTrabalho: string
+  pretensaoSalarial: string
+  sobreVoce: string
+  mensagemEmpresa: string
   compartilhamentoAccepted: boolean
 }
 
@@ -103,14 +109,35 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
   requireNonEmptyValue(data.experiencia, "Selecione seu nivel de experiencia.")
   requireNonEmptyValue(data.industria, "Selecione a industria atual.")
   requireNonEmptyValue(data.salarioAtual, "Informe o salario atual.")
-  requireNonEmptyValue(data.industriaInteresse, "Selecione a industria de interesse.")
+  requireSelection(data.industriaInteresse, "Selecione ao menos uma industria de interesse.")
 
   requireSelection(data.beneficiosAtuais, "Selecione ao menos um beneficio atual.")
   requireSelection(data.cargoInteresse, "Selecione ao menos um cargo de interesse.")
   requireSelection(data.tipoContratacao, "Selecione ao menos um tipo de contratacao.")
   requireSelection(data.modeloTrabalho, "Selecione ao menos um modelo de trabalho.")
   requireLanguageSelection(data.idiomas, "Selecione ao menos um idioma.")
-  requireSelection(data.skillsProfissionais, "Selecione ao menos uma skill profissional.")
+  requireSelection(data.hardSkills, "Selecione ao menos uma hard skill.")
+  requireSelection(data.softSkills, "Selecione ao menos uma soft skill.")
+  requireSelection(data.ferramentas, "Selecione ao menos uma ferramenta.")
+  requireNonEmptyValue(data.viagemTrabalho, "Selecione a disponibilidade para viagem de trabalho.")
+  requireNonEmptyValue(data.pretensaoSalarial, "Informe a pretensao salarial.")
+  requireNonEmptyValue(data.sobreVoce, "Conte um pouco sobre voce.")
+
+  if (data.industriaInteresse.length > 3) {
+    throw new Error("Selecione no maximo 3 industrias de interesse.")
+  }
+
+  if (data.hardSkills.length > 7) {
+    throw new Error("Selecione no maximo 7 hard skills.")
+  }
+
+  if (data.softSkills.length > 7) {
+    throw new Error("Selecione no maximo 7 soft skills.")
+  }
+
+  if (data.ferramentas.length > 7) {
+    throw new Error("Selecione no maximo 7 ferramentas.")
+  }
 
   if (data.lgpdAccepted !== true) {
     throw new Error("Aceite os termos de privacidade para continuar.")

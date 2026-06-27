@@ -4,18 +4,24 @@ import {
   fetchContractTypeOptions,
   fetchCurrentBenefitOptions,
   fetchExperienceOptions,
+  fetchHardSkillOptions,
   fetchIndustryOptions,
   fetchLanguageOptions,
-  fetchProfessionalSkillOptions,
+  fetchSoftSkillOptions,
+  fetchToolOptions,
+  fetchTravelAvailabilityOptions,
   fetchWorkTypeOptions,
 } from "@/services/onboarding-options-service"
 import {
   defaultContractTypeOptions,
   defaultCurrentBenefitOptions,
   defaultExperienceOptions,
+  defaultHardSkillOptions,
   defaultIndustryOptions,
   defaultLanguageOptions,
-  defaultProfessionalSkillOptions,
+  defaultSoftSkillOptions,
+  defaultToolOptions,
+  defaultTravelAvailabilityOptions,
   defaultWorkTypeOptions,
 } from "@/lib/onboarding-options"
 
@@ -40,8 +46,20 @@ describe("onboarding-options-service", () => {
     await expect(fetchLanguageOptions()).resolves.toEqual(defaultLanguageOptions)
   })
 
-  it("returns default professional skill options", async () => {
-    await expect(fetchProfessionalSkillOptions()).resolves.toEqual(defaultProfessionalSkillOptions)
+  it("returns default hard skill options", async () => {
+    await expect(fetchHardSkillOptions()).resolves.toEqual(defaultHardSkillOptions)
+  })
+
+  it("returns default soft skill options", async () => {
+    await expect(fetchSoftSkillOptions()).resolves.toEqual(defaultSoftSkillOptions)
+  })
+
+  it("returns default tool options", async () => {
+    await expect(fetchToolOptions()).resolves.toEqual(defaultToolOptions)
+  })
+
+  it("returns default travel availability options", async () => {
+    await expect(fetchTravelAvailabilityOptions()).resolves.toEqual(defaultTravelAvailabilityOptions)
   })
 
   it("returns default current benefit options", async () => {

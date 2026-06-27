@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 export type MultiSelectProps = {
   disabled?: boolean
   id?: string
+  maxSelections?: number
   onChange: (value: string[]) => void
   options: OnboardingOption[]
   placeholder: string
@@ -40,7 +41,15 @@ export function buildMultiSelectSummary(options: OnboardingOption[], value: stri
   return `${selectedLabels.slice(0, 2).join(", ")} +${selectedLabels.length - 2}`
 }
 
-export function MultiSelect({ disabled = false, id, onChange, options, placeholder, value }: MultiSelectProps) {
+export function MultiSelect({
+  disabled = false,
+  id,
+  maxSelections,
+  onChange,
+  options,
+  placeholder,
+  value,
+}: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
 
@@ -96,14 +105,20 @@ export function MultiSelect({ disabled = false, id, onChange, options, placehold
           <div className="space-y-1">
             {options.map((option) => {
               const checked = value.includes(option.value)
+              const hasReachedMax = typeof maxSelections === "number" && value.length >= maxSelections
+              const shouldDisableOption = disabled || (!checked && hasReachedMax)
 
               return (
                 <label
                   key={option.value}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-slate-50"
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-slate-50",
+                    shouldDisableOption ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+                  )}
                 >
                   <Checkbox
                     checked={checked}
+                    disabled={shouldDisableOption}
                     onCheckedChange={() => onChange(toggleMultiSelectValue(value, option.value))}
                   />
                   <span className="flex-1 text-slate-700">{option.label}</span>
@@ -113,6 +128,10 @@ export function MultiSelect({ disabled = false, id, onChange, options, placehold
             })}
           </div>
         </div>
+      ) : null}
+
+      {typeof maxSelections === "number" ? (
+        <p className="mt-2 px-1 text-xs text-slate-500">Selecione ate {maxSelections} itens.</p>
       ) : null}
     </div>
   )

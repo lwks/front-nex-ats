@@ -8,6 +8,11 @@ export type LanguageProficiencyOption = {
   label: string
 }
 
+export type TravelAvailabilityOption = {
+  value: string
+  label: string
+}
+
 export const defaultExperienceOptions: OnboardingOption[] = [
   { value: "estagio", label: "Estagio" },
   { value: "junior", label: "1-3 anos" },
@@ -80,17 +85,70 @@ export const defaultLanguageOptions: OnboardingOption[] = [
   { value: "italiano", label: "Italiano" },
 ]
 
-export const defaultProfessionalSkillOptions: OnboardingOption[] = [
-  { value: "gestao-projetos", label: "Gestao de projetos" },
+export const defaultHardSkillOptions: OnboardingOption[] = [
   { value: "analise-dados", label: "Analise de dados" },
-  { value: "sql", label: "SQL" },
-  { value: "excel", label: "Excel avancado" },
-  { value: "power-bi", label: "Power BI" },
+  { value: "automacao-processos", label: "Automacao de processos" },
+  { value: "aws", label: "AWS" },
+  { value: "azure", label: "Azure" },
+  { value: "business-intelligence", label: "Business Intelligence" },
+  { value: "compliance-lgpd", label: "Compliance / LGPD" },
+  { value: "crm", label: "CRM" },
+  { value: "ciberseguranca", label: "Ciberseguranca" },
+  { value: "cloud-computing", label: "Cloud Computing" },
+  { value: "excel-avancado", label: "Excel avancado" },
   { value: "figma", label: "Figma" },
+  { value: "gestao-projetos", label: "Gestao de projetos" },
+  { value: "git-github", label: "Git / GitHub" },
+  { value: "inteligencia-artificial", label: "Inteligencia Artificial" },
+  { value: "java", label: "Java" },
+  { value: "javascript", label: "JavaScript" },
+  { value: "machine-learning", label: "Machine Learning" },
+  { value: "metricas-kpis", label: "Metricas e KPIs" },
+  { value: "power-bi", label: "Power BI" },
+  { value: "python", label: "Python" },
   { value: "react", label: "React" },
+  { value: "sql", label: "SQL" },
+  { value: "scrum-agile", label: "Scrum / Agile" },
+  { value: "seo-performance", label: "SEO / Performance" },
+  { value: "testes-qa", label: "Testes / QA" },
   { value: "typescript", label: "TypeScript" },
   { value: "ux-research", label: "UX Research" },
+  { value: "vendas-b2b", label: "Vendas B2B" },
+  { value: "visualizacao-dados", label: "Visualizacao de dados" },
+  { value: "wordpress-cms", label: "WordPress / CMS" },
+]
+
+export const defaultSoftSkillOptions: OnboardingOption[] = [
+  { value: "adaptabilidade", label: "Adaptabilidade" },
+  { value: "aprendizado-continuo", label: "Aprendizado continuo" },
+  { value: "atencao-detalhes", label: "Atencao aos detalhes" },
+  { value: "colaboracao", label: "Colaboracao" },
+  { value: "comunicacao-escrita", label: "Comunicacao escrita" },
+  { value: "comunicacao-oral", label: "Comunicacao oral" },
+  { value: "criatividade", label: "Criatividade" },
+  { value: "empatia", label: "Empatia" },
+  { value: "escuta-ativa", label: "Escuta ativa" },
+  { value: "flexibilidade", label: "Flexibilidade" },
+  { value: "gestao-conflitos", label: "Gestao de conflitos" },
+  { value: "gestao-tempo", label: "Gestao do tempo" },
+  { value: "influencia", label: "Influencia" },
+  { value: "iniciativa", label: "Iniciativa" },
+  { value: "inteligencia-emocional", label: "Inteligencia emocional" },
+  { value: "lideranca", label: "Lideranca" },
+  { value: "mentalidade-analitica", label: "Mentalidade analitica" },
   { value: "negociacao", label: "Negociacao" },
+  { value: "orientacao-resultado", label: "Orientacao para resultado" },
+  { value: "pensamento-critico", label: "Pensamento critico" },
+  { value: "proatividade", label: "Proatividade" },
+  { value: "resiliencia", label: "Resiliencia" },
+  { value: "resolucao-problemas", label: "Resolucao de problemas" },
+  { value: "responsabilidade", label: "Responsabilidade" },
+  { value: "storytelling", label: "Storytelling" },
+  { value: "tomada-decisao", label: "Tomada de decisao" },
+  { value: "trabalho-equipe", label: "Trabalho em equipe" },
+  { value: "visao-negocio", label: "Visao de negocio" },
+  { value: "gestao-stakeholders", label: "Gestao de stakeholders" },
+  { value: "ownership", label: "Ownership" },
 ]
 
 export const defaultCurrentBenefitOptions: OnboardingOption[] = [
@@ -118,6 +176,44 @@ export const defaultInterestRoleOptions: OnboardingOption[] = [
   { value: "project-manager", label: "Project Manager" },
   { value: "qa-teste", label: "QA / Testes" },
   { value: "tech-lead", label: "Tech Lead" },
+]
+
+export const defaultToolOptions: OnboardingOption[] = [
+  { value: "adobe-creative-cloud", label: "Adobe Creative Cloud" },
+  { value: "asana", label: "Asana" },
+  { value: "aws", label: "AWS" },
+  { value: "azure-devops", label: "Azure DevOps" },
+  { value: "canva", label: "Canva" },
+  { value: "clickup", label: "ClickUp" },
+  { value: "confluence", label: "Confluence" },
+  { value: "discord", label: "Discord" },
+  { value: "docker", label: "Docker" },
+  { value: "excel", label: "Excel" },
+  { value: "figma", label: "Figma" },
+  { value: "ga4", label: "Google Analytics 4" },
+  { value: "github", label: "GitHub" },
+  { value: "gitlab", label: "GitLab" },
+  { value: "hubspot", label: "HubSpot" },
+  { value: "jira", label: "Jira" },
+  { value: "looker-studio", label: "Looker Studio" },
+  { value: "microsoft-teams", label: "Microsoft Teams" },
+  { value: "miro", label: "Miro" },
+  { value: "notion", label: "Notion" },
+  { value: "power-bi", label: "Power BI" },
+  { value: "powerpoint", label: "PowerPoint" },
+  { value: "salesforce", label: "Salesforce" },
+  { value: "sap", label: "SAP" },
+  { value: "slack", label: "Slack" },
+  { value: "sql-server", label: "SQL Server" },
+  { value: "tableau", label: "Tableau" },
+  { value: "trello", label: "Trello" },
+  { value: "vs-code", label: "VS Code" },
+  { value: "wordpress", label: "WordPress" },
+]
+
+export const defaultTravelAvailabilityOptions: TravelAvailabilityOption[] = [
+  { value: "sim", label: "Sim" },
+  { value: "nao", label: "Nao" },
 ]
 
 export const defaultLanguageProficiencyOptions: LanguageProficiencyOption[] = [
