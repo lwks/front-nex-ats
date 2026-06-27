@@ -39,4 +39,18 @@ describe("multi-select", () => {
 
     expect(html).toContain("Remoto, Hibrido")
   })
+
+  it("renders the max-selection helper text when a limit is provided", () => {
+    const html = renderToStaticMarkup(
+      <MultiSelect
+        options={options}
+        placeholder="Selecione"
+        value={["remoto"]}
+        maxSelections={7}
+        onChange={vi.fn()}
+      />,
+    )
+
+    expect(html).toContain("Selecione ate 7 itens.")
+  })
 })

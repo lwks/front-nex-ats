@@ -2,12 +2,15 @@ import {
   defaultContractTypeOptions,
   defaultCurrentBenefitOptions,
   defaultExperienceOptions,
+  defaultHardSkillOptions,
   defaultIndustryOptions,
   defaultInterestRoleOptions,
   defaultLanguageOptions,
   defaultLanguageProficiencyOptions,
-  defaultProfessionalSkillOptions,
   defaultSeniorityOptions,
+  defaultSoftSkillOptions,
+  defaultToolOptions,
+  defaultTravelAvailabilityOptions,
   defaultWorkTypeOptions,
 } from "@/lib/onboarding-options"
 
@@ -39,8 +42,12 @@ export function fetchLanguageProficiencyOptions() {
   return Promise.resolve(defaultLanguageProficiencyOptions)
 }
 
-export function fetchProfessionalSkillOptions() {
-  return Promise.resolve(defaultProfessionalSkillOptions)
+export function fetchHardSkillOptions() {
+  return Promise.resolve(defaultHardSkillOptions)
+}
+
+export function fetchSoftSkillOptions() {
+  return Promise.resolve(defaultSoftSkillOptions)
 }
 
 export function fetchCurrentBenefitOptions() {
@@ -49,4 +56,12 @@ export function fetchCurrentBenefitOptions() {
 
 export function fetchInterestRoleOptions() {
   return Promise.resolve(defaultInterestRoleOptions)
+}
+
+export function fetchToolOptions() {
+  return Promise.resolve(defaultToolOptions)
+}
+
+export function fetchTravelAvailabilityOptions() {
+  return Promise.resolve(defaultTravelAvailabilityOptions)
 }

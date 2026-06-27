@@ -25,7 +25,7 @@ function createInput(overrides: Partial<UserRegistrationData> = {}): UserRegistr
     industria: "tecnologia-informacao-ti",
     salarioAtual: "8.000",
     cargoAtual: "Pessoa desenvolvedora",
-    industriaInteresse: "desenvolvimento-software",
+    industriaInteresse: ["desenvolvimento-software", "financeiro-bancario"],
     cargoInteresse: ["tech-lead", "desenvolvedor-full-stack"],
     tipoContratacao: ["clt", "pj"],
     modeloTrabalho: ["remoto", "hibrido"],
@@ -33,7 +33,13 @@ function createInput(overrides: Partial<UserRegistrationData> = {}): UserRegistr
       { idioma: "portugues", fluencia: "nativo" },
       { idioma: "ingles", fluencia: "avancado" },
     ],
-    skillsProfissionais: ["react", "typescript"],
+    hardSkills: ["react", "sql"],
+    softSkills: ["comunicacao-oral", "trabalho-equipe"],
+    ferramentas: ["figma", "jira"],
+    viagemTrabalho: "sim",
+    pretensaoSalarial: "12.000",
+    sobreVoce: "Profissional com experiencia em produto e tecnologia.",
+    mensagemEmpresa: "Tenho interesse em contribuir com a evolucao do time.",
     compartilhamentoAccepted: true,
     ...overrides,
   }
@@ -144,6 +150,14 @@ describe("user-registration-service", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
+          industriaInteresse: [],
+        }),
+      ),
+    ).toThrow("Selecione ao menos uma industria de interesse.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
           beneficiosAtuais: [],
         }),
       ),
@@ -164,6 +178,64 @@ describe("user-registration-service", () => {
         }),
       ),
     ).toThrow("Selecione ao menos um tipo de contratacao.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          hardSkills: [],
+        }),
+      ),
+    ).toThrow("Selecione ao menos uma hard skill.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          softSkills: [],
+        }),
+      ),
+    ).toThrow("Selecione ao menos uma soft skill.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          ferramentas: [],
+        }),
+      ),
+    ).toThrow("Selecione ao menos uma ferramenta.")
+  })
+
+  it("enforces selection limits for industry, hard skills, soft skills and tools", () => {
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          industriaInteresse: ["1", "2", "3", "4"],
+        }),
+      ),
+    ).toThrow("Selecione no maximo 3 industrias de interesse.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          hardSkills: ["1", "2", "3", "4", "5", "6", "7", "8"],
+        }),
+      ),
+    ).toThrow("Selecione no maximo 7 hard skills.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          softSkills: ["1", "2", "3", "4", "5", "6", "7", "8"],
+        }),
+      ),
+    ).toThrow("Selecione no maximo 7 soft skills.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          ferramentas: ["1", "2", "3", "4", "5", "6", "7", "8"],
+        }),
+      ),
+    ).toThrow("Selecione no maximo 7 ferramentas.")
   })
 
   it("requires idioma and fluencia for each language entry", () => {
@@ -182,5 +254,42 @@ describe("user-registration-service", () => {
         }),
       ),
     ).toThrow("Selecione o nivel de fluencia do idioma.")
+  })
+
+  it("requires travel availability, salary expectation and summary while allowing empty company message", async () => {
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          viagemTrabalho: "",
+        }),
+      ),
+    ).toThrow("Selecione a disponibilidade para viagem de trabalho.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          pretensaoSalarial: "",
+        }),
+      ),
+    ).toThrow("Informe a pretensao salarial.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          sobreVoce: "   ",
+        }),
+      ),
+    ).toThrow("Conte um pouco sobre voce.")
+
+    await expect(
+      submitUserRegistration(
+        createInput({
+          mensagemEmpresa: "",
+        }),
+      ),
+    ).resolves.toMatchObject({
+      nome: "Mariana Costa",
+      contato: "mariana@clusterhr.com",
+    })
   })
 })
