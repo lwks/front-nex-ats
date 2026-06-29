@@ -27,6 +27,7 @@ const REGISTRATION_STEPS = [
 
 export function UserRegistrationPage() {
   const [currentStep, setCurrentStep] = useState(1)
+  const [visitedSteps, setVisitedSteps] = useState<number[]>([1])
   const [registrationData, setRegistrationData] = useState<Partial<UserRegistrationData>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [feedbackModal, setFeedbackModal] = useState<SubmissionFeedback | null>(null)
@@ -36,11 +37,22 @@ export function UserRegistrationPage() {
   }
 
   const nextStep = () => {
-    setCurrentStep((current) => Math.min(current + 1, REGISTRATION_STEPS.length))
+    setCurrentStep((current) => {
+      const next = Math.min(current + 1, REGISTRATION_STEPS.length)
+      setVisitedSteps((previous) => (previous.includes(next) ? previous : [...previous, next]))
+      return next
+    })
   }
 
   const prevStep = () => {
     setCurrentStep((current) => Math.max(current - 1, 1))
+  }
+
+  const handleStepClick = (stepNumber: number) => {
+    if (!visitedSteps.includes(stepNumber)) {
+      return
+    }
+    setCurrentStep(stepNumber)
   }
 
   const handleSubmit = async (finalStepData?: Partial<UserRegistrationData>) => {
@@ -78,6 +90,7 @@ export function UserRegistrationPage() {
   const closeFeedbackModal = () => {
     if (feedbackModal?.type === "success") {
       setCurrentStep(1)
+      setVisitedSteps([1])
       setRegistrationData({})
     }
     setFeedbackModal(null)
@@ -108,7 +121,13 @@ export function UserRegistrationPage() {
         </section>
 
         <section className="rounded-[2rem] border border-slate-200 bg-white px-5 py-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] md:px-8">
-          <ProgressIndicator currentStep={currentStep} totalSteps={REGISTRATION_STEPS.length} steps={REGISTRATION_STEPS} />
+          <ProgressIndicator
+            currentStep={currentStep}
+            totalSteps={REGISTRATION_STEPS.length}
+            onStepClick={handleStepClick}
+            steps={REGISTRATION_STEPS}
+            visitedSteps={visitedSteps}
+          />
         </section>
 
         {currentStep === 1 ? (

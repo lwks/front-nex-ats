@@ -242,6 +242,14 @@ describe("user-registration-service", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
+          idiomas: [],
+        }),
+      ),
+    ).not.toThrow()
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
           idiomas: [{ idioma: "", fluencia: "fluente" }],
         }),
       ),

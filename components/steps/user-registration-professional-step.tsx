@@ -8,21 +8,26 @@ import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { MultiSelect } from "@/components/ui/multi-select"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
+  defaultCurrentBenefitOptions,
   defaultExperienceOptions,
   defaultIndustryOptions,
   defaultLanguageOptions,
   defaultLanguageProficiencyOptions,
+  defaultSeniorityOptions,
   type LanguageProficiencyOption,
   type OnboardingOption,
 } from "@/lib/onboarding-options"
 import { cn } from "@/lib/utils"
 import {
+  fetchCurrentBenefitOptions,
   fetchExperienceOptions,
   fetchIndustryOptions,
   fetchLanguageOptions,
   fetchLanguageProficiencyOptions,
+  fetchSeniorityOptions,
 } from "@/services/onboarding-options-service"
 import type { UserRegistrationData, UserRegistrationLanguage } from "@/services/user-registration-service"
 
@@ -57,10 +62,7 @@ function createEmptyLanguage(): UserRegistrationLanguage {
 }
 
 function hasCompleteLanguages(languages: UserRegistrationLanguage[]) {
-  return (
-    languages.length > 0 &&
-    languages.every((language) => language.idioma.trim().length > 0 && language.fluencia.trim().length > 0)
-  )
+  return languages.every((language) => language.idioma.trim().length > 0 && language.fluencia.trim().length > 0)
 }
 
 export function UserRegistrationProfessionalStep({
@@ -73,16 +75,26 @@ export function UserRegistrationProfessionalStep({
     experiencia: data.experiencia || "",
     industria: data.industria || "",
     salarioAtual: data.salarioAtual || "",
-    idiomas: data.idiomas && data.idiomas.length > 0 ? data.idiomas : [createEmptyLanguage()],
+    empresaAtual: data.empresaAtual || "",
+    cargoAtual: data.cargoAtual || "",
+    senioridade: data.senioridade || "",
+    beneficiosAtuais: data.beneficiosAtuais || [],
+    idiomas: data.idiomas || [],
   })
   const [touched, setTouched] = useState({
     experiencia: false,
     industria: false,
     salarioAtual: false,
+    empresaAtual: false,
+    cargoAtual: false,
+    senioridade: false,
+    beneficiosAtuais: false,
     idiomas: false,
   })
   const [experienceOptions, setExperienceOptions] = useState<OnboardingOption[]>(defaultExperienceOptions)
   const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
+  const [seniorityOptions, setSeniorityOptions] = useState<OnboardingOption[]>(defaultSeniorityOptions)
+  const [benefitOptions, setBenefitOptions] = useState<OnboardingOption[]>(defaultCurrentBenefitOptions)
   const [languageOptions, setLanguageOptions] = useState<OnboardingOption[]>(defaultLanguageOptions)
   const [languageProficiencyOptions, setLanguageProficiencyOptions] = useState<LanguageProficiencyOption[]>(
     defaultLanguageProficiencyOptions,
@@ -92,6 +104,10 @@ export function UserRegistrationProfessionalStep({
     Boolean(formData.experiencia) &&
     Boolean(formData.industria) &&
     Boolean(formData.salarioAtual.trim()) &&
+    Boolean(formData.empresaAtual.trim()) &&
+    Boolean(formData.cargoAtual.trim()) &&
+    Boolean(formData.senioridade) &&
+    formData.beneficiosAtuais.length > 0 &&
     hasCompleteLanguages(formData.idiomas)
 
   const experienceError =
@@ -99,8 +115,18 @@ export function UserRegistrationProfessionalStep({
   const industryError = touched.industria && !formData.industria ? "Selecione a industria atual." : ""
   const salaryError =
     touched.salarioAtual && !formData.salarioAtual.trim() ? "Informe o salario atual." : ""
+  const companyError =
+    touched.empresaAtual && !formData.empresaAtual.trim() ? "Informe a empresa atual." : ""
+  const roleError =
+    touched.cargoAtual && !formData.cargoAtual.trim() ? "Informe o cargo atual." : ""
+  const seniorityError =
+    touched.senioridade && !formData.senioridade ? "Selecione a senioridade atual." : ""
+  const benefitError =
+    touched.beneficiosAtuais && formData.beneficiosAtuais.length === 0
+      ? "Selecione ao menos um beneficio atual."
+      : ""
   const languageError =
-    touched.idiomas && !hasCompleteLanguages(formData.idiomas)
+    touched.idiomas && formData.idiomas.length > 0 && !hasCompleteLanguages(formData.idiomas)
       ? "Selecione ao menos um idioma e informe sua fluencia."
       : ""
 
@@ -108,9 +134,11 @@ export function UserRegistrationProfessionalStep({
     let isMounted = true
 
     const loadOptions = async () => {
-      const [experiences, industries, languages, proficiencies] = await Promise.all([
+      const [experiences, industries, seniorities, benefits, languages, proficiencies] = await Promise.all([
         fetchExperienceOptions(),
         fetchIndustryOptions(),
+        fetchSeniorityOptions(),
+        fetchCurrentBenefitOptions(),
         fetchLanguageOptions(),
         fetchLanguageProficiencyOptions(),
       ])
@@ -118,6 +146,8 @@ export function UserRegistrationProfessionalStep({
       if (isMounted) {
         setExperienceOptions(experiences)
         setIndustryOptions(industries)
+        setSeniorityOptions(seniorities)
+        setBenefitOptions(benefits)
         setLanguageOptions(languages)
         setLanguageProficiencyOptions(proficiencies)
       }
@@ -169,6 +199,10 @@ export function UserRegistrationProfessionalStep({
         experiencia: true,
         industria: true,
         salarioAtual: true,
+        empresaAtual: true,
+        cargoAtual: true,
+        senioridade: true,
+        beneficiosAtuais: true,
         idiomas: true,
       })
       return
@@ -183,7 +217,7 @@ export function UserRegistrationProfessionalStep({
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#C44E00]">Cadastro oficial</p>
         <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Experiencia profissional</h2>
         <p className="mt-3 text-sm leading-6 text-slate-600">
-          Conte sua experiencia atual e os idiomas com nivel de fluencia.
+          Conte sua experiencia, momento profissional atual e idiomas, se desejar informar.
         </p>
       </div>
 
@@ -264,6 +298,90 @@ export function UserRegistrationProfessionalStep({
             aria-invalid={salaryError ? "true" : "false"}
           />
           {salaryError ? <p className="text-xs text-destructive">{salaryError}</p> : null}
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="empresaAtual">Empresa Atual</Label>
+            <Input
+              id="empresaAtual"
+              value={formData.empresaAtual}
+              onChange={(event) => setFormData({ ...formData, empresaAtual: event.target.value })}
+              onBlur={() => {
+                if (!touched.empresaAtual) {
+                  setTouched((previous) => ({ ...previous, empresaAtual: true }))
+                }
+              }}
+              className={cn(companyError && "border-destructive focus-visible:ring-destructive/40")}
+              aria-invalid={companyError ? "true" : "false"}
+            />
+            {companyError ? <p className="text-xs text-destructive">{companyError}</p> : null}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cargoAtual">Cargo Atual</Label>
+            <Input
+              id="cargoAtual"
+              value={formData.cargoAtual}
+              onChange={(event) => setFormData({ ...formData, cargoAtual: event.target.value })}
+              onBlur={() => {
+                if (!touched.cargoAtual) {
+                  setTouched((previous) => ({ ...previous, cargoAtual: true }))
+                }
+              }}
+              className={cn(roleError && "border-destructive focus-visible:ring-destructive/40")}
+              aria-invalid={roleError ? "true" : "false"}
+            />
+            {roleError ? <p className="text-xs text-destructive">{roleError}</p> : null}
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="senioridade">Senioridade</Label>
+            <Select
+              value={formData.senioridade}
+              onValueChange={(value) => {
+                setFormData({ ...formData, senioridade: value })
+                if (!touched.senioridade) {
+                  setTouched((previous) => ({ ...previous, senioridade: true }))
+                }
+              }}
+            >
+              <SelectTrigger
+                id="senioridade"
+                className={cn("w-full", seniorityError && "border-destructive focus-visible:ring-destructive/40")}
+                aria-invalid={seniorityError ? "true" : "false"}
+              >
+                <SelectValue placeholder="Selecione a senioridade atual" />
+              </SelectTrigger>
+              <SelectContent>
+                {seniorityOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {seniorityError ? <p className="text-xs text-destructive">{seniorityError}</p> : null}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="beneficiosAtuais">Beneficios</Label>
+            <MultiSelect
+              id="beneficiosAtuais"
+              options={benefitOptions}
+              placeholder="Selecione seus beneficios"
+              value={formData.beneficiosAtuais}
+              onChange={(value) => {
+                setFormData({ ...formData, beneficiosAtuais: value })
+                if (!touched.beneficiosAtuais) {
+                  setTouched((previous) => ({ ...previous, beneficiosAtuais: true }))
+                }
+              }}
+            />
+            {benefitError ? <p className="text-xs text-destructive">{benefitError}</p> : null}
+          </div>
         </div>
 
         <div className="space-y-4 rounded-[1.5rem] border border-slate-200 p-5">

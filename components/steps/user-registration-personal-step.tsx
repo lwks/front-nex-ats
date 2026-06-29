@@ -8,10 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { MultiSelect } from "@/components/ui/multi-select"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ZIPS_API_PROXY_URL } from "@/config"
-import { defaultCurrentBenefitOptions, defaultSeniorityOptions, type OnboardingOption } from "@/lib/onboarding-options"
 import {
   formatZipSummary,
   hasZipCityAndState,
@@ -21,7 +18,6 @@ import {
   type ZipLookupResponse,
 } from "@/lib/zip-utils"
 import { cn } from "@/lib/utils"
-import { fetchCurrentBenefitOptions, fetchSeniorityOptions } from "@/services/onboarding-options-service"
 import type { UserRegistrationData } from "@/services/user-registration-service"
 
 type UserRegistrationPersonalStepProps = {
@@ -110,11 +106,18 @@ export function UserRegistrationPersonalStep({
     estado: data.estado || "",
     contatoCel: (data.contatoCel || "").replace(/\D/g, ""),
     contato: data.contato || "",
-    empresaAtual: data.empresaAtual || "",
-    cargoAtual: data.cargoAtual || "",
-    senioridade: data.senioridade || "",
-    beneficiosAtuais: data.beneficiosAtuais || [],
     lgpdAccepted: data.lgpdAccepted || false,
+  })
+  const [touched, setTouched] = useState({
+    nome: false,
+    documento: false,
+    dataNascimento: false,
+    localResidencia: false,
+    endereco: false,
+    cidade: false,
+    estado: false,
+    contatoCel: false,
+    contato: false,
   })
   const [errors, setErrors] = useState({
     nome: "",
@@ -126,44 +129,16 @@ export function UserRegistrationPersonalStep({
     estado: "",
     contatoCel: "",
     contato: "",
-    empresaAtual: "",
-    cargoAtual: "",
-    senioridade: "",
-    beneficiosAtuais: "",
   })
   const [isZipLookupLoading, setIsZipLookupLoading] = useState(false)
   const [zipLookupError, setZipLookupError] = useState<string | null>(null)
   const [zipLookupResult, setZipLookupResult] = useState<ZipLookupResponse | null>(null)
   const [hasAttemptedZipLookup, setHasAttemptedZipLookup] = useState(false)
-  const [seniorityOptions, setSeniorityOptions] = useState<OnboardingOption[]>(defaultSeniorityOptions)
-  const [benefitOptions, setBenefitOptions] = useState<OnboardingOption[]>(defaultCurrentBenefitOptions)
   const zipLookupController = useRef<AbortController | null>(null)
 
   useEffect(() => {
     return () => {
       zipLookupController.current?.abort()
-    }
-  }, [])
-
-  useEffect(() => {
-    let isMounted = true
-
-    const loadOptions = async () => {
-      const [seniorities, benefits] = await Promise.all([
-        fetchSeniorityOptions(),
-        fetchCurrentBenefitOptions(),
-      ])
-
-      if (isMounted) {
-        setSeniorityOptions(seniorities)
-        setBenefitOptions(benefits)
-      }
-    }
-
-    loadOptions().catch((error) => console.error("Failed to load personal data options", error))
-
-    return () => {
-      isMounted = false
     }
   }, [])
 
@@ -191,10 +166,6 @@ export function UserRegistrationPersonalStep({
     hasNonEmptyValue(formData.estado) &&
     isValidPhone(formData.contatoCel) &&
     isValidEmail(formData.contato) &&
-    hasNonEmptyValue(formData.empresaAtual) &&
-    hasNonEmptyValue(formData.cargoAtual) &&
-    hasNonEmptyValue(formData.senioridade) &&
-    formData.beneficiosAtuais.length > 0 &&
     formData.lgpdAccepted
 
   function getZipErrorMessage() {
@@ -222,10 +193,6 @@ export function UserRegistrationPersonalStep({
       estado: "",
       contatoCel: "",
       contato: "",
-      empresaAtual: "",
-      cargoAtual: "",
-      senioridade: "",
-      beneficiosAtuais: "",
     }
 
     newErrors.nome = hasFullName(formData.nome) ? "" : "Informe nome e sobrenome."
@@ -243,14 +210,59 @@ export function UserRegistrationPersonalStep({
       ? ""
       : `Informe um celular com ${CEL_MIN_LENGTH} a ${CEL_MAX_LENGTH} digitos.`
     newErrors.contato = isValidEmail(formData.contato) ? "" : "Digite um e-mail valido."
-    newErrors.empresaAtual = hasNonEmptyValue(formData.empresaAtual) ? "" : "Informe a empresa atual."
-    newErrors.cargoAtual = hasNonEmptyValue(formData.cargoAtual) ? "" : "Informe o cargo atual."
-    newErrors.senioridade = hasNonEmptyValue(formData.senioridade) ? "" : "Selecione a senioridade atual."
-    newErrors.beneficiosAtuais =
-      formData.beneficiosAtuais.length > 0 ? "" : "Selecione ao menos um beneficio atual."
 
     setErrors(newErrors)
     return Object.values(newErrors).every((error) => error === "")
+  }
+
+  const updateFieldError = (field: keyof typeof errors, nextValue?: string) => {
+    setErrors((previous) => {
+      const nextErrors = { ...previous }
+
+      switch (field) {
+        case "nome":
+          nextErrors.nome = hasFullName(nextValue ?? formData.nome) ? "" : "Informe nome e sobrenome."
+          break
+        case "documento":
+          nextErrors.documento = getDocumentError(nextValue ?? formData.documento)
+          break
+        case "dataNascimento": {
+          const value = nextValue ?? formData.dataNascimento
+          nextErrors.dataNascimento = !value
+            ? "Informe a data de nascimento."
+            : isValidBirthDate(value)
+              ? ""
+              : "Informe uma data de nascimento valida."
+          break
+        }
+        case "localResidencia":
+          nextErrors.localResidencia = getZipErrorMessage()
+          break
+        case "endereco":
+          nextErrors.endereco = hasNonEmptyValue(nextValue ?? formData.endereco) ? "" : "Informe o endereco."
+          break
+        case "cidade":
+          nextErrors.cidade = hasNonEmptyValue(nextValue ?? formData.cidade) ? "" : "Informe a cidade."
+          break
+        case "estado":
+          nextErrors.estado = hasNonEmptyValue(nextValue ?? formData.estado) ? "" : "Informe o estado."
+          break
+        case "contatoCel":
+          nextErrors.contatoCel = isValidPhone(nextValue ?? formData.contatoCel)
+            ? ""
+            : `Informe um celular com ${CEL_MIN_LENGTH} a ${CEL_MAX_LENGTH} digitos.`
+          break
+        case "contato":
+          nextErrors.contato = isValidEmail(nextValue ?? formData.contato) ? "" : "Digite um e-mail valido."
+          break
+      }
+
+      return nextErrors
+    })
+  }
+
+  const touchField = (field: keyof typeof touched) => {
+    setTouched((previous) => ({ ...previous, [field]: true }))
   }
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -348,10 +360,6 @@ export function UserRegistrationPersonalStep({
   const handleZipChange: React.ChangeEventHandler<HTMLInputElement> = (event) => {
     const digitsOnly = event.target.value.replace(/\D/g, "").slice(0, CEP_LENGTH)
 
-    if (errors.localResidencia) {
-      setErrors((previous) => ({ ...previous, localResidencia: "" }))
-    }
-
     setFormData((previous) => ({
       ...previous,
       localResidencia: digitsOnly,
@@ -374,6 +382,9 @@ export function UserRegistrationPersonalStep({
       setHasAttemptedZipLookup(false)
       setIsZipLookupLoading(false)
       setFormData((previous) => ({ ...previous, endereco: "", cidade: "", estado: "" }))
+      if (touched.localResidencia) {
+        setTimeout(() => updateFieldError("localResidencia", digitsOnly), 0)
+      }
     }
   }
 
@@ -393,7 +404,7 @@ export function UserRegistrationPersonalStep({
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#C44E00]">Cadastro oficial</p>
         <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Dados pessoais</h2>
         <p className="mt-3 text-sm leading-6 text-slate-600">
-          Preencha seus dados pessoais, de contato e informacoes atuais de trabalho.
+          Preencha seus dados pessoais, endereco e informacoes de contato.
         </p>
       </div>
 
@@ -404,7 +415,17 @@ export function UserRegistrationPersonalStep({
             <Input
               id="nome"
               value={formData.nome}
-              onChange={(event) => setFormData({ ...formData, nome: event.target.value })}
+              onChange={(event) => {
+                const value = event.target.value
+                setFormData({ ...formData, nome: value })
+                if (touched.nome) {
+                  updateFieldError("nome", value)
+                }
+              }}
+              onBlur={() => {
+                touchField("nome")
+                updateFieldError("nome")
+              }}
               className={cn(errors.nome && "border-destructive focus-visible:ring-destructive/40")}
               aria-invalid={errors.nome ? "true" : "false"}
             />
@@ -417,7 +438,17 @@ export function UserRegistrationPersonalStep({
               id="dataNascimento"
               type="date"
               value={formData.dataNascimento}
-              onChange={(event) => setFormData({ ...formData, dataNascimento: event.target.value })}
+              onChange={(event) => {
+                const value = event.target.value
+                setFormData({ ...formData, dataNascimento: value })
+                if (touched.dataNascimento) {
+                  updateFieldError("dataNascimento", value)
+                }
+              }}
+              onBlur={() => {
+                touchField("dataNascimento")
+                updateFieldError("dataNascimento")
+              }}
               className={cn(errors.dataNascimento && "border-destructive focus-visible:ring-destructive/40")}
               aria-invalid={errors.dataNascimento ? "true" : "false"}
             />
@@ -432,9 +463,17 @@ export function UserRegistrationPersonalStep({
               id="documento"
               inputMode="numeric"
               value={formData.documento}
-              onChange={(event) =>
-                setFormData({ ...formData, documento: event.target.value.replace(/\D/g, "").slice(0, CPF_LENGTH) })
-              }
+              onChange={(event) => {
+                const value = event.target.value.replace(/\D/g, "").slice(0, CPF_LENGTH)
+                setFormData({ ...formData, documento: value })
+                if (touched.documento) {
+                  updateFieldError("documento", value)
+                }
+              }}
+              onBlur={() => {
+                touchField("documento")
+                updateFieldError("documento")
+              }}
               className={cn(errors.documento && "border-destructive focus-visible:ring-destructive/40")}
               aria-invalid={errors.documento ? "true" : "false"}
             />
@@ -448,6 +487,10 @@ export function UserRegistrationPersonalStep({
               inputMode="numeric"
               value={formData.localResidencia}
               onChange={handleZipChange}
+              onBlur={() => {
+                touchField("localResidencia")
+                updateFieldError("localResidencia")
+              }}
               className={cn(errors.localResidencia && "border-destructive focus-visible:ring-destructive/40")}
               aria-invalid={errors.localResidencia ? "true" : "false"}
             />
@@ -457,13 +500,23 @@ export function UserRegistrationPersonalStep({
 
         <div className="space-y-2">
           <Label htmlFor="endereco">Endereço</Label>
-          <Input
-            id="endereco"
-            value={formData.endereco}
-            onChange={(event) => setFormData({ ...formData, endereco: event.target.value })}
-            readOnly={isZipLookupLoading}
-            className={cn(errors.endereco && "border-destructive focus-visible:ring-destructive/40")}
-            aria-invalid={errors.endereco ? "true" : "false"}
+            <Input
+              id="endereco"
+              value={formData.endereco}
+              onChange={(event) => {
+                const value = event.target.value
+                setFormData({ ...formData, endereco: value })
+                if (touched.endereco) {
+                  updateFieldError("endereco", value)
+                }
+              }}
+              onBlur={() => {
+                touchField("endereco")
+                updateFieldError("endereco")
+              }}
+              readOnly={isZipLookupLoading}
+              className={cn(errors.endereco && "border-destructive focus-visible:ring-destructive/40")}
+              aria-invalid={errors.endereco ? "true" : "false"}
           />
           {isZipLookupLoading ? <p className="text-xs text-slate-500">Consultando CEP...</p> : null}
           {errors.endereco ? <p className="text-xs text-destructive">{errors.endereco}</p> : null}
@@ -475,7 +528,17 @@ export function UserRegistrationPersonalStep({
             <Input
               id="cidade"
               value={formData.cidade}
-              onChange={(event) => setFormData({ ...formData, cidade: event.target.value })}
+              onChange={(event) => {
+                const value = event.target.value
+                setFormData({ ...formData, cidade: value })
+                if (touched.cidade) {
+                  updateFieldError("cidade", value)
+                }
+              }}
+              onBlur={() => {
+                touchField("cidade")
+                updateFieldError("cidade")
+              }}
               className={cn(errors.cidade && "border-destructive focus-visible:ring-destructive/40")}
               aria-invalid={errors.cidade ? "true" : "false"}
             />
@@ -487,7 +550,17 @@ export function UserRegistrationPersonalStep({
             <Input
               id="estado"
               value={formData.estado}
-              onChange={(event) => setFormData({ ...formData, estado: event.target.value })}
+              onChange={(event) => {
+                const value = event.target.value
+                setFormData({ ...formData, estado: value })
+                if (touched.estado) {
+                  updateFieldError("estado", value)
+                }
+              }}
+              onBlur={() => {
+                touchField("estado")
+                updateFieldError("estado")
+              }}
               className={cn(errors.estado && "border-destructive focus-visible:ring-destructive/40")}
               aria-invalid={errors.estado ? "true" : "false"}
             />
@@ -502,9 +575,17 @@ export function UserRegistrationPersonalStep({
               id="contatoCel"
               inputMode="numeric"
               value={formData.contatoCel}
-              onChange={(event) =>
-                setFormData({ ...formData, contatoCel: event.target.value.replace(/\D/g, "").slice(0, CEL_MAX_LENGTH) })
-              }
+              onChange={(event) => {
+                const value = event.target.value.replace(/\D/g, "").slice(0, CEL_MAX_LENGTH)
+                setFormData({ ...formData, contatoCel: value })
+                if (touched.contatoCel) {
+                  updateFieldError("contatoCel", value)
+                }
+              }}
+              onBlur={() => {
+                touchField("contatoCel")
+                updateFieldError("contatoCel")
+              }}
               className={cn(errors.contatoCel && "border-destructive focus-visible:ring-destructive/40")}
               aria-invalid={errors.contatoCel ? "true" : "false"}
             />
@@ -517,75 +598,21 @@ export function UserRegistrationPersonalStep({
               id="contato"
               type="email"
               value={formData.contato}
-              onChange={(event) => setFormData({ ...formData, contato: event.target.value })}
+              onChange={(event) => {
+                const value = event.target.value
+                setFormData({ ...formData, contato: value })
+                if (touched.contato) {
+                  updateFieldError("contato", value)
+                }
+              }}
+              onBlur={() => {
+                touchField("contato")
+                updateFieldError("contato")
+              }}
               className={cn(errors.contato && "border-destructive focus-visible:ring-destructive/40")}
               aria-invalid={errors.contato ? "true" : "false"}
             />
             {errors.contato ? <p className="text-xs text-destructive">{errors.contato}</p> : null}
-          </div>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="empresaAtual">Empresa Atual</Label>
-            <Input
-              id="empresaAtual"
-              value={formData.empresaAtual}
-              onChange={(event) => setFormData({ ...formData, empresaAtual: event.target.value })}
-              className={cn(errors.empresaAtual && "border-destructive focus-visible:ring-destructive/40")}
-              aria-invalid={errors.empresaAtual ? "true" : "false"}
-            />
-            {errors.empresaAtual ? <p className="text-xs text-destructive">{errors.empresaAtual}</p> : null}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="cargoAtual">Cargo Atual</Label>
-            <Input
-              id="cargoAtual"
-              value={formData.cargoAtual}
-              onChange={(event) => setFormData({ ...formData, cargoAtual: event.target.value })}
-              className={cn(errors.cargoAtual && "border-destructive focus-visible:ring-destructive/40")}
-              aria-invalid={errors.cargoAtual ? "true" : "false"}
-            />
-            {errors.cargoAtual ? <p className="text-xs text-destructive">{errors.cargoAtual}</p> : null}
-          </div>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="senioridade">Senioridade</Label>
-            <Select
-              value={formData.senioridade}
-              onValueChange={(value) => setFormData({ ...formData, senioridade: value })}
-            >
-              <SelectTrigger
-                id="senioridade"
-                className={cn("w-full", errors.senioridade && "border-destructive focus-visible:ring-destructive/40")}
-                aria-invalid={errors.senioridade ? "true" : "false"}
-              >
-                <SelectValue placeholder="Selecione a senioridade atual" />
-              </SelectTrigger>
-              <SelectContent>
-                {seniorityOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.senioridade ? <p className="text-xs text-destructive">{errors.senioridade}</p> : null}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="beneficiosAtuais">Beneficios</Label>
-            <MultiSelect
-              id="beneficiosAtuais"
-              options={benefitOptions}
-              placeholder="Selecione seus beneficios"
-              value={formData.beneficiosAtuais}
-              onChange={(value) => setFormData({ ...formData, beneficiosAtuais: value })}
-            />
-            {errors.beneficiosAtuais ? <p className="text-xs text-destructive">{errors.beneficiosAtuais}</p> : null}
           </div>
         </div>
 
