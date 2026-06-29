@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
+import { ProgressIndicator } from "@/components/progress-indicator"
 import { UserRegistrationPage } from "@/components/user-registration-page"
 import { UserRegistrationPersonalStep } from "@/components/steps/user-registration-personal-step"
 import { UserRegistrationPreferencesStep } from "@/components/steps/user-registration-preferences-step"
@@ -43,5 +44,35 @@ describe("UserRegistrationPage", () => {
     expect(preferencesHtml).toContain("Conte um pouco sobre você")
     expect(preferencesHtml).toContain("Mensagem para empresa/gestor")
     expect(preferencesHtml).toContain("Selecione ate 3 industrias")
+    expect(personalHtml).not.toContain("Empresa Atual")
+    expect(personalHtml).not.toContain("Cargo Atual")
+    expect(personalHtml).not.toContain("Senioridade")
+    expect(personalHtml).not.toContain("Beneficios")
+    expect(professionalHtml).toContain("Empresa Atual")
+    expect(professionalHtml).toContain("Cargo Atual")
+    expect(professionalHtml).toContain("Senioridade")
+    expect(professionalHtml).toContain("Beneficios")
+    expect(professionalHtml).toContain("Adicionar idioma")
+  })
+
+  it("renders visited steps as clickable buttons and future steps as disabled", () => {
+    const html = renderToStaticMarkup(
+      <ProgressIndicator
+        currentStep={2}
+        totalSteps={4}
+        visitedSteps={[1, 2]}
+        steps={[
+          { number: 1, label: "Dados pessoais" },
+          { number: 2, label: "Experiencia profissional" },
+          { number: 3, label: "Preferencias" },
+          { number: 4, label: "CV" },
+        ]}
+      />,
+    )
+
+    expect(html).toContain('aria-current="step"')
+    expect(html).toContain(">1</button>")
+    expect(html).toContain(">2</button>")
+    expect(html).toContain('disabled=""')
   })
 })

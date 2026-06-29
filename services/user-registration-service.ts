@@ -74,7 +74,7 @@ function requireValidDate(value: string, message: string) {
 
 function requireLanguageSelection(values: UserRegistrationLanguage[], message: string) {
   if (values.length === 0) {
-    throw new Error(message)
+    return
   }
 
   for (const language of values) {
