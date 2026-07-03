@@ -5,6 +5,7 @@ import {
   defaultHardSkillOptions,
   defaultIndustryOptions,
   defaultInterestRoleOptions,
+  defaultInterestRoleAreaMap,
   defaultLanguageOptions,
   defaultLanguageProficiencyOptions,
   defaultSeniorityOptions,
@@ -56,6 +57,10 @@ export function fetchCurrentBenefitOptions() {
 
 export function fetchInterestRoleOptions() {
   return Promise.resolve(defaultInterestRoleOptions)
+}
+
+export function fetchInterestRoleAreaMap() {
+  return Promise.resolve(defaultInterestRoleAreaMap)
 }
 
 export function fetchToolOptions() {

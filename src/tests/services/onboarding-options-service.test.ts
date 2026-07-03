@@ -6,6 +6,7 @@ import {
   fetchExperienceOptions,
   fetchHardSkillOptions,
   fetchIndustryOptions,
+  fetchInterestRoleAreaMap,
   fetchLanguageOptions,
   fetchSoftSkillOptions,
   fetchToolOptions,
@@ -18,6 +19,7 @@ import {
   defaultExperienceOptions,
   defaultHardSkillOptions,
   defaultIndustryOptions,
+  defaultInterestRoleAreaMap,
   defaultLanguageOptions,
   defaultSoftSkillOptions,
   defaultToolOptions,
@@ -56,6 +58,10 @@ describe("onboarding-options-service", () => {
 
   it("returns default tool options", async () => {
     await expect(fetchToolOptions()).resolves.toEqual(defaultToolOptions)
+  })
+
+  it("returns the default cargo to area map", async () => {
+    await expect(fetchInterestRoleAreaMap()).resolves.toEqual(defaultInterestRoleAreaMap)
   })
 
   it("returns default travel availability options", async () => {

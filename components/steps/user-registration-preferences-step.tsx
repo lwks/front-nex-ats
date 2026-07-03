@@ -13,8 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   defaultContractTypeOptions,
   defaultHardSkillOptions,
-  defaultIndustryOptions,
-  defaultInterestRoleOptions,
   defaultSoftSkillOptions,
   defaultToolOptions,
   defaultTravelAvailabilityOptions,
@@ -26,8 +24,6 @@ import { cn } from "@/lib/utils"
 import {
   fetchContractTypeOptions,
   fetchHardSkillOptions,
-  fetchIndustryOptions,
-  fetchInterestRoleOptions,
   fetchSoftSkillOptions,
   fetchToolOptions,
   fetchTravelAvailabilityOptions,
@@ -65,8 +61,6 @@ export function UserRegistrationPreferencesStep({
   onUpdate,
 }: UserRegistrationPreferencesStepProps) {
   const [formData, setFormData] = useState({
-    industriaInteresse: data.industriaInteresse || [],
-    cargoInteresse: data.cargoInteresse || [],
     tipoContratacao: data.tipoContratacao || [],
     modeloTrabalho: data.modeloTrabalho || [],
     hardSkills: data.hardSkills || [],
@@ -79,8 +73,6 @@ export function UserRegistrationPreferencesStep({
     compartilhamentoAccepted: data.compartilhamentoAccepted || false,
   })
   const [touched, setTouched] = useState({
-    industriaInteresse: false,
-    cargoInteresse: false,
     tipoContratacao: false,
     modeloTrabalho: false,
     hardSkills: false,
@@ -91,19 +83,14 @@ export function UserRegistrationPreferencesStep({
     sobreVoce: false,
     compartilhamentoAccepted: false,
   })
-  const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
   const [workTypeOptions, setWorkTypeOptions] = useState<OnboardingOption[]>(defaultWorkTypeOptions)
   const [contractTypeOptions, setContractTypeOptions] = useState<OnboardingOption[]>(defaultContractTypeOptions)
-  const [interestRoleOptions, setInterestRoleOptions] = useState<OnboardingOption[]>(defaultInterestRoleOptions)
   const [hardSkillOptions, setHardSkillOptions] = useState<OnboardingOption[]>(defaultHardSkillOptions)
   const [softSkillOptions, setSoftSkillOptions] = useState<OnboardingOption[]>(defaultSoftSkillOptions)
   const [toolOptions, setToolOptions] = useState<OnboardingOption[]>(defaultToolOptions)
   const [travelOptions, setTravelOptions] = useState<TravelAvailabilityOption[]>(defaultTravelAvailabilityOptions)
 
   const isFormComplete =
-    formData.industriaInteresse.length > 0 &&
-    formData.industriaInteresse.length <= 3 &&
-    formData.cargoInteresse.length > 0 &&
     formData.tipoContratacao.length > 0 &&
     formData.modeloTrabalho.length > 0 &&
     formData.hardSkills.length > 0 &&
@@ -117,16 +104,6 @@ export function UserRegistrationPreferencesStep({
     Boolean(formData.sobreVoce.trim()) &&
     formData.compartilhamentoAccepted
 
-  const industryError =
-    touched.industriaInteresse && formData.industriaInteresse.length === 0
-      ? "Selecione ao menos uma industria de interesse."
-      : touched.industriaInteresse && formData.industriaInteresse.length > 3
-        ? "Selecione no maximo 3 industrias de interesse."
-        : ""
-  const roleError =
-    touched.cargoInteresse && formData.cargoInteresse.length === 0
-      ? "Selecione ao menos um cargo de interesse."
-      : ""
   const contractError =
     touched.tipoContratacao && formData.tipoContratacao.length === 0
       ? "Selecione ao menos um tipo de contratacao."
@@ -165,23 +142,18 @@ export function UserRegistrationPreferencesStep({
     let isMounted = true
 
     const loadOptions = async () => {
-      const [industries, workTypes, contractTypes, interestRoles, hardSkills, softSkills, tools, travel] =
-        await Promise.all([
-          fetchIndustryOptions(),
-          fetchWorkTypeOptions(),
-          fetchContractTypeOptions(),
-          fetchInterestRoleOptions(),
-          fetchHardSkillOptions(),
-          fetchSoftSkillOptions(),
-          fetchToolOptions(),
-          fetchTravelAvailabilityOptions(),
-        ])
+      const [workTypes, contractTypes, hardSkills, softSkills, tools, travel] = await Promise.all([
+        fetchWorkTypeOptions(),
+        fetchContractTypeOptions(),
+        fetchHardSkillOptions(),
+        fetchSoftSkillOptions(),
+        fetchToolOptions(),
+        fetchTravelAvailabilityOptions(),
+      ])
 
       if (isMounted) {
-        setIndustryOptions(industries)
         setWorkTypeOptions(workTypes)
         setContractTypeOptions(contractTypes)
-        setInterestRoleOptions(interestRoles)
         setHardSkillOptions(hardSkills)
         setSoftSkillOptions(softSkills)
         setToolOptions(tools)
@@ -200,8 +172,6 @@ export function UserRegistrationPreferencesStep({
     event.preventDefault()
     if (!isFormComplete) {
       setTouched({
-        industriaInteresse: true,
-        cargoInteresse: true,
         tipoContratacao: true,
         modeloTrabalho: true,
         hardSkills: true,
@@ -224,63 +194,26 @@ export function UserRegistrationPreferencesStep({
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#C44E00]">Cadastro oficial</p>
         <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Preferencias e perfil</h2>
         <p className="mt-3 text-sm leading-6 text-slate-600">
-          Defina seus interesses profissionais, ferramentas, disponibilidade e sua apresentacao para a empresa.
+          Defina seus modelos de trabalho, habilidades, ferramentas, disponibilidade e sua apresentacao para a empresa.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="industriaInteresse">Industria de interesse</Label>
+          <Label htmlFor="tipoContratacao">Modelo de contrato</Label>
           <MultiSelect
-            id="industriaInteresse"
-            maxSelections={3}
-            options={industryOptions}
-            placeholder="Selecione ate 3 industrias"
-            value={formData.industriaInteresse}
+            id="tipoContratacao"
+            options={contractTypeOptions}
+            placeholder="Selecione um ou mais modelos"
+            value={formData.tipoContratacao}
             onChange={(value) => {
-              setFormData({ ...formData, industriaInteresse: value })
-              if (!touched.industriaInteresse) {
-                setTouched((previous) => ({ ...previous, industriaInteresse: true }))
+              setFormData({ ...formData, tipoContratacao: value })
+              if (!touched.tipoContratacao) {
+                setTouched((previous) => ({ ...previous, tipoContratacao: true }))
               }
             }}
           />
-          {industryError ? <p className="text-xs text-destructive">{industryError}</p> : null}
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="cargoInteresse">Cargo de Interesse</Label>
-            <MultiSelect
-              id="cargoInteresse"
-              options={interestRoleOptions}
-              placeholder="Selecione um ou mais cargos"
-              value={formData.cargoInteresse}
-              onChange={(value) => {
-                setFormData({ ...formData, cargoInteresse: value })
-                if (!touched.cargoInteresse) {
-                  setTouched((previous) => ({ ...previous, cargoInteresse: true }))
-                }
-              }}
-            />
-            {roleError ? <p className="text-xs text-destructive">{roleError}</p> : null}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tipoContratacao">Modelo de contrato</Label>
-            <MultiSelect
-              id="tipoContratacao"
-              options={contractTypeOptions}
-              placeholder="Selecione um ou mais modelos"
-              value={formData.tipoContratacao}
-              onChange={(value) => {
-                setFormData({ ...formData, tipoContratacao: value })
-                if (!touched.tipoContratacao) {
-                  setTouched((previous) => ({ ...previous, tipoContratacao: true }))
-                }
-              }}
-            />
-            {contractError ? <p className="text-xs text-destructive">{contractError}</p> : null}
-          </div>
+          {contractError ? <p className="text-xs text-destructive">{contractError}</p> : null}
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">

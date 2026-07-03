@@ -178,6 +178,43 @@ export const defaultInterestRoleOptions: OnboardingOption[] = [
   { value: "tech-lead", label: "Tech Lead" },
 ]
 
+export const defaultInterestRoleAreaMap: Record<string, string[]> = {
+  "analista-dados": ["tecnologia-informacao-ti", "financeiro-bancario", "ecommerce-marketplaces"],
+  "analista-produto": ["tecnologia-informacao-ti", "ecommerce-marketplaces", "financeiro-bancario"],
+  "designer-ux-ui": ["tecnologia-informacao-ti", "ecommerce-marketplaces", "educacao-ensino"],
+  "desenvolvedor-front-end": ["desenvolvimento-software", "tecnologia-informacao-ti", "ecommerce-marketplaces"],
+  "desenvolvedor-back-end": ["desenvolvimento-software", "tecnologia-informacao-ti", "financeiro-bancario"],
+  "desenvolvedor-full-stack": [
+    "desenvolvimento-software",
+    "tecnologia-informacao-ti",
+    "financeiro-bancario",
+    "ecommerce-marketplaces",
+  ],
+  "devops-sre": ["desenvolvimento-software", "tecnologia-informacao-ti", "telecomunicacoes"],
+  "engenheiro-dados": ["tecnologia-informacao-ti", "financeiro-bancario", "saude-servicos-hospitalares"],
+  "gerente-produto": ["tecnologia-informacao-ti", "ecommerce-marketplaces", "financeiro-bancario"],
+  "product-owner": ["tecnologia-informacao-ti", "ecommerce-marketplaces", "educacao-ensino"],
+  "project-manager": ["tecnologia-informacao-ti", "engenharia-projetos-industriais", "construcao-civil"],
+  "qa-teste": ["desenvolvimento-software", "tecnologia-informacao-ti", "saude-servicos-hospitalares"],
+  "tech-lead": ["desenvolvimento-software", "tecnologia-informacao-ti", "financeiro-bancario"],
+}
+
+export function resolveAreaValuesForRoles(
+  cargoValues: string[],
+  roleAreaMap: Record<string, string[]> = defaultInterestRoleAreaMap,
+) {
+  return [...new Set(cargoValues.flatMap((cargoValue) => roleAreaMap[cargoValue] ?? []))]
+}
+
+export function filterAreaSelectionsByRoles(
+  cargoValues: string[],
+  selectedAreaValues: string[],
+  roleAreaMap: Record<string, string[]> = defaultInterestRoleAreaMap,
+) {
+  const allowedAreaValues = new Set(resolveAreaValuesForRoles(cargoValues, roleAreaMap))
+  return selectedAreaValues.filter((areaValue) => allowedAreaValues.has(areaValue))
+}
+
 export const defaultToolOptions: OnboardingOption[] = [
   { value: "adobe-creative-cloud", label: "Adobe Creative Cloud" },
   { value: "asana", label: "Asana" },
