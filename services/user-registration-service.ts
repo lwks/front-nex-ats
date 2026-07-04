@@ -18,11 +18,13 @@ export type UserRegistrationData = {
   senioridade: string
   beneficiosAtuais: string[]
   experiencia: string
-  industria: string
   salarioAtual: string
   cargoAtual: string
   industriaInteresse: string[]
   cargoInteresse: string[]
+  hardSkillsProfissionais: string[]
+  softSkillsProfissionais: string[]
+  ferramentasProfissionais: string[]
   tipoContratacao: string[]
   modeloTrabalho: string[]
   idiomas: UserRegistrationLanguage[]
@@ -107,12 +109,14 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
   }
 
   requireNonEmptyValue(data.experiencia, "Selecione seu nivel de experiencia.")
-  requireNonEmptyValue(data.industria, "Selecione a industria atual.")
   requireNonEmptyValue(data.salarioAtual, "Informe o salario atual.")
-  requireSelection(data.industriaInteresse, "Selecione ao menos uma industria de interesse.")
+  requireSelection(data.industriaInteresse, "Selecione ao menos uma area.")
 
   requireSelection(data.beneficiosAtuais, "Selecione ao menos um beneficio atual.")
-  requireSelection(data.cargoInteresse, "Selecione ao menos um cargo de interesse.")
+  requireSelection(data.cargoInteresse, "Selecione ao menos um cargo.")
+  requireSelection(data.hardSkillsProfissionais, "Selecione ao menos uma hard skill profissional.")
+  requireSelection(data.softSkillsProfissionais, "Selecione ao menos uma soft skill profissional.")
+  requireSelection(data.ferramentasProfissionais, "Selecione ao menos uma ferramenta profissional.")
   requireSelection(data.tipoContratacao, "Selecione ao menos um tipo de contratacao.")
   requireSelection(data.modeloTrabalho, "Selecione ao menos um modelo de trabalho.")
   requireLanguageSelection(data.idiomas, "Selecione ao menos um idioma.")
@@ -124,7 +128,19 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
   requireNonEmptyValue(data.sobreVoce, "Conte um pouco sobre voce.")
 
   if (data.industriaInteresse.length > 3) {
-    throw new Error("Selecione no maximo 3 industrias de interesse.")
+    throw new Error("Selecione no maximo 3 areas.")
+  }
+
+  if (data.hardSkillsProfissionais.length > 7) {
+    throw new Error("Selecione no maximo 7 hard skills profissionais.")
+  }
+
+  if (data.softSkillsProfissionais.length > 7) {
+    throw new Error("Selecione no maximo 7 soft skills profissionais.")
+  }
+
+  if (data.ferramentasProfissionais.length > 7) {
+    throw new Error("Selecione no maximo 7 ferramentas profissionais.")
   }
 
   if (data.hardSkills.length > 7) {

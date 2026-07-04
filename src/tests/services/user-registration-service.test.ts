@@ -22,11 +22,13 @@ function createInput(overrides: Partial<UserRegistrationData> = {}): UserRegistr
     senioridade: "pleno",
     beneficiosAtuais: ["vale-refeicao", "plano-saude"],
     experiencia: "pleno",
-    industria: "tecnologia-informacao-ti",
     salarioAtual: "8.000",
     cargoAtual: "Pessoa desenvolvedora",
     industriaInteresse: ["desenvolvimento-software", "financeiro-bancario"],
     cargoInteresse: ["tech-lead", "desenvolvedor-full-stack"],
+    hardSkillsProfissionais: ["react", "sql"],
+    softSkillsProfissionais: ["comunicacao-oral", "trabalho-equipe"],
+    ferramentasProfissionais: ["figma", "jira"],
     tipoContratacao: ["clt", "pj"],
     modeloTrabalho: ["remoto", "hibrido"],
     idiomas: [
@@ -153,7 +155,7 @@ describe("user-registration-service", () => {
           industriaInteresse: [],
         }),
       ),
-    ).toThrow("Selecione ao menos uma industria de interesse.")
+    ).toThrow("Selecione ao menos uma area.")
 
     expect(() =>
       validateUserRegistrationData(
@@ -169,7 +171,31 @@ describe("user-registration-service", () => {
           cargoInteresse: [],
         }),
       ),
-    ).toThrow("Selecione ao menos um cargo de interesse.")
+    ).toThrow("Selecione ao menos um cargo.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          hardSkillsProfissionais: [],
+        }),
+      ),
+    ).toThrow("Selecione ao menos uma hard skill profissional.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          softSkillsProfissionais: [],
+        }),
+      ),
+    ).toThrow("Selecione ao menos uma soft skill profissional.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          ferramentasProfissionais: [],
+        }),
+      ),
+    ).toThrow("Selecione ao menos uma ferramenta profissional.")
 
     expect(() =>
       validateUserRegistrationData(
@@ -204,14 +230,38 @@ describe("user-registration-service", () => {
     ).toThrow("Selecione ao menos uma ferramenta.")
   })
 
-  it("enforces selection limits for industry, hard skills, soft skills and tools", () => {
+  it("enforces selection limits for area, professional skill sets, hard skills, soft skills and tools", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
           industriaInteresse: ["1", "2", "3", "4"],
         }),
       ),
-    ).toThrow("Selecione no maximo 3 industrias de interesse.")
+    ).toThrow("Selecione no maximo 3 areas.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          hardSkillsProfissionais: ["1", "2", "3", "4", "5", "6", "7", "8"],
+        }),
+      ),
+    ).toThrow("Selecione no maximo 7 hard skills profissionais.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          softSkillsProfissionais: ["1", "2", "3", "4", "5", "6", "7", "8"],
+        }),
+      ),
+    ).toThrow("Selecione no maximo 7 soft skills profissionais.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          ferramentasProfissionais: ["1", "2", "3", "4", "5", "6", "7", "8"],
+        }),
+      ),
+    ).toThrow("Selecione no maximo 7 ferramentas profissionais.")
 
     expect(() =>
       validateUserRegistrationData(
