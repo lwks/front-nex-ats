@@ -13,10 +13,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   defaultContractTypeOptions,
   defaultHardSkillOptions,
+  defaultIndustryOptions,
+  defaultInterestRoleAreaMap,
+  defaultInterestRoleOptions,
   defaultSoftSkillOptions,
   defaultToolOptions,
   defaultTravelAvailabilityOptions,
   defaultWorkTypeOptions,
+  filterAreaSelectionsByRoles,
+  resolveAreaValuesForRoles,
   type OnboardingOption,
   type TravelAvailabilityOption,
 } from "@/lib/onboarding-options"
@@ -24,6 +29,9 @@ import { cn } from "@/lib/utils"
 import {
   fetchContractTypeOptions,
   fetchHardSkillOptions,
+  fetchIndustryOptions,
+  fetchInterestRoleAreaMap,
+  fetchInterestRoleOptions,
   fetchSoftSkillOptions,
   fetchToolOptions,
   fetchTravelAvailabilityOptions,
@@ -61,6 +69,10 @@ export function UserRegistrationPreferencesStep({
   onUpdate,
 }: UserRegistrationPreferencesStepProps) {
   const [formData, setFormData] = useState({
+    setor: data.setor || "",
+    time: data.time || "",
+    cargoPreferencia: data.cargoPreferencia || [],
+    areaPreferencia: data.areaPreferencia || [],
     tipoContratacao: data.tipoContratacao || [],
     modeloTrabalho: data.modeloTrabalho || [],
     hardSkills: data.hardSkills || [],
@@ -73,6 +85,10 @@ export function UserRegistrationPreferencesStep({
     compartilhamentoAccepted: data.compartilhamentoAccepted || false,
   })
   const [touched, setTouched] = useState({
+    setor: false,
+    time: false,
+    cargoPreferencia: false,
+    areaPreferencia: false,
     tipoContratacao: false,
     modeloTrabalho: false,
     hardSkills: false,
@@ -85,12 +101,23 @@ export function UserRegistrationPreferencesStep({
   })
   const [workTypeOptions, setWorkTypeOptions] = useState<OnboardingOption[]>(defaultWorkTypeOptions)
   const [contractTypeOptions, setContractTypeOptions] = useState<OnboardingOption[]>(defaultContractTypeOptions)
+  const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
+  const [interestRoleOptions, setInterestRoleOptions] = useState<OnboardingOption[]>(defaultInterestRoleOptions)
+  const [roleAreaMap, setRoleAreaMap] = useState<Record<string, string[]>>(defaultInterestRoleAreaMap)
   const [hardSkillOptions, setHardSkillOptions] = useState<OnboardingOption[]>(defaultHardSkillOptions)
   const [softSkillOptions, setSoftSkillOptions] = useState<OnboardingOption[]>(defaultSoftSkillOptions)
   const [toolOptions, setToolOptions] = useState<OnboardingOption[]>(defaultToolOptions)
   const [travelOptions, setTravelOptions] = useState<TravelAvailabilityOption[]>(defaultTravelAvailabilityOptions)
+  const availableAreaOptions = industryOptions.filter((option) =>
+    new Set(resolveAreaValuesForRoles(formData.cargoPreferencia, roleAreaMap)).has(option.value),
+  )
 
   const isFormComplete =
+    Boolean(formData.setor.trim()) &&
+    Boolean(formData.time.trim()) &&
+    formData.cargoPreferencia.length > 0 &&
+    formData.areaPreferencia.length > 0 &&
+    formData.areaPreferencia.length <= 3 &&
     formData.tipoContratacao.length > 0 &&
     formData.modeloTrabalho.length > 0 &&
     formData.hardSkills.length > 0 &&
@@ -108,6 +135,18 @@ export function UserRegistrationPreferencesStep({
     touched.tipoContratacao && formData.tipoContratacao.length === 0
       ? "Selecione ao menos um tipo de contratacao."
       : ""
+  const sectorError = touched.setor && !formData.setor.trim() ? "Informe o setor." : ""
+  const teamError = touched.time && !formData.time.trim() ? "Informe o time." : ""
+  const preferenceRoleError =
+    touched.cargoPreferencia && formData.cargoPreferencia.length === 0
+      ? "Selecione ao menos um cargo de preferencia."
+      : ""
+  const preferenceAreaError =
+    touched.areaPreferencia && formData.areaPreferencia.length === 0
+      ? "Selecione ao menos uma area de preferencia."
+      : touched.areaPreferencia && formData.areaPreferencia.length > 3
+        ? "Selecione no maximo 3 areas de preferencia."
+        : ""
   const workTypeError =
     touched.modeloTrabalho && formData.modeloTrabalho.length === 0 ? "Selecione ao menos um modelo de trabalho." : ""
   const hardSkillError =
@@ -142,9 +181,12 @@ export function UserRegistrationPreferencesStep({
     let isMounted = true
 
     const loadOptions = async () => {
-      const [workTypes, contractTypes, hardSkills, softSkills, tools, travel] = await Promise.all([
+      const [workTypes, contractTypes, industries, interestRoles, mappedAreas, hardSkills, softSkills, tools, travel] = await Promise.all([
         fetchWorkTypeOptions(),
         fetchContractTypeOptions(),
+        fetchIndustryOptions(),
+        fetchInterestRoleOptions(),
+        fetchInterestRoleAreaMap(),
         fetchHardSkillOptions(),
         fetchSoftSkillOptions(),
         fetchToolOptions(),
@@ -154,6 +196,9 @@ export function UserRegistrationPreferencesStep({
       if (isMounted) {
         setWorkTypeOptions(workTypes)
         setContractTypeOptions(contractTypes)
+        setIndustryOptions(industries)
+        setInterestRoleOptions(interestRoles)
+        setRoleAreaMap(mappedAreas)
         setHardSkillOptions(hardSkills)
         setSoftSkillOptions(softSkills)
         setToolOptions(tools)
@@ -168,10 +213,33 @@ export function UserRegistrationPreferencesStep({
     }
   }, [])
 
+  useEffect(() => {
+    setFormData((previous) => {
+      const nextAreas = filterAreaSelectionsByRoles(
+        previous.cargoPreferencia,
+        previous.areaPreferencia,
+        roleAreaMap,
+      )
+
+      if (nextAreas.length === previous.areaPreferencia.length) {
+        return previous
+      }
+
+      return {
+        ...previous,
+        areaPreferencia: nextAreas,
+      }
+    })
+  }, [roleAreaMap, formData.cargoPreferencia])
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
     if (!isFormComplete) {
       setTouched({
+        setor: true,
+        time: true,
+        cargoPreferencia: true,
+        areaPreferencia: true,
         tipoContratacao: true,
         modeloTrabalho: true,
         hardSkills: true,
@@ -199,6 +267,84 @@ export function UserRegistrationPreferencesStep({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="setor">Setor</Label>
+            <Input
+              id="setor"
+              value={formData.setor}
+              onChange={(event) => setFormData({ ...formData, setor: event.target.value })}
+              onBlur={() => {
+                if (!touched.setor) {
+                  setTouched((previous) => ({ ...previous, setor: true }))
+                }
+              }}
+              className={cn(sectorError && "border-destructive focus-visible:ring-destructive/40")}
+              aria-invalid={sectorError ? "true" : "false"}
+            />
+            {sectorError ? <p className="text-xs text-destructive">{sectorError}</p> : null}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="time">Time</Label>
+            <Input
+              id="time"
+              value={formData.time}
+              onChange={(event) => setFormData({ ...formData, time: event.target.value })}
+              onBlur={() => {
+                if (!touched.time) {
+                  setTouched((previous) => ({ ...previous, time: true }))
+                }
+              }}
+              className={cn(teamError && "border-destructive focus-visible:ring-destructive/40")}
+              aria-invalid={teamError ? "true" : "false"}
+            />
+            {teamError ? <p className="text-xs text-destructive">{teamError}</p> : null}
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="cargoPreferencia">Cargo</Label>
+            <MultiSelect
+              id="cargoPreferencia"
+              options={interestRoleOptions}
+              placeholder="Selecione um ou mais cargos"
+              value={formData.cargoPreferencia}
+              onChange={(value) => {
+                setFormData({ ...formData, cargoPreferencia: value })
+                if (!touched.cargoPreferencia) {
+                  setTouched((previous) => ({ ...previous, cargoPreferencia: true }))
+                }
+              }}
+            />
+            {preferenceRoleError ? <p className="text-xs text-destructive">{preferenceRoleError}</p> : null}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="areaPreferencia">Area</Label>
+            <MultiSelect
+              id="areaPreferencia"
+              disabled={formData.cargoPreferencia.length === 0}
+              maxSelections={3}
+              options={availableAreaOptions}
+              placeholder={
+                formData.cargoPreferencia.length === 0
+                  ? "Selecione um cargo para liberar as areas"
+                  : "Selecione ate 3 areas"
+              }
+              value={formData.areaPreferencia}
+              onChange={(value) => {
+                setFormData({ ...formData, areaPreferencia: value })
+                if (!touched.areaPreferencia) {
+                  setTouched((previous) => ({ ...previous, areaPreferencia: true }))
+                }
+              }}
+            />
+            {preferenceAreaError ? <p className="text-xs text-destructive">{preferenceAreaError}</p> : null}
+          </div>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="tipoContratacao">Modelo de contrato</Label>
           <MultiSelect

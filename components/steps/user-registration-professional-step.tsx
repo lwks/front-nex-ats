@@ -87,8 +87,9 @@ export function UserRegistrationProfessionalStep({
     experiencia: data.experiencia || "",
     salarioAtual: data.salarioAtual || "",
     empresaAtual: data.empresaAtual || "",
-    cargoAtual: data.cargoAtual || "",
     senioridade: data.senioridade || "",
+    setorAtual: data.setorAtual || "",
+    timeAtual: data.timeAtual || "",
     beneficiosAtuais: data.beneficiosAtuais || [],
     cargoInteresse: data.cargoInteresse || [],
     industriaInteresse: data.industriaInteresse || [],
@@ -101,8 +102,9 @@ export function UserRegistrationProfessionalStep({
     experiencia: false,
     salarioAtual: false,
     empresaAtual: false,
-    cargoAtual: false,
     senioridade: false,
+    setorAtual: false,
+    timeAtual: false,
     beneficiosAtuais: false,
     cargoInteresse: false,
     industriaInteresse: false,
@@ -137,8 +139,9 @@ export function UserRegistrationProfessionalStep({
     Boolean(formData.experiencia) &&
     Boolean(formData.salarioAtual.trim()) &&
     Boolean(formData.empresaAtual.trim()) &&
-    Boolean(formData.cargoAtual.trim()) &&
     Boolean(formData.senioridade) &&
+    Boolean(formData.setorAtual.trim()) &&
+    Boolean(formData.timeAtual.trim()) &&
     formData.beneficiosAtuais.length > 0 &&
     formData.cargoInteresse.length > 0 &&
     formData.industriaInteresse.length > 0 &&
@@ -157,10 +160,12 @@ export function UserRegistrationProfessionalStep({
     touched.salarioAtual && !formData.salarioAtual.trim() ? "Informe o salario atual." : ""
   const companyError =
     touched.empresaAtual && !formData.empresaAtual.trim() ? "Informe a empresa atual." : ""
-  const currentRoleError =
-    touched.cargoAtual && !formData.cargoAtual.trim() ? "Informe o cargo atual." : ""
   const seniorityError =
     touched.senioridade && !formData.senioridade ? "Selecione a senioridade atual." : ""
+  const currentSectorError =
+    touched.setorAtual && !formData.setorAtual.trim() ? "Informe o setor atual." : ""
+  const currentTeamError =
+    touched.timeAtual && !formData.timeAtual.trim() ? "Informe o time atual." : ""
   const benefitError =
     touched.beneficiosAtuais && formData.beneficiosAtuais.length === 0
       ? "Selecione ao menos um beneficio atual."
@@ -303,8 +308,9 @@ export function UserRegistrationProfessionalStep({
         experiencia: true,
         salarioAtual: true,
         empresaAtual: true,
-        cargoAtual: true,
         senioridade: true,
+        setorAtual: true,
+        timeAtual: true,
         beneficiosAtuais: true,
         cargoInteresse: true,
         industriaInteresse: true,
@@ -398,25 +404,6 @@ export function UserRegistrationProfessionalStep({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cargoAtual">Cargo Atual</Label>
-            <Input
-              id="cargoAtual"
-              value={formData.cargoAtual}
-              onChange={(event) => setFormData({ ...formData, cargoAtual: event.target.value })}
-              onBlur={() => {
-                if (!touched.cargoAtual) {
-                  setTouched((previous) => ({ ...previous, cargoAtual: true }))
-                }
-              }}
-              className={cn(currentRoleError && "border-destructive focus-visible:ring-destructive/40")}
-              aria-invalid={currentRoleError ? "true" : "false"}
-            />
-            {currentRoleError ? <p className="text-xs text-destructive">{currentRoleError}</p> : null}
-          </div>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
             <Label htmlFor="senioridade">Senioridade</Label>
             <Select
               value={formData.senioridade}
@@ -444,7 +431,45 @@ export function UserRegistrationProfessionalStep({
             </Select>
             {seniorityError ? <p className="text-xs text-destructive">{seniorityError}</p> : null}
           </div>
+        </div>
 
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="setorAtual">Setor</Label>
+            <Input
+              id="setorAtual"
+              value={formData.setorAtual}
+              onChange={(event) => setFormData({ ...formData, setorAtual: event.target.value })}
+              onBlur={() => {
+                if (!touched.setorAtual) {
+                  setTouched((previous) => ({ ...previous, setorAtual: true }))
+                }
+              }}
+              className={cn(currentSectorError && "border-destructive focus-visible:ring-destructive/40")}
+              aria-invalid={currentSectorError ? "true" : "false"}
+            />
+            {currentSectorError ? <p className="text-xs text-destructive">{currentSectorError}</p> : null}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="timeAtual">Time</Label>
+            <Input
+              id="timeAtual"
+              value={formData.timeAtual}
+              onChange={(event) => setFormData({ ...formData, timeAtual: event.target.value })}
+              onBlur={() => {
+                if (!touched.timeAtual) {
+                  setTouched((previous) => ({ ...previous, timeAtual: true }))
+                }
+              }}
+              className={cn(currentTeamError && "border-destructive focus-visible:ring-destructive/40")}
+              aria-invalid={currentTeamError ? "true" : "false"}
+            />
+            {currentTeamError ? <p className="text-xs text-destructive">{currentTeamError}</p> : null}
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="beneficiosAtuais">Beneficios</Label>
             <MultiSelect

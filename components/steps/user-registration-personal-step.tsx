@@ -616,14 +616,24 @@ export function UserRegistrationPersonalStep({
           </div>
         </div>
 
-        <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div
+          className={cn(
+            "flex items-start gap-4 rounded-xl border-2 p-4 transition",
+            formData.lgpdAccepted
+              ? "border-[#FF6B00] bg-orange-50"
+              : "border-slate-300 bg-white shadow-sm",
+          )}
+        >
           <Checkbox
             id="lgpdAccepted"
             checked={formData.lgpdAccepted}
             onCheckedChange={(checked) => setFormData({ ...formData, lgpdAccepted: checked === true })}
+            className="mt-0.5 size-5 border-2 border-[#FF6B00] data-[state=checked]:border-[#FF6B00] data-[state=checked]:bg-[#FF6B00]"
           />
           <div className="space-y-1">
-            <Label htmlFor="lgpdAccepted">Aceito os termos de privacidade e uso de dados</Label>
+            <Label htmlFor="lgpdAccepted" className="text-sm font-semibold text-slate-950">
+              Aceito os termos de privacidade e uso de dados
+            </Label>
             <p className="text-xs leading-5 text-slate-500">
               Seus dados serao usados para montar seu perfil dentro da plataforma ClusterHR.
             </p>
