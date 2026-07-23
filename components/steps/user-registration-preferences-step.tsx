@@ -260,7 +260,7 @@ export function UserRegistrationPreferencesStep({
     <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_rgba(15,23,42,0.08)] md:p-8">
       <div className="mb-8 text-center">
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#C44E00]">Cadastro oficial</p>
-        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Preferencias e perfil</h2>
+        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Preferencias e Perfil</h2>
         <p className="mt-3 text-sm leading-6 text-slate-600">
           Defina seus modelos de trabalho, habilidades, ferramentas, disponibilidade e sua apresentacao para a empresa.
         </p>
@@ -518,7 +518,14 @@ export function UserRegistrationPreferencesStep({
           />
         </div>
 
-        <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div
+          className={cn(
+            "flex items-start gap-4 rounded-xl border-2 p-4 transition",
+            formData.compartilhamentoAccepted
+              ? "border-[#FF6B00] bg-orange-50"
+              : "border-slate-300 bg-white shadow-sm",
+          )}
+        >
           <Checkbox
             id="compartilhamentoAccepted"
             checked={formData.compartilhamentoAccepted}
@@ -528,9 +535,12 @@ export function UserRegistrationPreferencesStep({
                 setTouched((previous) => ({ ...previous, compartilhamentoAccepted: true }))
               }
             }}
+            className="mt-0.5 size-5 border-2 border-[#FF6B00] data-[state=checked]:border-[#FF6B00] data-[state=checked]:bg-[#FF6B00]"
           />
           <div className="space-y-1">
-            <Label htmlFor="compartilhamentoAccepted">Autorizo o compartilhamento dos meus dados de perfil</Label>
+            <Label htmlFor="compartilhamentoAccepted" className="text-sm font-semibold text-slate-950">
+              Autorizo o compartilhamento dos meus dados de perfil
+            </Label>
             <p className="text-xs leading-5 text-slate-500">
               A plataforma podera usar essas informacoes para montar minha experiencia inicial de uso.
             </p>
