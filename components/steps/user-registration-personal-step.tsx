@@ -33,6 +33,17 @@ const CEP_LENGTH = 8
 const CEL_MIN_LENGTH = 10
 const CEL_MAX_LENGTH = 11
 
+type ZipValidationState = {
+  endereco: string
+  cidade: string
+  estado: string
+  isCepMissing: boolean
+  isCepIncomplete: boolean
+  isZipLookupLoading: boolean
+  zipLookupError: string | null
+  hasZipCityState: boolean
+}
+
 const hasFullName = (value: string) => value.trim().split(/\s+/).length >= 2
 const hasNonEmptyValue = (value: string) => value.trim().length > 0
 
@@ -58,6 +69,46 @@ const validateCpf = (value: string) => {
 
 const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
 const isValidPhone = (value: string) => value.length >= CEL_MIN_LENGTH && value.length <= CEL_MAX_LENGTH
+
+export function hasManualZipAddress({ endereco, cidade, estado }: Pick<ZipValidationState, "endereco" | "cidade" | "estado">) {
+  return endereco.trim().length > 0 && cidade.trim().length > 0 && estado.trim().length > 0
+}
+
+export function isZipValidationBlocked(state: ZipValidationState) {
+  if (state.isCepMissing || state.isCepIncomplete || state.isZipLookupLoading) {
+    return true
+  }
+
+  if (state.hasZipCityState) {
+    return false
+  }
+
+  if (state.zipLookupError) {
+    return !hasManualZipAddress(state)
+  }
+
+  return !hasManualZipAddress(state)
+}
+
+export function getZipValidationMessage(state: ZipValidationState) {
+  if (!isZipValidationBlocked(state)) {
+    return ""
+  }
+
+  if (state.isCepMissing) {
+    return "Informe o CEP."
+  }
+
+  if (state.isCepIncomplete) {
+    return `Informe os ${CEP_LENGTH} digitos do CEP.`
+  }
+
+  if (state.isZipLookupLoading) {
+    return "Consultando CEP..."
+  }
+
+  return state.zipLookupError ?? "Informe um CEP valido."
+}
 
 function isValidBirthDate(value: string) {
   if (!value) {
@@ -148,19 +199,25 @@ export function UserRegistrationPersonalStep({
     formData.localResidencia.length > 0 && formData.localResidencia.length < CEP_LENGTH
   const shouldValidateZip =
     isCepMissing || hasAttemptedZipLookup || formData.localResidencia.length === CEP_LENGTH
-  const isZipValidationBlocked =
+  const zipValidationState = {
+    endereco: formData.endereco,
+    cidade: formData.cidade,
+    estado: formData.estado,
+    isCepMissing,
+    isCepIncomplete,
+    isZipLookupLoading,
+    zipLookupError,
+    hasZipCityState,
+  }
+  const isZipBlocked =
     shouldValidateZip &&
-    (isCepMissing ||
-      isCepIncomplete ||
-      isZipLookupLoading ||
-      Boolean(zipLookupError) ||
-      !hasZipCityState)
+    isZipValidationBlocked(zipValidationState)
 
   const isFormComplete =
     hasFullName(formData.nome) &&
     getDocumentError(formData.documento) === "" &&
     isValidBirthDate(formData.dataNascimento) &&
-    !isZipValidationBlocked &&
+    !isZipBlocked &&
     hasNonEmptyValue(formData.endereco) &&
     hasNonEmptyValue(formData.cidade) &&
     hasNonEmptyValue(formData.estado) &&
@@ -169,17 +226,11 @@ export function UserRegistrationPersonalStep({
     formData.lgpdAccepted
 
   function getZipErrorMessage() {
-    if (!isZipValidationBlocked) {
+    if (!shouldValidateZip) {
       return ""
     }
 
-    if (isCepMissing) {
-      return "Informe o CEP."
-    }
-    if (isCepIncomplete) {
-      return `Informe os ${CEP_LENGTH} digitos do CEP.`
-    }
-    return zipLookupError ?? "Informe um CEP valido."
+    return getZipValidationMessage(zipValidationState)
   }
 
   const validateFields = () => {
@@ -289,7 +340,6 @@ export function UserRegistrationPersonalStep({
     setIsZipLookupLoading(true)
     setZipLookupError(null)
     setZipLookupResult(null)
-    setFormData((previous) => ({ ...previous, endereco: "", cidade: "", estado: "" }))
     setHasAttemptedZipLookup(true)
 
     try {
@@ -409,6 +459,13 @@ export function UserRegistrationPersonalStep({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {isZipLookupLoading ? (
+          <div className="rounded-xl border border-[#FF6B00]/20 bg-orange-50 px-4 py-3 text-sm font-medium text-[#C44E00]">
+            Consultando CEP... aguarde o preenchimento automatico terminar.
+          </div>
+        ) : null}
+
+        <fieldset disabled={isZipLookupLoading} className={cn("space-y-6", isZipLookupLoading && "opacity-60")}>
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="nome">Nome completo</Label>
@@ -514,11 +571,14 @@ export function UserRegistrationPersonalStep({
                 touchField("endereco")
                 updateFieldError("endereco")
               }}
-              readOnly={isZipLookupLoading}
               className={cn(errors.endereco && "border-destructive focus-visible:ring-destructive/40")}
               aria-invalid={errors.endereco ? "true" : "false"}
           />
-          {isZipLookupLoading ? <p className="text-xs text-slate-500">Consultando CEP...</p> : null}
+          {zipLookupError ? (
+            <p className="text-xs text-amber-700">
+              Consulta do CEP indisponivel. Preencha endereco, cidade e estado manualmente.
+            </p>
+          ) : null}
           {errors.endereco ? <p className="text-xs text-destructive">{errors.endereco}</p> : null}
         </div>
 
@@ -616,14 +676,24 @@ export function UserRegistrationPersonalStep({
           </div>
         </div>
 
-        <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div
+          className={cn(
+            "flex items-start gap-4 rounded-xl border-2 p-4 transition",
+            formData.lgpdAccepted
+              ? "border-[#FF6B00] bg-orange-50"
+              : "border-slate-300 bg-white shadow-sm",
+          )}
+        >
           <Checkbox
             id="lgpdAccepted"
             checked={formData.lgpdAccepted}
             onCheckedChange={(checked) => setFormData({ ...formData, lgpdAccepted: checked === true })}
+            className="mt-0.5 size-5 border-2 border-[#FF6B00] data-[state=checked]:border-[#FF6B00] data-[state=checked]:bg-[#FF6B00]"
           />
           <div className="space-y-1">
-            <Label htmlFor="lgpdAccepted">Aceito os termos de privacidade e uso de dados</Label>
+            <Label htmlFor="lgpdAccepted" className="text-sm font-semibold text-slate-950">
+              Aceito os termos de privacidade e uso de dados
+            </Label>
             <p className="text-xs leading-5 text-slate-500">
               Seus dados serao usados para montar seu perfil dentro da plataforma ClusterHR.
             </p>
@@ -638,6 +708,7 @@ export function UserRegistrationPersonalStep({
         >
           Continuar
         </Button>
+        </fieldset>
       </form>
     </div>
   )

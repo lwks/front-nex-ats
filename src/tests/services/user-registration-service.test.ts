@@ -19,11 +19,12 @@ function createInput(overrides: Partial<UserRegistrationData> = {}): UserRegistr
     contato: "mariana@clusterhr.com",
     lgpdAccepted: true,
     empresaAtual: "ClusterHR",
-    senioridade: "pleno",
+    senioridade: "gerente",
     beneficiosAtuais: ["vale-refeicao", "plano-saude"],
     experiencia: "pleno",
     salarioAtual: "8.000",
-    cargoAtual: "Pessoa desenvolvedora",
+    setorAtual: "Tecnologia",
+    timeAtual: "Plataforma",
     industriaInteresse: ["desenvolvimento-software", "financeiro-bancario"],
     cargoInteresse: ["tech-lead", "desenvolvedor-full-stack"],
     hardSkillsProfissionais: ["react", "sql"],
@@ -31,6 +32,10 @@ function createInput(overrides: Partial<UserRegistrationData> = {}): UserRegistr
     ferramentasProfissionais: ["figma", "jira"],
     tipoContratacao: ["clt", "pj"],
     modeloTrabalho: ["remoto", "hibrido"],
+    setor: "Tecnologia",
+    time: "Produto",
+    cargoPreferencia: ["gerente-produto", "project-manager"],
+    areaPreferencia: ["tecnologia-informacao-ti", "ecommerce-marketplaces"],
     idiomas: [
       { idioma: "portugues", fluencia: "nativo" },
       { idioma: "ingles", fluencia: "avancado" },
@@ -106,7 +111,7 @@ describe("user-registration-service", () => {
     ).toThrow("A data de nascimento nao pode estar no futuro.")
   })
 
-  it("requires all new personal string fields", () => {
+  it("requires all new personal and professional string fields", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
@@ -134,18 +139,42 @@ describe("user-registration-service", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          cargoAtual: "",
-        }),
-      ),
-    ).toThrow("Informe o cargo atual.")
-
-    expect(() =>
-      validateUserRegistrationData(
-        createInput({
           senioridade: "",
         }),
       ),
     ).toThrow("Selecione a senioridade atual.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          setorAtual: "",
+        }),
+      ),
+    ).toThrow("Informe o setor atual.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          timeAtual: "",
+        }),
+      ),
+    ).toThrow("Informe o time atual.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          setor: "",
+        }),
+      ),
+    ).toThrow("Informe o setor.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          time: "",
+        }),
+      ),
+    ).toThrow("Informe o time.")
   })
 
   it("requires all new multi-select fields", () => {
@@ -208,6 +237,22 @@ describe("user-registration-service", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
+          cargoPreferencia: [],
+        }),
+      ),
+    ).toThrow("Selecione ao menos um cargo de preferencia.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          areaPreferencia: [],
+        }),
+      ),
+    ).toThrow("Selecione ao menos uma area de preferencia.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
           hardSkills: [],
         }),
       ),
@@ -262,6 +307,14 @@ describe("user-registration-service", () => {
         }),
       ),
     ).toThrow("Selecione no maximo 7 ferramentas profissionais.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          areaPreferencia: ["1", "2", "3", "4"],
+        }),
+      ),
+    ).toThrow("Selecione no maximo 3 areas de preferencia.")
 
     expect(() =>
       validateUserRegistrationData(

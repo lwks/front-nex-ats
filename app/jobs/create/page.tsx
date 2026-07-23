@@ -8,7 +8,16 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { MultiSelect } from "@/components/ui/multi-select"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  defaultIndustryOptions,
+  defaultInterestRoleAreaMap,
+  defaultInterestRoleOptions,
+  filterAreaSelectionsByRoles,
+  resolveAreaValuesForRoles,
+  type OnboardingOption,
+} from "@/lib/onboarding-options"
 import {
   formatZipSummary,
   isRecord,
@@ -17,12 +26,20 @@ import {
   type ZipLookupResponse,
 } from "@/lib/zip-utils"
 import { cn } from "@/lib/utils"
+import {
+  fetchIndustryOptions,
+  fetchInterestRoleAreaMap,
+  fetchInterestRoleOptions,
+} from "@/services/onboarding-options-service"
 
-type JobFormState = {
+export type JobFormState = {
   titulo: string
   descricao: string
   cargo: string
   nivel: string
+  setor: string
+  area: string[]
+  time: string
   localizacao: string
   cidade: string
   estado: string
@@ -37,13 +54,6 @@ type JobFormState = {
 
 const DEFAULT_JOB_STATUS = "Aberto"
 const BRL_NUMBER_FORMATTER = new Intl.NumberFormat("pt-BR")
-const JOB_ROLE_OPTIONS = [
-  { value: "estagiario", label: "Estagiario" },
-  { value: "analista", label: "Analista" },
-  { value: "coordenador", label: "Coordenador" },
-  { value: "gerente", label: "Gerente" },
-  { value: "diretor", label: "Diretor" },
-]
 const JOB_LEVEL_OPTIONS = [
   { value: "jr", label: "Jr" },
   { value: "pl", label: "Pl" },
@@ -61,6 +71,7 @@ const CONTRACT_FORMAT_OPTIONS = [
 const CEP_LENGTH = 8
 const MIN_TITLE_LENGTH = 5
 const MIN_DESCRIPTION_LENGTH = 30
+const MAX_JOB_AREA_SELECTIONS = 3
 
 function createDefaultFormState(): JobFormState {
   return {
@@ -68,6 +79,9 @@ function createDefaultFormState(): JobFormState {
     descricao: "",
     cargo: "",
     nivel: "",
+    setor: "",
+    area: [],
+    time: "",
     localizacao: "",
     cidade: "",
     estado: "",
@@ -81,7 +95,7 @@ function createDefaultFormState(): JobFormState {
   }
 }
 
-function parseList(rawValue: string): string[] {
+export function parseList(rawValue: string): string[] {
   return rawValue
     .split(/[,\n]/)
     .map((item) => item.trim())
@@ -120,6 +134,82 @@ function generateGuid(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
+export function validateJobFormState(formState: JobFormState) {
+  const title = formState.titulo.trim()
+  const descriptionPlainText = formState.descricao
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  const initialSalaryValue = parseCurrencyToNumber(formState.valor_inicial)
+  const finalSalaryValue = parseCurrencyToNumber(formState.valor_final)
+
+  if (title.length < MIN_TITLE_LENGTH) {
+    throw new Error(`O titulo da vaga deve ter pelo menos ${MIN_TITLE_LENGTH} caracteres.`)
+  }
+
+  if (descriptionPlainText.length < MIN_DESCRIPTION_LENGTH) {
+    throw new Error(`A descricao deve ter pelo menos ${MIN_DESCRIPTION_LENGTH} caracteres.`)
+  }
+
+  if (!formState.setor.trim()) {
+    throw new Error("Informe o setor.")
+  }
+
+  if (formState.area.length === 0) {
+    throw new Error("Selecione ao menos uma area.")
+  }
+
+  if (formState.area.length > MAX_JOB_AREA_SELECTIONS) {
+    throw new Error(`Selecione no maximo ${MAX_JOB_AREA_SELECTIONS} areas.`)
+  }
+
+  if (!formState.time.trim()) {
+    throw new Error("Informe o time.")
+  }
+
+  if (!formState.valor_inicial.trim() || !formState.valor_final.trim()) {
+    throw new Error("Informe os valores inicial e final.")
+  }
+
+  if (initialSalaryValue < 0 || finalSalaryValue < 0) {
+    throw new Error("Os valores nao podem ser negativos.")
+  }
+
+  if (initialSalaryValue > finalSalaryValue) {
+    throw new Error("O valor inicial nao pode ser maior que o valor final.")
+  }
+}
+
+export function buildJobPayload(formState: JobFormState, guidId: string, publishedAt: string) {
+  validateJobFormState(formState)
+
+  return {
+    titulo: formState.titulo.trim(),
+    descricao: formState.descricao.trim(),
+    cargo: formState.cargo,
+    nivel: formState.nivel,
+    setor: formState.setor.trim(),
+    area: formState.area,
+    time: formState.time.trim(),
+    localizacao: formState.localizacao.trim(),
+    modelo_trabalho: formState.modelo_trabalho,
+    publicada_em: publishedAt,
+    formato_contratacao: formState.formato_contratacao,
+    exibir_salario: formState.exibir_salario,
+    guid_id: guidId,
+    status: DEFAULT_JOB_STATUS,
+    cidade: formState.cidade.trim(),
+    estado: formState.estado.trim(),
+    skills: parseList(formState.skills),
+    beneficios: parseList(formState.beneficios),
+    orcamento: {
+      valor_inicial: parseCurrencyToNumber(formState.valor_inicial),
+      valor_final: parseCurrencyToNumber(formState.valor_final),
+    },
+  }
+}
+
 type ToastState = {
   type: "success" | "error"
   message: string
@@ -134,6 +224,9 @@ export default function CreateJobPage() {
   const [zipLookupError, setZipLookupError] = useState<string | null>(null)
   const [zipLookupResult, setZipLookupResult] = useState<ZipLookupResponse | null>(null)
   const [hasAttemptedZipLookup, setHasAttemptedZipLookup] = useState(false)
+  const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
+  const [interestRoleOptions, setInterestRoleOptions] = useState<OnboardingOption[]>(defaultInterestRoleOptions)
+  const [roleAreaMap, setRoleAreaMap] = useState<Record<string, string[]>>(defaultInterestRoleAreaMap)
   const zipLookupController = useRef<AbortController | null>(null)
   const descriptionEditorRef = useRef<HTMLDivElement | null>(null)
 
@@ -153,8 +246,58 @@ export default function CreateJobPage() {
     }
   }, [formState.descricao])
 
+  useEffect(() => {
+    let isMounted = true
+
+    const loadOptions = async () => {
+      const [industries, interestRoles, mappedAreas] = await Promise.all([
+        fetchIndustryOptions(),
+        fetchInterestRoleOptions(),
+        fetchInterestRoleAreaMap(),
+      ])
+
+      if (isMounted) {
+        setIndustryOptions(industries)
+        setInterestRoleOptions(interestRoles)
+        setRoleAreaMap(mappedAreas)
+      }
+    }
+
+    loadOptions().catch((error) => console.error("Failed to load job create options", error))
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    setFormState((previous) => {
+      const nextAreas = filterAreaSelectionsByRoles(
+        previous.cargo ? [previous.cargo] : [],
+        previous.area,
+        roleAreaMap,
+      )
+
+      if (nextAreas.length === previous.area.length) {
+        return previous
+      }
+
+      return {
+        ...previous,
+        area: nextAreas,
+      }
+    })
+  }, [roleAreaMap, formState.cargo])
+
   const zipSummary = zipLookupResult ? formatZipSummary(zipLookupResult) : null
   const isNivelDisabled = formState.cargo === "estagiario"
+  const availableAreaOptions = industryOptions.filter((option) =>
+    new Set(resolveAreaValuesForRoles(formState.cargo ? [formState.cargo] : [], roleAreaMap)).has(option.value),
+  )
+  const isSectorMissing = formState.setor.trim().length === 0
+  const isAreaMissing = formState.area.length === 0
+  const isAreaInvalid = formState.area.length > MAX_JOB_AREA_SELECTIONS
+  const isTeamMissing = formState.time.trim().length === 0
   const isCepMissing = formState.localizacao.trim().length === 0
   const isCepIncomplete =
     formState.localizacao.length > 0 && formState.localizacao.length < CEP_LENGTH
@@ -182,6 +325,13 @@ export default function CreateJobPage() {
   const isSalaryNegative = initialSalaryValue < 0 || finalSalaryValue < 0
   const isSalaryRangeInvalid = initialSalaryValue > finalSalaryValue
   const isSalaryInvalid = isSalaryMissing || isSalaryNegative || isSalaryRangeInvalid
+  const sectorValidationMessage = isSectorMissing ? "Informe o setor." : null
+  const areaValidationMessage = isAreaMissing
+    ? "Selecione ao menos uma area."
+    : isAreaInvalid
+      ? `Selecione no maximo ${MAX_JOB_AREA_SELECTIONS} areas.`
+      : null
+  const teamValidationMessage = isTeamMissing ? "Informe o time." : null
   const zipValidationMessage = isZipLookupLoading
     ? "Consultando CEP..."
     : zipLookupError
@@ -402,29 +552,24 @@ export default function CreateJobPage() {
       return
     }
 
+    const businessFieldsValidationMessage =
+      sectorValidationMessage ?? areaValidationMessage ?? teamValidationMessage
+
+    if (businessFieldsValidationMessage) {
+      setToast({
+        type: "error",
+        message: businessFieldsValidationMessage,
+      })
+      return
+    }
+
     setIsSubmitting(true)
 
-    const payload = {
-      titulo: formState.titulo.trim(),
-      descricao: formState.descricao.trim(),
-      cargo: formState.cargo,
-      nivel: formState.nivel,
-      localizacao: formState.localizacao.trim(),
-      modelo_trabalho: formState.modelo_trabalho,
-      publicada_em: new Date().toISOString().split("T")[0],
-      formato_contratacao: formState.formato_contratacao,
-      exibir_salario: formState.exibir_salario,
-      guid_id: generateGuid(),
-      status: DEFAULT_JOB_STATUS,
-      cidade: formState.cidade.trim(),
-      estado: formState.estado.trim(),
-      skills: parseList(formState.skills),
-      beneficios: parseList(formState.beneficios),
-      orcamento: {
-        valor_inicial: parseCurrencyToNumber(formState.valor_inicial),
-        valor_final: parseCurrencyToNumber(formState.valor_final),
-      },
-    }
+    const payload = buildJobPayload(
+      formState,
+      generateGuid(),
+      new Date().toISOString().split("T")[0],
+    )
 
     try {
       const response = await fetch(JOBS_API_PROXY_URL, {
@@ -591,6 +736,7 @@ export default function CreateJobPage() {
                     setFormState((previous) => ({
                       ...previous,
                       cargo: value,
+                      area: filterAreaSelectionsByRoles([value], previous.area, roleAreaMap),
                       ...(value === "estagiario" ? { nivel: "" } : {}),
                     }))
                   }
@@ -600,7 +746,7 @@ export default function CreateJobPage() {
                     <SelectValue placeholder="Selecione o cargo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {JOB_ROLE_OPTIONS.map((option) => (
+                    {interestRoleOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -633,6 +779,57 @@ export default function CreateJobPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="setor">Setor</Label>
+                <Input
+                  id="setor"
+                  name="setor"
+                  value={formState.setor}
+                  onChange={handleChange("setor")}
+                  required
+                  aria-invalid={sectorValidationMessage ? "true" : "false"}
+                  className={cn(sectorValidationMessage && "border-destructive focus-visible:ring-destructive/40")}
+                />
+                {sectorValidationMessage ? <p className="text-xs text-destructive">{sectorValidationMessage}</p> : null}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="time">Time</Label>
+                <Input
+                  id="time"
+                  name="time"
+                  value={formState.time}
+                  onChange={handleChange("time")}
+                  required
+                  aria-invalid={teamValidationMessage ? "true" : "false"}
+                  className={cn(teamValidationMessage && "border-destructive focus-visible:ring-destructive/40")}
+                />
+                {teamValidationMessage ? <p className="text-xs text-destructive">{teamValidationMessage}</p> : null}
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="area">Area</Label>
+                <MultiSelect
+                  id="area"
+                  disabled={formState.cargo.length === 0}
+                  maxSelections={MAX_JOB_AREA_SELECTIONS}
+                  options={availableAreaOptions}
+                  placeholder={
+                    formState.cargo.length === 0
+                      ? "Selecione um cargo para liberar as areas"
+                      : `Selecione ate ${MAX_JOB_AREA_SELECTIONS} areas`
+                  }
+                  value={formState.area}
+                  onChange={(value) =>
+                    setFormState((previous) => ({
+                      ...previous,
+                      area: value,
+                    }))
+                  }
+                />
+                {areaValidationMessage ? <p className="text-xs text-destructive">{areaValidationMessage}</p> : null}
               </div>
 
               <div className="md:col-span-2 grid gap-4 md:grid-cols-4">
@@ -815,7 +1012,11 @@ export default function CreateJobPage() {
                   isZipValidationBlocked ||
                   isSalaryInvalid ||
                   isTitleTooShort ||
-                  isDescriptionTooShort
+                  isDescriptionTooShort ||
+                  isSectorMissing ||
+                  isAreaMissing ||
+                  isAreaInvalid ||
+                  isTeamMissing
                 }
                 className="min-w-[160px]"
               >

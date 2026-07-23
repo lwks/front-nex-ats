@@ -59,7 +59,7 @@ type CandidateCountState = CandidateMetrics & {
   status: "idle" | "loading" | "ready" | "error"
 }
 
-export const JOBS_PER_PAGE = 2
+export const JOBS_PER_PAGE = 6
 export { BLOCKED_MODULE_LABELS }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -189,6 +189,10 @@ export function deriveCandidateMetrics(payload: unknown, jobs: JobCard[]): Candi
   }
 }
 
+export function getCandidateTotalForJobs(jobs: JobCard[], byJobId: Record<string, number>) {
+  return jobs.reduce((total, job) => total + (byJobId[job.id] ?? 0), 0)
+}
+
 export function JobListingsClient({ jobs, error, showEmptyState = false }: JobListingsClientProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState("")
@@ -204,6 +208,10 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
   const visibleJobs = useMemo(
     () => getPaginatedJobs(filteredJobs, currentPage),
     [filteredJobs, currentPage],
+  )
+  const filteredCandidateTotal = useMemo(
+    () => getCandidateTotalForJobs(filteredJobs, candidateCounts.byJobId),
+    [filteredJobs, candidateCounts.byJobId],
   )
   const jobGuidSignature = jobs
     .map((job) => job.jobGuid?.trim())
@@ -266,12 +274,6 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
               <h2 className="mt-1 text-2xl font-semibold text-black">Sistema ATS</h2>
               <p className="mt-1 text-sm text-gray-600">Rastreamento de vagas e candidaturas.</p>
             </div>
-            <Button asChild className="w-full rounded-lg bg-[#FF6B00] text-white hover:bg-[#FF8C00] sm:w-auto">
-              <Link href="/jobs/create">
-                <Plus className="size-4" />
-                Nova Vaga
-              </Link>
-            </Button>
           </div>
         </header>
 
@@ -280,13 +282,15 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
             <MetricCard
               icon={Users}
               label="Candidatos"
-              value={candidateCounts.totalCandidates}
+              value={filteredCandidateTotal}
               helper={
                 candidateCounts.status === "loading"
                   ? "Atualizando contagem..."
                   : candidateCounts.status === "error"
                     ? "Contagem indisponivel"
-                    : "Candidatos nas vagas listadas"
+                    : searchQuery.trim()
+                      ? "Candidatos nas vagas filtradas"
+                      : "Candidatos nas vagas listadas"
               }
             />
             <MetricCard
@@ -417,19 +421,6 @@ export function JobListingsClient({ jobs, error, showEmptyState = false }: JobLi
                       <div className="mt-auto flex flex-col-reverse gap-3 pt-6 sm:flex-row sm:justify-end">
                         <Button type="button" variant="outline" onClick={() => setModalJob(job)}>
                           Ver detalhes
-                        </Button>
-                        <Button asChild className="rounded-lg bg-[#FF6B00] text-white hover:bg-[#FF8C00]">
-                          <Link
-                            href={job.applyHref}
-                            {...(job.isExternal
-                              ? {
-                                  target: "_blank",
-                                  rel: "noopener noreferrer",
-                                }
-                              : undefined)}
-                          >
-                            Candidatar-se
-                          </Link>
                         </Button>
                       </div>
                     </article>

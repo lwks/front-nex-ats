@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest"
 
 import { ProgressIndicator } from "@/components/progress-indicator"
 import { UserRegistrationPage } from "@/components/user-registration-page"
-import { UserRegistrationPersonalStep } from "@/components/steps/user-registration-personal-step"
+import {
+  UserRegistrationPersonalStep,
+  getZipValidationMessage,
+  hasManualZipAddress,
+  isZipValidationBlocked,
+} from "@/components/steps/user-registration-personal-step"
 import { UserRegistrationPreferencesStep } from "@/components/steps/user-registration-preferences-step"
 import { UserRegistrationProfessionalStep } from "@/components/steps/user-registration-professional-step"
 
@@ -43,9 +48,12 @@ describe("UserRegistrationPage", () => {
     expect(personalHtml).not.toContain("Senioridade")
     expect(personalHtml).not.toContain("Beneficios")
     expect(professionalHtml).toContain("Empresa Atual")
-    expect(professionalHtml).toContain("Cargo Atual")
+    expect(professionalHtml).not.toContain("Cargo Atual")
     expect(professionalHtml).toContain("Senioridade")
+    expect(professionalHtml).not.toContain("Lideranca")
     expect(professionalHtml).toContain("Beneficios")
+    expect(professionalHtml).toContain("Setor")
+    expect(professionalHtml).toContain("Time")
     expect(professionalHtml).toContain("Cargo")
     expect(professionalHtml).toContain("Area")
     expect(professionalHtml).toContain("Hard Skills")
@@ -54,12 +62,18 @@ describe("UserRegistrationPage", () => {
     expect(professionalHtml).toContain("Selecione um cargo para liberar as areas")
     expect(professionalHtml).toContain("Adicionar idioma")
     expect(preferencesHtml).toContain("Hard Skills")
+    expect(preferencesHtml).toContain("Setor")
+    expect(preferencesHtml).toContain("Time")
+    expect(preferencesHtml).toContain("Cargo")
+    expect(preferencesHtml).toContain("Area")
     expect(preferencesHtml).toContain("Soft Skills")
     expect(preferencesHtml).toContain("Ferramentas")
     expect(preferencesHtml).toContain("Viagem de trabalho")
     expect(preferencesHtml).toContain("Pretensao salarial")
+    expect(preferencesHtml).toContain("Preferencias e Perfil")
     expect(preferencesHtml).toContain("Conte um pouco sobre você")
     expect(preferencesHtml).toContain("Mensagem para empresa/gestor")
+    expect(preferencesHtml).toContain("Autorizo o compartilhamento dos meus dados de perfil")
   })
 
   it("renders visited steps as clickable buttons and future steps as disabled", () => {
@@ -81,5 +95,38 @@ describe("UserRegistrationPage", () => {
     expect(html).toContain(">1</button>")
     expect(html).toContain(">2</button>")
     expect(html).toContain('disabled=""')
+  })
+
+  it("allows manual address fallback when the CEP lookup fails", () => {
+    const zipState = {
+      endereco: "Rua Manual, 123",
+      cidade: "Sao Paulo",
+      estado: "SP",
+      isCepMissing: false,
+      isCepIncomplete: false,
+      isZipLookupLoading: false,
+      zipLookupError: "Servico indisponivel",
+      hasZipCityState: false,
+    }
+
+    expect(hasManualZipAddress(zipState)).toBe(true)
+    expect(isZipValidationBlocked(zipState)).toBe(false)
+    expect(getZipValidationMessage(zipState)).toBe("")
+  })
+
+  it("keeps CEP validation blocked while lookup is still loading", () => {
+    const zipState = {
+      endereco: "Rua Manual, 123",
+      cidade: "Sao Paulo",
+      estado: "SP",
+      isCepMissing: false,
+      isCepIncomplete: false,
+      isZipLookupLoading: true,
+      zipLookupError: null,
+      hasZipCityState: false,
+    }
+
+    expect(isZipValidationBlocked(zipState)).toBe(true)
+    expect(getZipValidationMessage(zipState)).toBe("Consultando CEP...")
   })
 })

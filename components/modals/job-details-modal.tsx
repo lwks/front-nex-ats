@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { useEffect } from "react"
 
 import { Button } from "../ui/button"
@@ -149,19 +148,6 @@ export function JobDetailsModal({ job, onClose }: JobDetailsModalProps) {
         <div className="flex flex-col-reverse gap-3 border-t border-border px-8 py-6 sm:flex-row sm:items-center sm:justify-end">
           <Button variant="outline" type="button" onClick={onClose}>
             Voltar para lista
-          </Button>
-          <Button asChild className="rounded-full">
-            <Link
-              href={job.applyHref}
-              {...(job.isExternal
-                ? {
-                  target: "_blank",
-                  rel: "noopener noreferrer",
-                }
-                : undefined)}
-            >
-              Candidatar-se
-            </Link>
           </Button>
         </div>
       </div>

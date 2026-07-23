@@ -19,7 +19,8 @@ export type UserRegistrationData = {
   beneficiosAtuais: string[]
   experiencia: string
   salarioAtual: string
-  cargoAtual: string
+  setorAtual: string
+  timeAtual: string
   industriaInteresse: string[]
   cargoInteresse: string[]
   hardSkillsProfissionais: string[]
@@ -27,6 +28,10 @@ export type UserRegistrationData = {
   ferramentasProfissionais: string[]
   tipoContratacao: string[]
   modeloTrabalho: string[]
+  setor: string
+  time: string
+  cargoPreferencia: string[]
+  areaPreferencia: string[]
   idiomas: UserRegistrationLanguage[]
   hardSkills: string[]
   softSkills: string[]
@@ -101,7 +106,6 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
   requireNonEmptyValue(data.contatoCel, "Informe o celular.")
   requireNonEmptyValue(data.contato, "Informe o email.")
   requireNonEmptyValue(data.empresaAtual, "Informe a empresa atual.")
-  requireNonEmptyValue(data.cargoAtual, "Informe o cargo atual.")
   requireNonEmptyValue(data.senioridade, "Selecione a senioridade atual.")
 
   if (!EMAIL_PATTERN.test(data.contato.trim())) {
@@ -110,6 +114,8 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
 
   requireNonEmptyValue(data.experiencia, "Selecione seu nivel de experiencia.")
   requireNonEmptyValue(data.salarioAtual, "Informe o salario atual.")
+  requireNonEmptyValue(data.setorAtual, "Informe o setor atual.")
+  requireNonEmptyValue(data.timeAtual, "Informe o time atual.")
   requireSelection(data.industriaInteresse, "Selecione ao menos uma area.")
 
   requireSelection(data.beneficiosAtuais, "Selecione ao menos um beneficio atual.")
@@ -119,6 +125,10 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
   requireSelection(data.ferramentasProfissionais, "Selecione ao menos uma ferramenta profissional.")
   requireSelection(data.tipoContratacao, "Selecione ao menos um tipo de contratacao.")
   requireSelection(data.modeloTrabalho, "Selecione ao menos um modelo de trabalho.")
+  requireNonEmptyValue(data.setor, "Informe o setor.")
+  requireNonEmptyValue(data.time, "Informe o time.")
+  requireSelection(data.cargoPreferencia, "Selecione ao menos um cargo de preferencia.")
+  requireSelection(data.areaPreferencia, "Selecione ao menos uma area de preferencia.")
   requireLanguageSelection(data.idiomas, "Selecione ao menos um idioma.")
   requireSelection(data.hardSkills, "Selecione ao menos uma hard skill.")
   requireSelection(data.softSkills, "Selecione ao menos uma soft skill.")
@@ -129,6 +139,10 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
 
   if (data.industriaInteresse.length > 3) {
     throw new Error("Selecione no maximo 3 areas.")
+  }
+
+  if (data.areaPreferencia.length > 3) {
+    throw new Error("Selecione no maximo 3 areas de preferencia.")
   }
 
   if (data.hardSkillsProfissionais.length > 7) {

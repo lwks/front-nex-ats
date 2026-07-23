@@ -73,7 +73,9 @@ export const defaultSeniorityOptions: OnboardingOption[] = [
   { value: "pleno", label: "Pleno" },
   { value: "senior", label: "Senior" },
   { value: "especialista", label: "Especialista" },
-  { value: "lideranca", label: "Lideranca" },
+  { value: "coordenador", label: "Coordenador" },
+  { value: "gerente", label: "Gerente" },
+  { value: "diretor", label: "Diretor" },
 ]
 
 export const defaultLanguageOptions: OnboardingOption[] = [

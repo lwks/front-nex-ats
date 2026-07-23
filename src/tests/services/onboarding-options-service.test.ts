@@ -8,6 +8,7 @@ import {
   fetchIndustryOptions,
   fetchInterestRoleAreaMap,
   fetchLanguageOptions,
+  fetchSeniorityOptions,
   fetchSoftSkillOptions,
   fetchToolOptions,
   fetchTravelAvailabilityOptions,
@@ -21,6 +22,7 @@ import {
   defaultIndustryOptions,
   defaultInterestRoleAreaMap,
   defaultLanguageOptions,
+  defaultSeniorityOptions,
   defaultSoftSkillOptions,
   defaultToolOptions,
   defaultTravelAvailabilityOptions,
@@ -42,6 +44,17 @@ describe("onboarding-options-service", () => {
 
   it("returns default contract type options", async () => {
     await expect(fetchContractTypeOptions()).resolves.toEqual(defaultContractTypeOptions)
+  })
+
+  it("returns default seniority options with leadership roles", async () => {
+    await expect(fetchSeniorityOptions()).resolves.toEqual(defaultSeniorityOptions)
+    await expect(fetchSeniorityOptions()).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ value: "coordenador", label: "Coordenador" }),
+        expect.objectContaining({ value: "gerente", label: "Gerente" }),
+        expect.objectContaining({ value: "diretor", label: "Diretor" }),
+      ]),
+    )
   })
 
   it("returns default language options", async () => {
