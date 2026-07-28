@@ -52,6 +52,34 @@ export const defaultIndustryOptions: OnboardingOption[] = [
   { value: "telecomunicacoes", label: "Telecomunicacoes" },
 ]
 
+const TOP_SECTOR_VALUES = [
+  "agronegocio",
+  "alimentos-bebidas",
+  "comercio-varejista",
+  "construcao-civil",
+  "desenvolvimento-software",
+  "ecommerce-marketplaces",
+  "energia",
+  "engenharia-projetos-industriais",
+  "financeiro-bancario",
+  "industria-automotiva",
+  "industria-farmaceutica",
+  "logistica-transporte",
+  "saude-servicos-hospitalares",
+  "seguros-previdencia",
+  "tecnologia-informacao-ti",
+] as const
+
+export const topSectorOptions: OnboardingOption[] = TOP_SECTOR_VALUES.map((value) => {
+  const matchedOption = defaultIndustryOptions.find((option) => option.value === value)
+
+  if (!matchedOption) {
+    throw new Error(`Top sector option "${value}" is not available in defaultIndustryOptions.`)
+  }
+
+  return matchedOption
+})
+
 export const defaultWorkTypeOptions: OnboardingOption[] = [
   { value: "presencial", label: "Presencial" },
   { value: "remoto", label: "Remoto" },

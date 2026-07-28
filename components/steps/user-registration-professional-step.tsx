@@ -24,6 +24,7 @@ import {
   defaultToolOptions,
   filterAreaSelectionsByRoles,
   resolveAreaValuesForRoles,
+  topSectorOptions,
   type LanguageProficiencyOption,
   type OnboardingOption,
 } from "@/lib/onboarding-options"
@@ -436,18 +437,30 @@ export function UserRegistrationProfessionalStep({
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="setorAtual">Setor</Label>
-            <Input
-              id="setorAtual"
+            <Select
               value={formData.setorAtual}
-              onChange={(event) => setFormData({ ...formData, setorAtual: event.target.value })}
-              onBlur={() => {
+              onValueChange={(value) => {
+                setFormData({ ...formData, setorAtual: value })
                 if (!touched.setorAtual) {
                   setTouched((previous) => ({ ...previous, setorAtual: true }))
                 }
               }}
-              className={cn(currentSectorError && "border-destructive focus-visible:ring-destructive/40")}
-              aria-invalid={currentSectorError ? "true" : "false"}
-            />
+            >
+              <SelectTrigger
+                id="setorAtual"
+                className={cn("w-full", currentSectorError && "border-destructive focus-visible:ring-destructive/40")}
+                aria-invalid={currentSectorError ? "true" : "false"}
+              >
+                <SelectValue placeholder="Selecione o setor atual" />
+              </SelectTrigger>
+              <SelectContent>
+                {topSectorOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {currentSectorError ? <p className="text-xs text-destructive">{currentSectorError}</p> : null}
           </div>
 

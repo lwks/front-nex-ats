@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { filterAreaSelectionsByRoles, resolveAreaValuesForRoles } from "@/lib/onboarding-options"
+import { filterAreaSelectionsByRoles, resolveAreaValuesForRoles, topSectorOptions } from "@/lib/onboarding-options"
 
 describe("onboarding-options area mapping", () => {
   it("combines area values for the selected cargos without duplicates", () => {
@@ -19,5 +19,26 @@ describe("onboarding-options area mapping", () => {
         ["tecnologia-informacao-ti", "financeiro-bancario", "construcao-civil"],
       ),
     ).toEqual(["tecnologia-informacao-ti", "construcao-civil"])
+  })
+
+  it("exposes the shared top-sector catalog used across the flow", () => {
+    expect(topSectorOptions).toHaveLength(15)
+    expect(topSectorOptions.map((option) => option.value)).toEqual([
+      "agronegocio",
+      "alimentos-bebidas",
+      "comercio-varejista",
+      "construcao-civil",
+      "desenvolvimento-software",
+      "ecommerce-marketplaces",
+      "energia",
+      "engenharia-projetos-industriais",
+      "financeiro-bancario",
+      "industria-automotiva",
+      "industria-farmaceutica",
+      "logistica-transporte",
+      "saude-servicos-hospitalares",
+      "seguros-previdencia",
+      "tecnologia-informacao-ti",
+    ])
   })
 })
