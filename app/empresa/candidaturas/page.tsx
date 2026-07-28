@@ -8,6 +8,7 @@ import {
   ApplicationColumn,
 } from "@/components/application-board"
 import { JOBS_API_URL } from "@/config"
+import { updateCandidateNotes } from "@/services/candidate-notes-service"
 
 type ApiJob = Record<string, unknown>
 
@@ -123,6 +124,13 @@ export default function CompanyApplicationsPage() {
   const [jobs, setJobs] = useState<JobOption[]>([])
   const [isLoadingJobs, setIsLoadingJobs] = useState(false)
   const [jobsError, setJobsError] = useState<string | null>(null)
+  const [candidateOverrides, setCandidateOverrides] = useState<Record<string, Partial<Application>>>({})
+  const [candidateNotesDraft, setCandidateNotesDraft] = useState("")
+  const [isSavingCandidateNote, setIsSavingCandidateNote] = useState(false)
+  const [candidateNoteFeedback, setCandidateNoteFeedback] = useState<{
+    type: "success" | "error"
+    message: string
+  } | null>(null)
 
   useEffect(() => {
     let active = true
@@ -172,6 +180,78 @@ export default function CompanyApplicationsPage() {
     () => jobs.find((job) => job.guidVaga === selectedGuidVaga) ?? null,
     [jobs, selectedGuidVaga],
   )
+
+  const hydratedSelectedCandidate = useMemo(() => {
+    if (!selectedCandidate) {
+      return null
+    }
+
+    return {
+      ...selectedCandidate,
+      ...(candidateOverrides[selectedCandidate.id] ?? {}),
+    }
+  }, [candidateOverrides, selectedCandidate])
+
+  useEffect(() => {
+    setCandidateNotesDraft(hydratedSelectedCandidate?.notes ?? "")
+    setCandidateNoteFeedback(null)
+  }, [hydratedSelectedCandidate?.id, hydratedSelectedCandidate?.notes])
+
+  const handleSaveCandidateNote = async () => {
+    if (!hydratedSelectedCandidate) {
+      return
+    }
+
+    if (!hydratedSelectedCandidate.recordId) {
+      setCandidateNoteFeedback({
+        type: "error",
+        message: "Não foi possível identificar o candidato para salvar a anotação.",
+      })
+      return
+    }
+
+    setIsSavingCandidateNote(true)
+    setCandidateNoteFeedback(null)
+
+    try {
+      const result = await updateCandidateNotes(
+        hydratedSelectedCandidate.recordId,
+        candidateNotesDraft,
+      )
+
+      const nextFields: Partial<Application> = {
+        recordId: result.id ?? hydratedSelectedCandidate.recordId,
+        notes: result.notes,
+        atualizadoEm: result.updatedAt ?? hydratedSelectedCandidate.atualizadoEm,
+      }
+
+      setCandidateOverrides((previous) => ({
+        ...previous,
+        [hydratedSelectedCandidate.id]: {
+          ...(previous[hydratedSelectedCandidate.id] ?? {}),
+          ...nextFields,
+        },
+      }))
+
+      setSelectedCandidate((previous) =>
+        previous && previous.id === hydratedSelectedCandidate.id
+          ? { ...previous, ...nextFields }
+          : previous,
+      )
+
+      setCandidateNoteFeedback({
+        type: "success",
+        message: "Anotação salva com sucesso.",
+      })
+    } catch (error) {
+      setCandidateNoteFeedback({
+        type: "error",
+        message: error instanceof Error ? error.message : "Não foi possível salvar a anotação.",
+      })
+    } finally {
+      setIsSavingCandidateNote(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -289,6 +369,7 @@ export default function CompanyApplicationsPage() {
                 guidVaga={selectedGuidVaga}
                 colunas={boardColumns}
                 draggable={false}
+                applicationOverrides={candidateOverrides}
                 onApplicationSelect={(application) => setSelectedCandidate(application)}
               />
             </section>
@@ -340,14 +421,14 @@ export default function CompanyApplicationsPage() {
         </div>
       ) : null}
 
-      {selectedCandidate ? (
+      {hydratedSelectedCandidate ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-xl">
+          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-xl">
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Perfil do candidato</p>
-                <h2 className="text-2xl font-semibold text-slate-900">{fallback(selectedCandidate.nome)}</h2>
-                <p className="text-sm text-slate-500">{fallback(selectedCandidate.cargo)}</p>
+                <h2 className="text-2xl font-semibold text-slate-900">{fallback(hydratedSelectedCandidate.nome)}</h2>
+                <p className="text-sm text-slate-500">{fallback(hydratedSelectedCandidate.cargo)}</p>
               </div>
               <button
                 type="button"
@@ -359,23 +440,66 @@ export default function CompanyApplicationsPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Email</p><p className="text-sm font-medium text-slate-700">{fallback(selectedCandidate.email)}</p></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Telefone</p><p className="text-sm font-medium text-slate-700">{fallback(selectedCandidate.telefone)}</p></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Modelo de trabalho</p><p className="text-sm font-medium text-slate-700">{fallback(selectedCandidate.modeloTrabalho)}</p></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Senioridade</p><p className="text-sm font-medium text-slate-700">{fallback(selectedCandidate.senioridade)}</p></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Experiência</p><p className="text-sm font-medium text-slate-700">{fallback(selectedCandidate.experiencia)}</p></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Email</p><p className="text-sm font-medium text-slate-700">{fallback(hydratedSelectedCandidate.email)}</p></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Telefone</p><p className="text-sm font-medium text-slate-700">{fallback(hydratedSelectedCandidate.telefone)}</p></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Modelo de trabalho</p><p className="text-sm font-medium text-slate-700">{fallback(hydratedSelectedCandidate.modeloTrabalho)}</p></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Senioridade</p><p className="text-sm font-medium text-slate-700">{fallback(hydratedSelectedCandidate.senioridade)}</p></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Experiência</p><p className="text-sm font-medium text-slate-700">{fallback(hydratedSelectedCandidate.experiencia)}</p></div>
               <div className="rounded-2xl bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">LinkedIn</p>
-                <p className="text-sm font-medium text-slate-700">{fallback(selectedCandidate.linkedinUrl)}</p>
+                <p className="text-sm font-medium text-slate-700">{fallback(hydratedSelectedCandidate.linkedinUrl)}</p>
               </div>
             </div>
 
             <div className="mt-6 rounded-2xl border border-slate-100 bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Skills</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {(selectedCandidate.skills?.length ? selectedCandidate.skills : ["Não informado"]).map((skill) => (
+                {(hydratedSelectedCandidate.skills?.length ? hydratedSelectedCandidate.skills : ["Não informado"]).map((skill) => (
                   <span key={skill} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{skill}</span>
                 ))}
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Anotações do recruiter</p>
+                  <p className="mt-1 text-sm text-slate-500">Esse texto fica vinculado ao candidato desta vaga e pode ser atualizado depois.</p>
+                </div>
+                {hydratedSelectedCandidate.atualizadoEm ? (
+                  <span className="text-xs text-slate-400">Atualizado em {hydratedSelectedCandidate.atualizadoEm}</span>
+                ) : null}
+              </div>
+
+              <textarea
+                value={candidateNotesDraft}
+                onChange={(event) => setCandidateNotesDraft(event.target.value)}
+                rows={5}
+                placeholder="Registre observações sobre entrevista, próximos passos, riscos ou destaque do perfil."
+                className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400"
+              />
+
+              {candidateNoteFeedback ? (
+                <div
+                  className={`mt-3 rounded-2xl px-4 py-3 text-sm ${
+                    candidateNoteFeedback.type === "success"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-red-50 text-red-700"
+                  }`}
+                >
+                  {candidateNoteFeedback.message}
+                </div>
+              ) : null}
+
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => void handleSaveCandidateNote()}
+                  disabled={isSavingCandidateNote}
+                  className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSavingCandidateNote ? "Salvando..." : "Salvar anotação"}
+                </button>
               </div>
             </div>
           </div>

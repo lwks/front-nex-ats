@@ -16,6 +16,7 @@ import {
   defaultInterestRoleOptions,
   filterAreaSelectionsByRoles,
   resolveAreaValuesForRoles,
+  topSectorOptions,
   type OnboardingOption,
 } from "@/lib/onboarding-options"
 import {
@@ -783,15 +784,31 @@ export default function CreateJobPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="setor">Setor</Label>
-                <Input
-                  id="setor"
-                  name="setor"
+                <Select
                   value={formState.setor}
-                  onChange={handleChange("setor")}
+                  onValueChange={(value) =>
+                    setFormState((previous) => ({
+                      ...previous,
+                      setor: value,
+                    }))
+                  }
                   required
-                  aria-invalid={sectorValidationMessage ? "true" : "false"}
-                  className={cn(sectorValidationMessage && "border-destructive focus-visible:ring-destructive/40")}
-                />
+                >
+                  <SelectTrigger
+                    id="setor"
+                    aria-invalid={sectorValidationMessage ? "true" : "false"}
+                    className={cn(sectorValidationMessage && "border-destructive focus-visible:ring-destructive/40")}
+                  >
+                    <SelectValue placeholder="Selecione o setor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {topSectorOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {sectorValidationMessage ? <p className="text-xs text-destructive">{sectorValidationMessage}</p> : null}
               </div>
 

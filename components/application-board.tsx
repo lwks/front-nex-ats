@@ -16,6 +16,7 @@ export type ApplicationStatus =
 
 export type Application = {
   id: string
+  recordId?: string
   nome: string
   cargo?: string
   email?: string
@@ -25,6 +26,7 @@ export type Application = {
   experiencia?: string
   skills?: string[]
   linkedinUrl?: string
+  notes?: string
   status: ApplicationStatus | string
   atualizadoEm?: string
 }
@@ -39,6 +41,7 @@ type ApplicationBoardProps = {
   candidaturas: Application[]
   colunas?: ApplicationColumn[]
   draggable?: boolean
+  applicationOverrides?: Record<string, Partial<Application>>
   onStatusChange?: (id: string, status: ApplicationStatus) => void
   onApplicationSelect?: (application: Application) => void
 }
@@ -47,6 +50,7 @@ type ApplicationBoardFromApiProps = {
   guidVaga: string
   colunas?: ApplicationColumn[]
   draggable?: boolean
+  applicationOverrides?: Record<string, Partial<Application>>
   onStatusChange?: (id: string, status: ApplicationStatus) => void
   onApplicationSelect?: (application: Application) => void
 }
@@ -196,7 +200,8 @@ function normalizeCandidate(item: unknown, index: number): Application | null {
     return null
   }
 
-  const id = pickString(item.guid_id, item.id, item.codigo, item.pk) ?? `candidato-${index}`
+  const recordId = pickString(item.id)
+  const id = recordId ?? pickString(item.guid_id, item.codigo, item.pk) ?? `candidato-${index}`
   const nome = pickString(item.nome, item.name, item.candidato, item.nome_candidato, item.fullName)
   if (!nome) {
     return null
@@ -206,6 +211,7 @@ function normalizeCandidate(item: unknown, index: number): Application | null {
 
   return {
     id,
+    recordId,
     nome,
     cargo: pickString(item.cargo, item.role, item.vaga, item.titulo_vaga),
     email: pickString(item.email, item.cd_email),
@@ -214,16 +220,36 @@ function normalizeCandidate(item: unknown, index: number): Application | null {
     senioridade: pickString(item.senioridade, item.seniority, item.nivel),
     experiencia: pickString(item.experiencia, item.experience),
     linkedinUrl: pickString(item.linkedin, item.linkedinUrl, item.linkedin_url),
+    notes: pickString(
+      item.anotacoes,
+      item.anotacao,
+      item.notes,
+      item.note,
+      item.observacoes,
+      item.observacao,
+      item.comments,
+      item.comment,
+    ),
     skills: pickStringArray(item.skills, item.habilidades),
     status: mapApiStatusToBoardStatus(rawStatus),
     atualizadoEm: pickString(item.updatedAt, item.updated_at, item.atualizadoEm),
   }
 }
 
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("")
+}
+
 export function ApplicationBoard({
   candidaturas,
   colunas = defaultColumns,
   draggable = true,
+  applicationOverrides,
   onStatusChange,
   onApplicationSelect,
 }: ApplicationBoardProps) {
@@ -235,12 +261,21 @@ export function ApplicationBoard({
     setBoardApplications(candidaturas)
   }, [candidaturas])
 
+  const resolvedApplications = useMemo(
+    () =>
+      boardApplications.map((application) => ({
+        ...application,
+        ...(applicationOverrides?.[application.id] ?? {}),
+      })),
+    [applicationOverrides, boardApplications],
+  )
+
   const groupedApplications = useMemo(() => {
     return colunas.reduce<Record<ApplicationStatus, Application[]>>((acc, column) => {
-      acc[column.id] = boardApplications.filter((application) => application.status === column.id)
+      acc[column.id] = resolvedApplications.filter((application) => application.status === column.id)
       return acc
     }, {} as Record<ApplicationStatus, Application[]>)
-  }, [boardApplications, colunas])
+  }, [colunas, resolvedApplications])
 
   const handleDragStart = (application: Application) => (event: DragEvent<HTMLDivElement>) => {
     if (!draggable) return
@@ -284,7 +319,7 @@ export function ApplicationBoard({
           <div
             key={column.id}
             className={cn(
-              "flex min-h-[320px] w-[260px] shrink-0 flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm transition",
+              "flex min-h-[320px] w-[300px] shrink-0 flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm transition",
               draggable && activeColumn === column.id && "border-primary/70 bg-primary/5",
             )}
             onDragOver={handleDragOver(column.id)}
@@ -310,9 +345,10 @@ export function ApplicationBoard({
                 onDragEnd={handleDragEnd}
                 onClick={() => onApplicationSelect?.(application)}
                 className={cn(
-                  "rounded-xl border border-border bg-background p-3 shadow-sm transition",
+                  "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition",
                   draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
                   draggedId === application.id && "opacity-60",
+                  onApplicationSelect && "hover:border-slate-300 hover:shadow-md",
                 )}
                 role={onApplicationSelect ? "button" : undefined}
                 tabIndex={onApplicationSelect ? 0 : undefined}
@@ -327,22 +363,72 @@ export function ApplicationBoard({
                     : undefined
                 }
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{application.nome}</p>
-                    {application.cargo ? (
-                      <p className="text-xs text-muted-foreground">{application.cargo}</p>
-                    ) : null}
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white">
+                    {getInitials(application.nome)}
                   </div>
-                  <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-semibold text-muted-foreground">
-                    {column.titulo}
-                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{application.nome}</p>
+                        {application.cargo ? (
+                          <p className="text-xs text-slate-500">{application.cargo}</p>
+                        ) : null}
+                      </div>
+                      <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">
+                        {column.titulo}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 grid gap-2 text-xs text-slate-600">
+                      {application.email ? (
+                        <p className="truncate rounded-xl bg-slate-50 px-3 py-2">{application.email}</p>
+                      ) : null}
+                      {application.telefone ? (
+                        <p className="rounded-xl bg-slate-50 px-3 py-2">{application.telefone}</p>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
-                {application.email ? (
-                  <p className="mt-2 text-xs text-muted-foreground">{application.email}</p>
-                ) : null}
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {application.senioridade ? (
+                    <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-semibold text-orange-700">
+                      {application.senioridade}
+                    </span>
+                  ) : null}
+                  {application.modeloTrabalho ? (
+                    <span className="rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-semibold text-sky-700">
+                      {application.modeloTrabalho}
+                    </span>
+                  ) : null}
+                  {application.experiencia ? (
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">
+                      {application.experiencia}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(application.skills?.length ? application.skills.slice(0, 3) : ["Sem skills"]).map((skill) => (
+                    <span
+                      key={skill}
+                      className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-600"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700">Anotacao</p>
+                  <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-amber-900">
+                    {application.notes?.trim() || "Sem anotacoes registradas."}
+                  </p>
+                </div>
+
                 {application.atualizadoEm ? (
-                  <p className="mt-2 text-[10px] text-muted-foreground">
+                  <p className="mt-3 text-[10px] text-slate-500">
                     Atualizado em {application.atualizadoEm}
                   </p>
                 ) : null}
@@ -365,6 +451,7 @@ export function ApplicationBoardFromApi({
   guidVaga,
   colunas = defaultColumns,
   draggable = true,
+  applicationOverrides,
   onStatusChange,
   onApplicationSelect,
 }: ApplicationBoardFromApiProps) {
@@ -440,6 +527,7 @@ export function ApplicationBoardFromApi({
       candidaturas={candidaturas}
       colunas={colunas}
       draggable={draggable}
+      applicationOverrides={applicationOverrides}
       onStatusChange={onStatusChange}
       onApplicationSelect={onApplicationSelect}
     />

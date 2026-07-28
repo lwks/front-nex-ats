@@ -7,7 +7,6 @@ Aplicacao web do fluxo ATS da ClusterHR, com:
 - Criacao de novas vagas
 - Painel de candidaturas por vaga (visao empresa)
 - Autenticacao Cognito via OAuth2 + PKCE
-- Rotas internas `/api/*` para proxy e sessao
 
 ## Stack
 
@@ -46,7 +45,7 @@ Aplicacao local: `http://localhost:3000`
 ### API externa
 
 - `NEXT_PUBLIC_API_BASE_URL`:
-  - Base da API ATS consumida pelo front e pelos proxies.
+  - Base da API ATS consumida pelo front.
   - Exemplo: `https://seu-endpoint.lambda-url.../api`
   - Se ausente, o projeto usa um endpoint default definido em `config.ts`.
 
@@ -68,32 +67,12 @@ Importante: nao versione segredos reais em `.env.local`.
 ## Rotas de pagina (UI)
 
 - `/`: listagem de vagas (dados vindos da API)
-- `/candidaturas`: onboarding do candidato em 4 etapas
+- `/jobs/list`: pagina publica de vagas, com filtros e links de candidatura
+- `/users/create`: cadastro de usuario/candidato
+- `/candidaturas`: onboarding do candidato em 4 etapas; aceita `?vagaGuid=...` para iniciar a candidatura a uma vaga especifica
 - `/jobs/create`: formulario de criacao de vaga com validacoes e consulta de CEP
 - `/empresa/candidaturas`: quadro de candidaturas por vaga (`guid_vaga`)
-
-## Rotas internas da aplicacao (`app/api`)
-
-### Proxy para API ATS
-
-- `POST /api/jobs`: cria vaga no backend
-- `POST /api/candidates`: cria candidatura no backend
-- `GET /api/candidates/by-job-guids?guid_vaga=...`: busca candidatos por vaga
-- `GET /api/zips/:zip`: consulta CEP (8 digitos)
-- `OPTIONS` nas rotas acima para preflight CORS
-
-### Autenticacao
-
-- `GET /api/auth/login`: inicia fluxo PKCE no Cognito
-- `GET /api/auth/callback`: troca `code` por tokens e grava cookies de sessao
-- `POST /api/auth/refresh`: renova sessao com refresh token (cookie httpOnly)
-- `GET /api/auth/session`: retorna resumo da sessao autenticada
-- `GET /api/auth/logout`: limpa cookies e redireciona (local ou Hosted UI)
-
-Cookies usados no fluxo de auth:
-
-- Fluxo PKCE: `nexjob_auth_state`, `nexjob_code_verifier`
-- Sessao: `nexjob_access_token`, `nexjob_id_token`, `nexjob_refresh_token`, `nexjob_token_expires_at`
+- `/empresa/relatorio`: indicadores operacionais de vagas e candidaturas
 
 ## Endpoints externos esperados (backend ATS)
 
@@ -107,7 +86,7 @@ Com `NEXT_PUBLIC_API_BASE_URL=<base>/api`, o front espera estes recursos:
 
 ## Estrutura resumida
 
-- `app/`: paginas e rotas server (`app/api/*`)
+- `app/`: paginas do App Router e handlers server internos
 - `components/`: UI e fluxos (vagas, onboarding, board)
 - `services/`: chamadas HTTP usadas pelo front
 - `lib/auth/cognito.ts`: utilitarios de auth, cookies e sessao
@@ -130,4 +109,4 @@ A configuracao de cobertura em `vitest.config.mjs` aplica threshold global de `9
 
 - O quadro de candidaturas em `/empresa/candidaturas` esta com drag-and-drop desabilitado (`draggable={false}`), sem persistencia de mudanca de status no backend.
 - O onboarding de candidato ainda gera `guid_id` e `cd_cnpj` no front para envio de payload.
-- O projeto possui servicos/testes legados de auth em `services/auth-service.ts`; o runtime principal de autenticacao usa `lib/auth/cognito.ts` + rotas em `app/api/auth/*`.
+- O projeto possui servicos/testes legados de auth em `services/auth-service.ts`; o runtime principal de autenticacao usa `lib/auth/cognito.ts` + handlers server internos.

@@ -5,6 +5,7 @@ import {
   validateJobFormState,
   type JobFormState,
 } from "@/app/jobs/create/page"
+import { topSectorOptions } from "@/lib/onboarding-options"
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -72,5 +73,11 @@ describe("/jobs/create payload helpers", () => {
         }),
       ),
     ).toThrow("Selecione no maximo 3 areas.")
+  })
+
+  it("keeps setor as a fixed dropdown with 15 predefined options", () => {
+    expect(topSectorOptions).toHaveLength(15)
+    expect(topSectorOptions.map((option) => option.value)).toContain("tecnologia-informacao-ti")
+    expect(topSectorOptions.map((option) => option.value)).toContain("agronegocio")
   })
 })
