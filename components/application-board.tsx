@@ -5,14 +5,10 @@ import { useEffect, useMemo, useState } from "react"
 
 import { fetchCandidatesByJobGuid } from "@/services/candidates-by-job-guids-service"
 import { cn } from "@/lib/utils"
+import { mapApiStatusToBoardStatus } from "@/lib/application-status"
+import type { ApplicationStatus } from "@/lib/application-status"
 
-export type ApplicationStatus =
-  | "novos"
-  | "entrevista-rh"
-  | "entrevista-tecnica"
-  | "proposta"
-  | "contratado"
-  | "rejeitado"
+export type { ApplicationStatus } from "@/lib/application-status"
 
 export type Application = {
   id: string
@@ -107,59 +103,7 @@ function pickStringArray(...values: Array<unknown>) {
   return undefined
 }
 
-function normalizeText(value?: string) {
-  if (!value) return ""
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-}
-
-export function mapApiStatusToBoardStatus(statusValue?: string): ApplicationStatus {
-  const normalized = normalizeText(statusValue)
-
-  if (
-    normalized.includes("rejeitado") ||
-    normalized.includes("reprovado") ||
-    normalized.includes("nao aderente")
-  ) {
-    return "rejeitado"
-  }
-
-  if (normalized.includes("contratado") || normalized.includes("admissao") || normalized.includes("hired")) {
-    return "contratado"
-  }
-
-  if (normalized.includes("oferta") || normalized.includes("proposta")) {
-    return "proposta"
-  }
-
-  if (
-    normalized.includes("tecnica") ||
-    normalized === "hm" ||
-    normalized.includes("gestor") ||
-    normalized.includes("case") ||
-    normalized.includes("teste")
-  ) {
-    return "entrevista-tecnica"
-  }
-
-  if (normalized === "rh" || normalized.includes("recrutador") || normalized.includes("people")) {
-    return "entrevista-rh"
-  }
-
-  if (
-    normalized.includes("novo") ||
-    normalized.includes("triagem") ||
-    normalized.includes("curriculo") ||
-    normalized.includes("inicial")
-  ) {
-    return "novos"
-  }
-
-  return "novos"
-}
+export { mapApiStatusToBoardStatus } from "@/lib/application-status"
 
 function extractCandidateItems(payload: unknown): unknown[] {
   if (Array.isArray(payload)) {

@@ -22,6 +22,7 @@ import {
 } from "@/components/job-listings-client"
 import { updateCandidateNotes } from "@/services/candidate-notes-service"
 import { updateCandidateStatus } from "@/services/candidate-status-service"
+import { mapApiStatusToBoardStatus } from "@/lib/application-status"
 import { fetchCandidatesByJobGuids } from "@/services/candidates-by-job-guids-service"
 
 type ApiJob = Record<string, unknown>
@@ -732,7 +733,7 @@ export function CompanyApplicationsPage() {
     const result = await updateCandidateStatus(application.recordId, status)
     const nextFields: Partial<Application> = {
       recordId: result.id ?? application.recordId,
-      status,
+      status: mapApiStatusToBoardStatus(result.status),
       atualizadoEm: result.updatedAt ?? application.atualizadoEm,
     }
 

@@ -8,22 +8,22 @@ describe("updateCandidateStatus", () => {
       ok: true,
       json: async () => ({
         id: "candidate-1",
-        status: "proposta",
+        status: "novo",
         updatedAt: "2026-07-29T12:00:00.000Z",
       }),
     })
     vi.stubGlobal("fetch", fetchMock)
 
-    const result = await updateCandidateStatus("candidate-1", "proposta")
+    const result = await updateCandidateStatus("candidate-1", "novos")
 
     expect(fetchMock).toHaveBeenCalledWith("/api/candidates/candidate-1", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "proposta" }),
+      body: JSON.stringify({ status: "novo" }),
     })
     expect(result).toEqual({
       id: "candidate-1",
-      status: "proposta",
+      status: "novo",
       updatedAt: "2026-07-29T12:00:00.000Z",
     })
   })

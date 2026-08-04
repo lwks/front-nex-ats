@@ -1,5 +1,6 @@
 import { CANDIDATES_API_PROXY_URL } from "@/config"
-import type { ApplicationStatus } from "@/components/application-board"
+import { mapBoardStatusToApiStatus } from "@/lib/application-status"
+import type { ApplicationStatus } from "@/lib/application-status"
 
 export type CandidateStatusUpdateResult = {
   id?: string
@@ -23,7 +24,7 @@ export async function updateCandidateStatus(
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status: mapBoardStatusToApiStatus(status) }),
   })
 
   if (!response.ok) {
