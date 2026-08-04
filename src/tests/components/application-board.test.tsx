@@ -44,6 +44,7 @@ describe("ApplicationBoard", () => {
         applicationOverrides: {
           "candidate-1": {
             notes: "Nota atualizada apos salvar.",
+            status: "proposta",
           },
         },
       }),
@@ -51,5 +52,6 @@ describe("ApplicationBoard", () => {
 
     expect(html).toContain("Nota atualizada apos salvar.")
     expect(html).not.toContain("Avancar para entrevista com lideranca.")
+    expect(html).toContain("Proposta")
   })
 })

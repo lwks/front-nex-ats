@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -15,15 +15,10 @@ import {
   defaultExperienceOptions,
   defaultHardSkillOptions,
   defaultIndustryOptions,
-  defaultInterestRoleAreaMap,
-  defaultInterestRoleOptions,
   defaultLanguageOptions,
   defaultLanguageProficiencyOptions,
   defaultSeniorityOptions,
   defaultSoftSkillOptions,
-  defaultToolOptions,
-  filterAreaSelectionsByRoles,
-  resolveAreaValuesForRoles,
   topSectorOptions,
   type LanguageProficiencyOption,
   type OnboardingOption,
@@ -34,13 +29,10 @@ import {
   fetchExperienceOptions,
   fetchHardSkillOptions,
   fetchIndustryOptions,
-  fetchInterestRoleAreaMap,
-  fetchInterestRoleOptions,
   fetchLanguageOptions,
   fetchLanguageProficiencyOptions,
   fetchSeniorityOptions,
   fetchSoftSkillOptions,
-  fetchToolOptions,
 } from "@/services/onboarding-options-service"
 import type { UserRegistrationData, UserRegistrationLanguage } from "@/services/user-registration-service"
 
@@ -92,11 +84,9 @@ export function UserRegistrationProfessionalStep({
     setorAtual: data.setorAtual || "",
     timeAtual: data.timeAtual || "",
     beneficiosAtuais: data.beneficiosAtuais || [],
-    cargoInteresse: data.cargoInteresse || [],
     industriaInteresse: data.industriaInteresse || [],
     hardSkillsProfissionais: data.hardSkillsProfissionais || [],
     softSkillsProfissionais: data.softSkillsProfissionais || [],
-    ferramentasProfissionais: data.ferramentasProfissionais || [],
     idiomas: data.idiomas || [],
   })
   const [touched, setTouched] = useState({
@@ -107,33 +97,20 @@ export function UserRegistrationProfessionalStep({
     setorAtual: false,
     timeAtual: false,
     beneficiosAtuais: false,
-    cargoInteresse: false,
     industriaInteresse: false,
     hardSkillsProfissionais: false,
     softSkillsProfissionais: false,
-    ferramentasProfissionais: false,
     idiomas: false,
   })
   const [experienceOptions, setExperienceOptions] = useState<OnboardingOption[]>(defaultExperienceOptions)
   const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
   const [seniorityOptions, setSeniorityOptions] = useState<OnboardingOption[]>(defaultSeniorityOptions)
   const [benefitOptions, setBenefitOptions] = useState<OnboardingOption[]>(defaultCurrentBenefitOptions)
-  const [interestRoleOptions, setInterestRoleOptions] = useState<OnboardingOption[]>(defaultInterestRoleOptions)
-  const [roleAreaMap, setRoleAreaMap] = useState<Record<string, string[]>>(defaultInterestRoleAreaMap)
   const [hardSkillOptions, setHardSkillOptions] = useState<OnboardingOption[]>(defaultHardSkillOptions)
   const [softSkillOptions, setSoftSkillOptions] = useState<OnboardingOption[]>(defaultSoftSkillOptions)
-  const [toolOptions, setToolOptions] = useState<OnboardingOption[]>(defaultToolOptions)
   const [languageOptions, setLanguageOptions] = useState<OnboardingOption[]>(defaultLanguageOptions)
   const [languageProficiencyOptions, setLanguageProficiencyOptions] = useState<LanguageProficiencyOption[]>(
     defaultLanguageProficiencyOptions,
-  )
-
-  const availableAreaOptions = useMemo(
-    () => {
-      const allowedAreaValues = new Set(resolveAreaValuesForRoles(formData.cargoInteresse, roleAreaMap))
-      return industryOptions.filter((option) => allowedAreaValues.has(option.value))
-    },
-    [formData.cargoInteresse, roleAreaMap, industryOptions],
   )
 
   const isFormComplete =
@@ -144,15 +121,12 @@ export function UserRegistrationProfessionalStep({
     Boolean(formData.setorAtual.trim()) &&
     Boolean(formData.timeAtual.trim()) &&
     formData.beneficiosAtuais.length > 0 &&
-    formData.cargoInteresse.length > 0 &&
     formData.industriaInteresse.length > 0 &&
     formData.industriaInteresse.length <= 3 &&
     formData.hardSkillsProfissionais.length > 0 &&
     formData.hardSkillsProfissionais.length <= 7 &&
     formData.softSkillsProfissionais.length > 0 &&
     formData.softSkillsProfissionais.length <= 7 &&
-    formData.ferramentasProfissionais.length > 0 &&
-    formData.ferramentasProfissionais.length <= 7 &&
     hasCompleteLanguages(formData.idiomas)
 
   const experienceError =
@@ -171,8 +145,6 @@ export function UserRegistrationProfessionalStep({
     touched.beneficiosAtuais && formData.beneficiosAtuais.length === 0
       ? "Selecione ao menos um beneficio atual."
       : ""
-  const roleInterestError =
-    touched.cargoInteresse && formData.cargoInteresse.length === 0 ? "Selecione ao menos um cargo." : ""
   const areaError =
     touched.industriaInteresse && formData.industriaInteresse.length === 0
       ? "Selecione ao menos uma area."
@@ -191,12 +163,6 @@ export function UserRegistrationProfessionalStep({
       : touched.softSkillsProfissionais && formData.softSkillsProfissionais.length > 7
         ? "Selecione no maximo 7 soft skills profissionais."
         : ""
-  const toolError =
-    touched.ferramentasProfissionais && formData.ferramentasProfissionais.length === 0
-      ? "Selecione ao menos uma ferramenta profissional."
-      : touched.ferramentasProfissionais && formData.ferramentasProfissionais.length > 7
-        ? "Selecione no maximo 7 ferramentas profissionais."
-        : ""
   const languageError =
     touched.idiomas && formData.idiomas.length > 0 && !hasCompleteLanguages(formData.idiomas)
       ? "Selecione ao menos um idioma e informe sua fluencia."
@@ -211,11 +177,8 @@ export function UserRegistrationProfessionalStep({
         industries,
         seniorities,
         benefits,
-        interestRoles,
-        mappedAreas,
         hardSkills,
         softSkills,
-        tools,
         languages,
         proficiencies,
       ] = await Promise.all([
@@ -223,11 +186,8 @@ export function UserRegistrationProfessionalStep({
         fetchIndustryOptions(),
         fetchSeniorityOptions(),
         fetchCurrentBenefitOptions(),
-        fetchInterestRoleOptions(),
-        fetchInterestRoleAreaMap(),
         fetchHardSkillOptions(),
         fetchSoftSkillOptions(),
-        fetchToolOptions(),
         fetchLanguageOptions(),
         fetchLanguageProficiencyOptions(),
       ])
@@ -237,11 +197,8 @@ export function UserRegistrationProfessionalStep({
         setIndustryOptions(industries)
         setSeniorityOptions(seniorities)
         setBenefitOptions(benefits)
-        setInterestRoleOptions(interestRoles)
-        setRoleAreaMap(mappedAreas)
         setHardSkillOptions(hardSkills)
         setSoftSkillOptions(softSkills)
-        setToolOptions(tools)
         setLanguageOptions(languages)
         setLanguageProficiencyOptions(proficiencies)
       }
@@ -253,25 +210,6 @@ export function UserRegistrationProfessionalStep({
       isMounted = false
     }
   }, [])
-
-  useEffect(() => {
-    setFormData((previous) => {
-      const nextAreas = filterAreaSelectionsByRoles(
-        previous.cargoInteresse,
-        previous.industriaInteresse,
-        roleAreaMap,
-      )
-
-      if (nextAreas.length === previous.industriaInteresse.length) {
-        return previous
-      }
-
-      return {
-        ...previous,
-        industriaInteresse: nextAreas,
-      }
-    })
-  }, [availableAreaOptions])
 
   const handleLanguageChange = (index: number, field: keyof UserRegistrationLanguage, value: string) => {
     setFormData((previous) => ({
@@ -313,11 +251,9 @@ export function UserRegistrationProfessionalStep({
         setorAtual: true,
         timeAtual: true,
         beneficiosAtuais: true,
-        cargoInteresse: true,
         industriaInteresse: true,
         hardSkillsProfissionais: true,
         softSkillsProfissionais: true,
-        ferramentasProfissionais: true,
         idiomas: true,
       })
       return
@@ -405,37 +341,6 @@ export function UserRegistrationProfessionalStep({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="senioridade">Senioridade</Label>
-            <Select
-              value={formData.senioridade}
-              onValueChange={(value) => {
-                setFormData({ ...formData, senioridade: value })
-                if (!touched.senioridade) {
-                  setTouched((previous) => ({ ...previous, senioridade: true }))
-                }
-              }}
-            >
-              <SelectTrigger
-                id="senioridade"
-                className={cn("w-full", seniorityError && "border-destructive focus-visible:ring-destructive/40")}
-                aria-invalid={seniorityError ? "true" : "false"}
-              >
-                <SelectValue placeholder="Selecione a senioridade atual" />
-              </SelectTrigger>
-              <SelectContent>
-                {seniorityOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {seniorityError ? <p className="text-xs text-destructive">{seniorityError}</p> : null}
-          </div>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
             <Label htmlFor="setorAtual">Setor</Label>
             <Select
               value={formData.setorAtual}
@@ -463,6 +368,26 @@ export function UserRegistrationProfessionalStep({
             </Select>
             {currentSectorError ? <p className="text-xs text-destructive">{currentSectorError}</p> : null}
           </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="industriaInteresse">Area</Label>
+            <MultiSelect
+              id="industriaInteresse"
+              maxSelections={3}
+              options={industryOptions}
+              placeholder="Selecione ate 3 areas"
+              value={formData.industriaInteresse}
+              onChange={(value) => {
+                setFormData({ ...formData, industriaInteresse: value })
+                if (!touched.industriaInteresse) {
+                  setTouched((previous) => ({ ...previous, industriaInteresse: true }))
+                }
+              }}
+            />
+            {areaError ? <p className="text-xs text-destructive">{areaError}</p> : null}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="timeAtual">Time</Label>
@@ -484,6 +409,35 @@ export function UserRegistrationProfessionalStep({
 
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
+            <Label htmlFor="senioridade">Senioridade</Label>
+            <Select
+              value={formData.senioridade}
+              onValueChange={(value) => {
+                setFormData({ ...formData, senioridade: value })
+                if (!touched.senioridade) {
+                  setTouched((previous) => ({ ...previous, senioridade: true }))
+                }
+              }}
+            >
+              <SelectTrigger
+                id="senioridade"
+                className={cn("w-full", seniorityError && "border-destructive focus-visible:ring-destructive/40")}
+                aria-invalid={seniorityError ? "true" : "false"}
+              >
+                <SelectValue placeholder="Selecione a senioridade atual" />
+              </SelectTrigger>
+              <SelectContent>
+                {seniorityOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {seniorityError ? <p className="text-xs text-destructive">{seniorityError}</p> : null}
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="beneficiosAtuais">Beneficios</Label>
             <MultiSelect
               id="beneficiosAtuais"
@@ -498,48 +452,6 @@ export function UserRegistrationProfessionalStep({
               }}
             />
             {benefitError ? <p className="text-xs text-destructive">{benefitError}</p> : null}
-          </div>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="cargoInteresse">Cargo</Label>
-            <MultiSelect
-              id="cargoInteresse"
-              options={interestRoleOptions}
-              placeholder="Selecione um ou mais cargos"
-              value={formData.cargoInteresse}
-              onChange={(value) => {
-                setFormData({ ...formData, cargoInteresse: value })
-                if (!touched.cargoInteresse) {
-                  setTouched((previous) => ({ ...previous, cargoInteresse: true }))
-                }
-              }}
-            />
-            {roleInterestError ? <p className="text-xs text-destructive">{roleInterestError}</p> : null}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="industriaInteresse">Area</Label>
-            <MultiSelect
-              id="industriaInteresse"
-              disabled={formData.cargoInteresse.length === 0}
-              maxSelections={3}
-              options={availableAreaOptions}
-              placeholder={
-                formData.cargoInteresse.length === 0
-                  ? "Selecione um cargo para liberar as areas"
-                  : "Selecione ate 3 areas"
-              }
-              value={formData.industriaInteresse}
-              onChange={(value) => {
-                setFormData({ ...formData, industriaInteresse: value })
-                if (!touched.industriaInteresse) {
-                  setTouched((previous) => ({ ...previous, industriaInteresse: true }))
-                }
-              }}
-            />
-            {areaError ? <p className="text-xs text-destructive">{areaError}</p> : null}
           </div>
         </div>
 
@@ -579,24 +491,6 @@ export function UserRegistrationProfessionalStep({
             />
             {softSkillError ? <p className="text-xs text-destructive">{softSkillError}</p> : null}
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="ferramentasProfissionais">Ferramentas</Label>
-          <MultiSelect
-            id="ferramentasProfissionais"
-            maxSelections={7}
-            options={toolOptions}
-            placeholder="Selecione ate 7 ferramentas"
-            value={formData.ferramentasProfissionais}
-            onChange={(value) => {
-              setFormData({ ...formData, ferramentasProfissionais: value })
-              if (!touched.ferramentasProfissionais) {
-                setTouched((previous) => ({ ...previous, ferramentasProfissionais: true }))
-              }
-            }}
-          />
-          {toolError ? <p className="text-xs text-destructive">{toolError}</p> : null}
         </div>
 
         <div className="space-y-4 rounded-[1.5rem] border border-slate-200 p-5">
