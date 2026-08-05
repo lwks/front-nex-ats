@@ -105,6 +105,17 @@ A configuracao de cobertura em `vitest.config.mjs` aplica threshold global de `9
 - branches
 - statements
 
+## Validacao E2E
+
+Para executar a validacao visual e funcional do quadro de candidaturas, instale
+os navegadores do Playwright uma vez e rode os testes:
+
+    npx playwright install chromium
+    npm run test:e2e
+
+Os cenarios usam dados descartaveis e interceptam as APIs locais da tela. Eles
+nao exercitam login Cognito nem alteram candidatos reais.
+
 ## Observacoes atuais
 
 - O quadro de candidaturas em `/` e `/empresa/candidaturas` permite mover candidatos entre etapas e persiste a mudanca via `PUT /api/candidates/:id`.

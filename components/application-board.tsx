@@ -286,6 +286,7 @@ export function ApplicationBoard({
         {colunas.map((column) => (
           <div
             key={column.id}
+            data-testid={"status-column-" + column.id}
             className={cn(
               "flex min-h-[320px] w-[300px] shrink-0 flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm transition",
               draggable && activeColumn === column.id && "border-primary/70 bg-primary/5",
@@ -308,6 +309,7 @@ export function ApplicationBoard({
             {groupedApplications[column.id]?.map((application) => (
               <div
                 key={application.id}
+                data-testid={"candidate-card-" + application.id}
                 draggable={draggable}
                 onDragStart={handleDragStart(application)}
                 onDragEnd={handleDragEnd}
