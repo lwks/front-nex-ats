@@ -223,7 +223,7 @@ export function UserRegistrationPreferencesStep({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="areaPreferencia">Area</Label>
             <MultiSelect
@@ -240,6 +240,35 @@ export function UserRegistrationPreferencesStep({
               }}
             />
             {preferenceAreaError ? <p className="text-xs text-destructive">{preferenceAreaError}</p> : null}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="setor">Setor</Label>
+            <Select
+              value={formData.setor}
+              onValueChange={(value) => {
+                setFormData({ ...formData, setor: value })
+                if (!touched.setor) {
+                  setTouched((previous) => ({ ...previous, setor: true }))
+                }
+              }}
+            >
+              <SelectTrigger
+                id="setor"
+                className={cn("w-full", sectorError && "border-destructive focus-visible:ring-destructive/40")}
+                aria-invalid={sectorError ? "true" : "false"}
+              >
+                <SelectValue placeholder="Selecione o setor" />
+              </SelectTrigger>
+              <SelectContent>
+                {topSectorOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {sectorError ? <p className="text-xs text-destructive">{sectorError}</p> : null}
           </div>
 
           <div className="space-y-2">
@@ -291,53 +320,22 @@ export function UserRegistrationPreferencesStep({
 
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="setor">Setor</Label>
-            <Select
-              value={formData.setor}
-              onValueChange={(value) => {
-                setFormData({ ...formData, setor: value })
-                if (!touched.setor) {
-                  setTouched((previous) => ({ ...previous, setor: true }))
+            <Label htmlFor="tipoContratacao">Modelo de contrato</Label>
+            <MultiSelect
+              id="tipoContratacao"
+              options={contractTypeOptions}
+              placeholder="Selecione um ou mais modelos"
+              value={formData.tipoContratacao}
+              onChange={(value) => {
+                setFormData({ ...formData, tipoContratacao: value })
+                if (!touched.tipoContratacao) {
+                  setTouched((previous) => ({ ...previous, tipoContratacao: true }))
                 }
               }}
-            >
-              <SelectTrigger
-                id="setor"
-                className={cn("w-full", sectorError && "border-destructive focus-visible:ring-destructive/40")}
-                aria-invalid={sectorError ? "true" : "false"}
-              >
-                <SelectValue placeholder="Selecione o setor" />
-              </SelectTrigger>
-              <SelectContent>
-                {topSectorOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {sectorError ? <p className="text-xs text-destructive">{sectorError}</p> : null}
+            />
+            {contractError ? <p className="text-xs text-destructive">{contractError}</p> : null}
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="tipoContratacao">Modelo de contrato</Label>
-          <MultiSelect
-            id="tipoContratacao"
-            options={contractTypeOptions}
-            placeholder="Selecione um ou mais modelos"
-            value={formData.tipoContratacao}
-            onChange={(value) => {
-              setFormData({ ...formData, tipoContratacao: value })
-              if (!touched.tipoContratacao) {
-                setTouched((previous) => ({ ...previous, tipoContratacao: true }))
-              }
-            }}
-          />
-          {contractError ? <p className="text-xs text-destructive">{contractError}</p> : null}
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="modeloTrabalho">Modelo de trabalho</Label>
             <MultiSelect
@@ -354,7 +352,9 @@ export function UserRegistrationPreferencesStep({
             />
             {workTypeError ? <p className="text-xs text-destructive">{workTypeError}</p> : null}
           </div>
+        </div>
 
+        <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="viagemTrabalho">Viagem de trabalho</Label>
             <Select
@@ -383,6 +383,25 @@ export function UserRegistrationPreferencesStep({
             </Select>
             {travelError ? <p className="text-xs text-destructive">{travelError}</p> : null}
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="pretensaoSalarial">Pretensao salarial</Label>
+            <Input
+              id="pretensaoSalarial"
+              inputMode="numeric"
+              value={formData.pretensaoSalarial}
+              onChange={(event) =>
+                setFormData({ ...formData, pretensaoSalarial: formatCurrencyInput(event.target.value) })
+              }
+              onBlur={() => {
+                if (!touched.pretensaoSalarial) {
+                  setTouched((previous) => ({ ...previous, pretensaoSalarial: true }))
+                }
+              }}
+              className={cn(salaryError && "border-destructive focus-visible:ring-destructive/40")}
+              aria-invalid={salaryError ? "true" : "false"}
+            />
+            {salaryError ? <p className="text-xs text-destructive">{salaryError}</p> : null}
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -403,7 +422,6 @@ export function UserRegistrationPreferencesStep({
             />
             {hardSkillError ? <p className="text-xs text-destructive">{hardSkillError}</p> : null}
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="softSkills">Soft Skills</Label>
             <MultiSelect
@@ -420,28 +438,6 @@ export function UserRegistrationPreferencesStep({
               }}
             />
             {softSkillError ? <p className="text-xs text-destructive">{softSkillError}</p> : null}
-          </div>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="pretensaoSalarial">Pretensao salarial</Label>
-            <Input
-              id="pretensaoSalarial"
-              inputMode="numeric"
-              value={formData.pretensaoSalarial}
-              onChange={(event) =>
-                setFormData({ ...formData, pretensaoSalarial: formatCurrencyInput(event.target.value) })
-              }
-              onBlur={() => {
-                if (!touched.pretensaoSalarial) {
-                  setTouched((previous) => ({ ...previous, pretensaoSalarial: true }))
-                }
-              }}
-              className={cn(salaryError && "border-destructive focus-visible:ring-destructive/40")}
-              aria-invalid={salaryError ? "true" : "false"}
-            />
-            {salaryError ? <p className="text-xs text-destructive">{salaryError}</p> : null}
           </div>
         </div>
 

@@ -72,12 +72,44 @@ describe("UserRegistrationPage", () => {
     expect(preferencesHtml).not.toContain("Ferramentas")
     expect(preferencesHtml.indexOf("Area")).toBeLessThan(preferencesHtml.indexOf("Time"))
     expect(preferencesHtml.indexOf("Time")).toBeLessThan(preferencesHtml.indexOf("Senioridade"))
+    expect(preferencesHtml).not.toContain("md:grid-cols-3")
+    expect(preferencesHtml).toContain("md:grid-cols-2")
     expect(preferencesHtml).toContain("Viagem de trabalho")
     expect(preferencesHtml).toContain("Pretensao salarial")
     expect(preferencesHtml).toContain("Preferencias e Perfil")
     expect(preferencesHtml).toContain("Conte um pouco sobre você")
     expect(preferencesHtml).toContain("Mensagem para empresa/gestor")
     expect(preferencesHtml).toContain("Autorizo o compartilhamento dos meus dados de perfil")
+  })
+
+  it("keeps the preferences step enabled when all required fields are filled", () => {
+    const html = renderToStaticMarkup(
+      <UserRegistrationPreferencesStep
+        data={{
+          setor: "tecnologia",
+          time: "Produto",
+          senioridadePreferencia: "senior",
+          areaPreferencia: ["tecnologia-informacao-ti"],
+          tipoContratacao: ["clt"],
+          modeloTrabalho: ["hibrido"],
+          hardSkills: ["javascript"],
+          softSkills: ["comunicacao"],
+          viagemTrabalho: "eventual",
+          pretensaoSalarial: "R$ 10.000",
+          sobreVoce: "Profissional com experiencia em produto.",
+          compartilhamentoAccepted: true,
+        }}
+        onUpdate={() => {}}
+        onNext={() => {}}
+        onBack={() => {}}
+      />,
+    )
+
+    expect(html).not.toContain('disabled=""')
+    expect(html).toContain('id="areaPreferencia"')
+    expect(html).toContain('id="setor"')
+    expect(html).toContain('id="time"')
+    expect(html).toContain('id="senioridadePreferencia"')
   })
 
   it("renders visited steps as clickable buttons and future steps as disabled", () => {
