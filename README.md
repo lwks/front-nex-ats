@@ -66,7 +66,7 @@ Importante: nao versione segredos reais em `.env.local`.
 
 ## Rotas de pagina (UI)
 
-- `/`: listagem de vagas (dados vindos da API)
+- `/`: pipeline de candidaturas por vaga, com guard de autenticacao Cognito quando habilitado
 - `/jobs/list`: pagina publica de vagas, com filtros e links de candidatura
 - `/users/create`: cadastro de usuario/candidato
 - `/candidaturas`: onboarding do candidato em 4 etapas; aceita `?vagaGuid=...` para iniciar a candidatura a uma vaga especifica
@@ -105,8 +105,19 @@ A configuracao de cobertura em `vitest.config.mjs` aplica threshold global de `9
 - branches
 - statements
 
+## Validacao E2E
+
+Para executar a validacao visual e funcional do quadro de candidaturas, instale
+os navegadores do Playwright uma vez e rode os testes:
+
+    npx playwright install chromium
+    npm run test:e2e
+
+Os cenarios usam dados descartaveis e interceptam as APIs locais da tela. Eles
+nao exercitam login Cognito nem alteram candidatos reais.
+
 ## Observacoes atuais
 
-- O quadro de candidaturas em `/empresa/candidaturas` esta com drag-and-drop desabilitado (`draggable={false}`), sem persistencia de mudanca de status no backend.
+- O quadro de candidaturas em `/` e `/empresa/candidaturas` permite mover candidatos entre etapas e persiste a mudanca via `PUT /api/candidates/:id`.
 - O onboarding de candidato ainda gera `guid_id` e `cd_cnpj` no front para envio de payload.
 - O projeto possui servicos/testes legados de auth em `services/auth-service.ts`; o runtime principal de autenticacao usa `lib/auth/cognito.ts` + handlers server internos.

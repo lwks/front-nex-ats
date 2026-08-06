@@ -22,20 +22,17 @@ export type UserRegistrationData = {
   setorAtual: string
   timeAtual: string
   industriaInteresse: string[]
-  cargoInteresse: string[]
   hardSkillsProfissionais: string[]
   softSkillsProfissionais: string[]
-  ferramentasProfissionais: string[]
   tipoContratacao: string[]
   modeloTrabalho: string[]
   setor: string
   time: string
-  cargoPreferencia: string[]
+  senioridadePreferencia: string
   areaPreferencia: string[]
   idiomas: UserRegistrationLanguage[]
   hardSkills: string[]
   softSkills: string[]
-  ferramentas: string[]
   viagemTrabalho: string
   pretensaoSalarial: string
   sobreVoce: string
@@ -119,20 +116,17 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
   requireSelection(data.industriaInteresse, "Selecione ao menos uma area.")
 
   requireSelection(data.beneficiosAtuais, "Selecione ao menos um beneficio atual.")
-  requireSelection(data.cargoInteresse, "Selecione ao menos um cargo.")
   requireSelection(data.hardSkillsProfissionais, "Selecione ao menos uma hard skill profissional.")
   requireSelection(data.softSkillsProfissionais, "Selecione ao menos uma soft skill profissional.")
-  requireSelection(data.ferramentasProfissionais, "Selecione ao menos uma ferramenta profissional.")
   requireSelection(data.tipoContratacao, "Selecione ao menos um tipo de contratacao.")
   requireSelection(data.modeloTrabalho, "Selecione ao menos um modelo de trabalho.")
   requireNonEmptyValue(data.setor, "Informe o setor.")
   requireNonEmptyValue(data.time, "Informe o time.")
-  requireSelection(data.cargoPreferencia, "Selecione ao menos um cargo de preferencia.")
+  requireNonEmptyValue(data.senioridadePreferencia, "Selecione a senioridade de preferencia.")
   requireSelection(data.areaPreferencia, "Selecione ao menos uma area de preferencia.")
   requireLanguageSelection(data.idiomas, "Selecione ao menos um idioma.")
   requireSelection(data.hardSkills, "Selecione ao menos uma hard skill.")
   requireSelection(data.softSkills, "Selecione ao menos uma soft skill.")
-  requireSelection(data.ferramentas, "Selecione ao menos uma ferramenta.")
   requireNonEmptyValue(data.viagemTrabalho, "Selecione a disponibilidade para viagem de trabalho.")
   requireNonEmptyValue(data.pretensaoSalarial, "Informe a pretensao salarial.")
   requireNonEmptyValue(data.sobreVoce, "Conte um pouco sobre voce.")
@@ -153,20 +147,12 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
     throw new Error("Selecione no maximo 7 soft skills profissionais.")
   }
 
-  if (data.ferramentasProfissionais.length > 7) {
-    throw new Error("Selecione no maximo 7 ferramentas profissionais.")
-  }
-
   if (data.hardSkills.length > 7) {
     throw new Error("Selecione no maximo 7 hard skills.")
   }
 
   if (data.softSkills.length > 7) {
     throw new Error("Selecione no maximo 7 soft skills.")
-  }
-
-  if (data.ferramentas.length > 7) {
-    throw new Error("Selecione no maximo 7 ferramentas.")
   }
 
   if (data.lgpdAccepted !== true) {

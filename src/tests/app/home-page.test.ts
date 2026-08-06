@@ -38,6 +38,11 @@ describe('app/page route guard', () => {
 
   it('does not redirect when auth is disabled for localhost', async () => {
     const redirectMock = vi.fn()
+    const pipelineMock = vi.fn(() => null)
+
+    vi.doMock('@/components/company-applications-page', () => ({
+      CompanyApplicationsPage: pipelineMock,
+    }))
 
     vi.doMock('next/navigation', () => ({
       redirect: redirectMock,
@@ -56,12 +61,18 @@ describe('app/page route guard', () => {
     const page = await HomePage()
 
     expect(page).toBeTruthy()
+    expect(page.type).toBe(pipelineMock)
     expect(redirectMock).not.toHaveBeenCalled()
   })
 
   it('renders home when session is authenticated', async () => {
     const redirectMock = vi.fn()
     const expiresAt = new Date(Date.now() + 60_000).toISOString()
+    const pipelineMock = vi.fn(() => null)
+
+    vi.doMock('@/components/company-applications-page', () => ({
+      CompanyApplicationsPage: pipelineMock,
+    }))
 
     vi.doMock('next/navigation', () => ({
       redirect: redirectMock,
@@ -94,6 +105,7 @@ describe('app/page route guard', () => {
     const page = await HomePage()
 
     expect(page).toBeTruthy()
+    expect(page.type).toBe(pipelineMock)
     expect(redirectMock).not.toHaveBeenCalled()
   })
 })

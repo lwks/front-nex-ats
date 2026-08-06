@@ -33,3 +33,7 @@ next-env.d.ts
 
 # Adicionar cache de ferramentas (opcional):
 .eslintcache
+
+# Playwright
+/playwright-report/
+/test-results/

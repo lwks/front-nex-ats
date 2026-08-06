@@ -60,7 +60,6 @@ describe("CompanyApplicationsView", () => {
         onSearchChange: vi.fn(),
         onJobSelect: vi.fn(),
         onPageChange: vi.fn(),
-        onOpenJobDetails: vi.fn(),
         board: <div>Board carregado</div>,
       }),
     )
@@ -70,6 +69,12 @@ describe("CompanyApplicationsView", () => {
     expect(html).toContain("Candidatos")
     expect(html).toContain("Vagas abertas")
     expect(html).toContain("Pessoa Desenvolvedora")
+    expect(html).toContain("Time:")
+    expect(html).toContain("Criado por:")
+    expect(html).toContain("Data:")
+    expect(html).toContain("Salario:")
+    expect(html).toContain("Relatorio:")
+    expect(html).not.toContain("Detalhes da vaga")
     expect(html).toContain('href="/"')
     expect(html).toContain("Board carregado")
   })
@@ -92,7 +97,6 @@ describe("CompanyApplicationsView", () => {
         onSearchChange={vi.fn()}
         onJobSelect={vi.fn()}
         onPageChange={vi.fn()}
-        onOpenJobDetails={vi.fn()}
       />,
     )
 
@@ -113,7 +117,6 @@ describe("CompanyApplicationsView", () => {
         onSearchChange={vi.fn()}
         onJobSelect={vi.fn()}
         onPageChange={vi.fn()}
-        onOpenJobDetails={vi.fn()}
       />,
     )
 
@@ -134,7 +137,6 @@ describe("CompanyApplicationsView", () => {
         onSearchChange={vi.fn()}
         onJobSelect={vi.fn()}
         onPageChange={vi.fn()}
-        onOpenJobDetails={vi.fn()}
       />,
     )
 
