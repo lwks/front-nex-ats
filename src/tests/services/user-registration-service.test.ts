@@ -26,15 +26,13 @@ function createInput(overrides: Partial<UserRegistrationData> = {}): UserRegistr
     setorAtual: "Tecnologia",
     timeAtual: "Plataforma",
     industriaInteresse: ["desenvolvimento-software", "financeiro-bancario"],
-    cargoInteresse: ["tech-lead", "desenvolvedor-full-stack"],
     hardSkillsProfissionais: ["react", "sql"],
     softSkillsProfissionais: ["comunicacao-oral", "trabalho-equipe"],
-    ferramentasProfissionais: ["figma", "jira"],
     tipoContratacao: ["clt", "pj"],
     modeloTrabalho: ["remoto", "hibrido"],
     setor: "Tecnologia",
     time: "Produto",
-    cargoPreferencia: ["gerente-produto", "project-manager"],
+    senioridadePreferencia: "senior",
     areaPreferencia: ["tecnologia-informacao-ti", "ecommerce-marketplaces"],
     idiomas: [
       { idioma: "portugues", fluencia: "nativo" },
@@ -42,7 +40,6 @@ function createInput(overrides: Partial<UserRegistrationData> = {}): UserRegistr
     ],
     hardSkills: ["react", "sql"],
     softSkills: ["comunicacao-oral", "trabalho-equipe"],
-    ferramentas: ["figma", "jira"],
     viagemTrabalho: "sim",
     pretensaoSalarial: "12.000",
     sobreVoce: "Profissional com experiencia em produto e tecnologia.",
@@ -175,6 +172,14 @@ describe("user-registration-service", () => {
         }),
       ),
     ).toThrow("Informe o time.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          senioridadePreferencia: "",
+        }),
+      ),
+    ).toThrow("Selecione a senioridade de preferencia.")
   })
 
   it("requires all new multi-select fields", () => {
@@ -197,14 +202,6 @@ describe("user-registration-service", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          cargoInteresse: [],
-        }),
-      ),
-    ).toThrow("Selecione ao menos um cargo.")
-
-    expect(() =>
-      validateUserRegistrationData(
-        createInput({
           hardSkillsProfissionais: [],
         }),
       ),
@@ -221,26 +218,10 @@ describe("user-registration-service", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          ferramentasProfissionais: [],
-        }),
-      ),
-    ).toThrow("Selecione ao menos uma ferramenta profissional.")
-
-    expect(() =>
-      validateUserRegistrationData(
-        createInput({
           tipoContratacao: [],
         }),
       ),
     ).toThrow("Selecione ao menos um tipo de contratacao.")
-
-    expect(() =>
-      validateUserRegistrationData(
-        createInput({
-          cargoPreferencia: [],
-        }),
-      ),
-    ).toThrow("Selecione ao menos um cargo de preferencia.")
 
     expect(() =>
       validateUserRegistrationData(
@@ -266,16 +247,9 @@ describe("user-registration-service", () => {
       ),
     ).toThrow("Selecione ao menos uma soft skill.")
 
-    expect(() =>
-      validateUserRegistrationData(
-        createInput({
-          ferramentas: [],
-        }),
-      ),
-    ).toThrow("Selecione ao menos uma ferramenta.")
   })
 
-  it("enforces selection limits for area, professional skill sets, hard skills, soft skills and tools", () => {
+  it("enforces selection limits for area, professional skill sets, hard skills and soft skills", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
@@ -303,14 +277,6 @@ describe("user-registration-service", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          ferramentasProfissionais: ["1", "2", "3", "4", "5", "6", "7", "8"],
-        }),
-      ),
-    ).toThrow("Selecione no maximo 7 ferramentas profissionais.")
-
-    expect(() =>
-      validateUserRegistrationData(
-        createInput({
           areaPreferencia: ["1", "2", "3", "4"],
         }),
       ),
@@ -332,13 +298,6 @@ describe("user-registration-service", () => {
       ),
     ).toThrow("Selecione no maximo 7 soft skills.")
 
-    expect(() =>
-      validateUserRegistrationData(
-        createInput({
-          ferramentas: ["1", "2", "3", "4", "5", "6", "7", "8"],
-        }),
-      ),
-    ).toThrow("Selecione no maximo 7 ferramentas.")
   })
 
   it("requires idioma and fluencia for each language entry", () => {

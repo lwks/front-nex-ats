@@ -1,4 +1,4 @@
-import { JobListings } from "@/components/job-listings"
+import { CompanyApplicationsPage } from "@/components/company-applications-page"
 import { cookies } from "next/headers"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
@@ -24,5 +24,5 @@ export default async function HomePage() {
     redirect("/api/auth/login")
   }
 
-  return <JobListings />
+  return <CompanyApplicationsPage />
 }

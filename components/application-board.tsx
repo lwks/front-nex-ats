@@ -5,14 +5,10 @@ import { useEffect, useMemo, useState } from "react"
 
 import { fetchCandidatesByJobGuid } from "@/services/candidates-by-job-guids-service"
 import { cn } from "@/lib/utils"
+import { mapApiStatusToBoardStatus } from "@/lib/application-status"
+import type { ApplicationStatus } from "@/lib/application-status"
 
-export type ApplicationStatus =
-  | "novos"
-  | "entrevista-rh"
-  | "entrevista-tecnica"
-  | "proposta"
-  | "contratado"
-  | "rejeitado"
+export type { ApplicationStatus } from "@/lib/application-status"
 
 export type Application = {
   id: string
@@ -42,7 +38,7 @@ type ApplicationBoardProps = {
   colunas?: ApplicationColumn[]
   draggable?: boolean
   applicationOverrides?: Record<string, Partial<Application>>
-  onStatusChange?: (id: string, status: ApplicationStatus) => void
+  onStatusChange?: (application: Application, status: ApplicationStatus) => Promise<void> | void
   onApplicationSelect?: (application: Application) => void
 }
 
@@ -51,7 +47,7 @@ type ApplicationBoardFromApiProps = {
   colunas?: ApplicationColumn[]
   draggable?: boolean
   applicationOverrides?: Record<string, Partial<Application>>
-  onStatusChange?: (id: string, status: ApplicationStatus) => void
+  onStatusChange?: (application: Application, status: ApplicationStatus) => Promise<void> | void
   onApplicationSelect?: (application: Application) => void
 }
 
@@ -107,59 +103,7 @@ function pickStringArray(...values: Array<unknown>) {
   return undefined
 }
 
-function normalizeText(value?: string) {
-  if (!value) return ""
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-}
-
-export function mapApiStatusToBoardStatus(statusValue?: string): ApplicationStatus {
-  const normalized = normalizeText(statusValue)
-
-  if (
-    normalized.includes("rejeitado") ||
-    normalized.includes("reprovado") ||
-    normalized.includes("nao aderente")
-  ) {
-    return "rejeitado"
-  }
-
-  if (normalized.includes("contratado") || normalized.includes("admissao") || normalized.includes("hired")) {
-    return "contratado"
-  }
-
-  if (normalized.includes("oferta") || normalized.includes("proposta")) {
-    return "proposta"
-  }
-
-  if (
-    normalized.includes("tecnica") ||
-    normalized === "hm" ||
-    normalized.includes("gestor") ||
-    normalized.includes("case") ||
-    normalized.includes("teste")
-  ) {
-    return "entrevista-tecnica"
-  }
-
-  if (normalized === "rh" || normalized.includes("recrutador") || normalized.includes("people")) {
-    return "entrevista-rh"
-  }
-
-  if (
-    normalized.includes("novo") ||
-    normalized.includes("triagem") ||
-    normalized.includes("curriculo") ||
-    normalized.includes("inicial")
-  ) {
-    return "novos"
-  }
-
-  return "novos"
-}
+export { mapApiStatusToBoardStatus } from "@/lib/application-status"
 
 function extractCandidateItems(payload: unknown): unknown[] {
   if (Array.isArray(payload)) {
@@ -256,6 +200,7 @@ export function ApplicationBoard({
   const [boardApplications, setBoardApplications] = useState<Application[]>(candidaturas)
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [activeColumn, setActiveColumn] = useState<ApplicationStatus | null>(null)
+  const [statusFeedback, setStatusFeedback] = useState<string | null>(null)
 
   useEffect(() => {
     setBoardApplications(candidaturas)
@@ -296,13 +241,31 @@ export function ApplicationBoard({
     const applicationId = event.dataTransfer.getData("text/plain")
     if (!applicationId) return
 
+    const currentApplication = resolvedApplications.find((application) => application.id === applicationId)
+    if (!currentApplication || currentApplication.status === columnId) {
+      setActiveColumn(null)
+      return
+    }
+
+    const previousStatus = currentApplication.status
+    setStatusFeedback(null)
+
     setBoardApplications((prev) =>
       prev.map((application) =>
         application.id === applicationId ? { ...application, status: columnId } : application,
       ),
     )
 
-    onStatusChange?.(applicationId, columnId)
+    Promise.resolve(onStatusChange?.(currentApplication, columnId)).catch((error) => {
+      setBoardApplications((prev) =>
+        prev.map((application) =>
+          application.id === applicationId ? { ...application, status: previousStatus } : application,
+        ),
+      )
+      setStatusFeedback(
+        error instanceof Error ? error.message : "Nao foi possivel atualizar a etapa do candidato.",
+      )
+    })
     setActiveColumn(null)
   }
 
@@ -314,10 +277,16 @@ export function ApplicationBoard({
 
   return (
     <div className="overflow-x-auto pb-2">
+      {statusFeedback ? (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          {statusFeedback}
+        </div>
+      ) : null}
       <section className="flex min-w-max gap-6">
         {colunas.map((column) => (
           <div
             key={column.id}
+            data-testid={"status-column-" + column.id}
             className={cn(
               "flex min-h-[320px] w-[300px] shrink-0 flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm transition",
               draggable && activeColumn === column.id && "border-primary/70 bg-primary/5",
@@ -340,6 +309,7 @@ export function ApplicationBoard({
             {groupedApplications[column.id]?.map((application) => (
               <div
                 key={application.id}
+                data-testid={"candidate-card-" + application.id}
                 draggable={draggable}
                 onDragStart={handleDragStart(application)}
                 onDragEnd={handleDragEnd}

@@ -7,6 +7,7 @@ import { Briefcase, ChevronLeft, ChevronRight, MapPin, Search, Users } from "luc
 import {
   type Application,
   ApplicationBoardFromApi,
+  type ApplicationStatus,
   type ApplicationColumn,
 } from "@/components/application-board"
 import { AtsSidebar } from "@/components/ats-sidebar"
@@ -20,6 +21,8 @@ import {
   getPaginatedJobs,
 } from "@/components/job-listings-client"
 import { updateCandidateNotes } from "@/services/candidate-notes-service"
+import { updateCandidateStatus } from "@/services/candidate-status-service"
+import { mapApiStatusToBoardStatus } from "@/lib/application-status"
 import { fetchCandidatesByJobGuids } from "@/services/candidates-by-job-guids-service"
 
 type ApiJob = Record<string, unknown>
@@ -54,7 +57,6 @@ export type CompanyApplicationsViewProps = {
   onSearchChange: ChangeEventHandler<HTMLInputElement>
   onJobSelect: (jobGuid: string) => void
   onPageChange: (page: number) => void
-  onOpenJobDetails: () => void
   board?: ReactNode
 }
 
@@ -324,7 +326,6 @@ export function CompanyApplicationsView({
   onSearchChange,
   onJobSelect,
   onPageChange,
-  onOpenJobDetails,
   board,
 }: CompanyApplicationsViewProps) {
   const hasJobs = jobs.length > 0
@@ -361,20 +362,12 @@ export function CompanyApplicationsView({
               value={jobs.length}
               helper="Oportunidades carregadas"
             />
-            <button
-              type="button"
-              onClick={onOpenJobDetails}
-              disabled={!currentJob}
-              className="rounded-lg border-2 border-[#FF6B00] bg-orange-50 p-5 text-left text-[#FF6B00] shadow-sm transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400"
-            >
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-[#FF6B00] text-white">
-                <Briefcase className="size-5" />
-              </div>
-              <p className="text-2xl font-bold">Detalhes da vaga</p>
-              <p className="mt-1 text-sm font-medium">
-                {currentJob ? "Abrir contexto da vaga selecionada" : "Aguardando vaga disponivel"}
-              </p>
-            </button>
+            <MetricCard
+              icon={Briefcase}
+              label="Vaga selecionada"
+              value={currentJob ? 1 : 0}
+              helper={currentJob?.title ?? "Aguardando vaga disponivel"}
+            />
           </section>
 
           <section className="rounded-lg border-2 border-gray-200 bg-white p-4 shadow-sm">
@@ -426,8 +419,36 @@ export function CompanyApplicationsView({
                       >
                         <p className="text-sm font-semibold text-[#FF6B00]">{job.company}</p>
                         <p className="mt-1 text-base font-semibold text-black">{job.title}</p>
-                        <p className="mt-2 text-sm text-gray-600">{job.location}</p>
-                        <p className="mt-1 text-xs text-gray-500">{job.workType}</p>
+                        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-600">
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="size-3.5" />
+                            {job.location}
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <Briefcase className="size-3.5" />
+                            {job.workType}
+                          </span>
+                        </div>
+                        <div className="mt-4 grid gap-2 text-xs text-gray-600 sm:grid-cols-2">
+                          <span>
+                            <strong className="text-gray-800">Time:</strong> {job.team}
+                          </span>
+                          <span>
+                            <strong className="text-gray-800">Criado por:</strong> {job.createdBy}
+                          </span>
+                          <span>
+                            <strong className="text-gray-800">Data:</strong> {job.createdAt}
+                          </span>
+                          <span>
+                            <strong className="text-gray-800">Salario:</strong> {job.salaryRange}
+                          </span>
+                        </div>
+                        <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-gray-600">
+                          {job.description}
+                        </p>
+                        <p className="mt-3 truncate text-xs font-medium text-gray-500">
+                          Relatorio: {job.reportUrl}
+                        </p>
                       </button>
                     )
                   })}
@@ -481,53 +502,9 @@ export function CompanyApplicationsView({
           ) : null}
 
           {currentJob && hasSearchResults ? (
-            <>
-              <section className="rounded-lg border-2 border-gray-200 bg-white p-6 shadow-sm">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-[#FF6B00]">{currentJob.company}</p>
-                    <h2 className="mt-1 text-2xl font-semibold text-black">{currentJob.title}</h2>
-                    <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                      <span className="inline-flex items-center gap-1">
-                        <MapPin className="size-4" />
-                        {currentJob.location}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Briefcase className="size-4" />
-                        {currentJob.workType}
-                      </span>
-                    </div>
-                  </div>
-
-                  <span className="w-fit rounded-full border border-green-300 bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
-                    Pipeline ativo
-                  </span>
-                </div>
-
-                <div className="mt-6 grid gap-3 text-sm text-gray-600 md:grid-cols-2 xl:grid-cols-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Time</p>
-                    <p className="mt-1 font-medium text-gray-700">{currentJob.team}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Criado por</p>
-                    <p className="mt-1 font-medium text-gray-700">{currentJob.createdBy}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Data de criacao</p>
-                    <p className="mt-1 font-medium text-gray-700">{currentJob.createdAt}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Faixa salarial</p>
-                    <p className="mt-1 font-medium text-gray-700">{currentJob.salaryRange}</p>
-                  </div>
-                </div>
-              </section>
-
-              <section className="rounded-lg border-2 border-gray-200 bg-white p-4 shadow-sm">
-                {board}
-              </section>
-            </>
+            <section className="rounded-lg border-2 border-gray-200 bg-white p-4 shadow-sm">
+              {board}
+            </section>
           ) : null}
         </div>
       </main>
@@ -537,7 +514,6 @@ export function CompanyApplicationsView({
 
 export function CompanyApplicationsPage() {
   const [selectedCandidate, setSelectedCandidate] = useState<Application | null>(null)
-  const [selectedJob, setSelectedJob] = useState<CompanyApplicationsJob | null>(null)
   const [selectedJobGuid, setSelectedJobGuid] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
@@ -677,12 +653,6 @@ export function CompanyApplicationsPage() {
     [filteredJobs, resolvedSelectedJobGuid],
   )
 
-  useEffect(() => {
-    if (!currentJob && selectedJob) {
-      setSelectedJob(null)
-    }
-  }, [currentJob, selectedJob])
-
   const hydratedSelectedCandidate = useMemo(() => {
     if (!selectedCandidate) {
       return null
@@ -755,12 +725,38 @@ export function CompanyApplicationsPage() {
     }
   }
 
+  const handleCandidateStatusChange = async (application: Application, status: ApplicationStatus) => {
+    if (!application.recordId) {
+      throw new Error("Nao foi possivel identificar o candidato para atualizar a etapa.")
+    }
+
+    const result = await updateCandidateStatus(application.recordId, status)
+    const nextFields: Partial<Application> = {
+      recordId: result.id ?? application.recordId,
+      status: mapApiStatusToBoardStatus(result.status),
+      atualizadoEm: result.updatedAt ?? application.atualizadoEm,
+    }
+
+    setCandidateOverrides((previous) => ({
+      ...previous,
+      [application.id]: {
+        ...(previous[application.id] ?? {}),
+        ...nextFields,
+      },
+    }))
+
+    setSelectedCandidate((previous) =>
+      previous && previous.id === application.id ? { ...previous, ...nextFields } : previous,
+    )
+  }
+
   const board = currentJob ? (
     <ApplicationBoardFromApi
       guidVaga={currentJob.jobGuid ?? ""}
       colunas={boardColumns}
-      draggable={false}
+      draggable={true}
       applicationOverrides={candidateOverrides}
+      onStatusChange={handleCandidateStatusChange}
       onApplicationSelect={(application) => setSelectedCandidate(application)}
     />
   ) : null
@@ -786,66 +782,8 @@ export function CompanyApplicationsPage() {
           setSelectedCandidate(null)
         }}
         onPageChange={setCurrentPage}
-        onOpenJobDetails={() => currentJob && setSelectedJob(currentJob)}
         board={board}
       />
-
-      {selectedJob ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[85vh] w-full max-w-5xl overflow-y-auto rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-xl">
-            <div className="mb-6 flex items-start justify-between gap-4 border-b border-gray-200 pb-6">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-widest text-[#FF6B00]">ATS</p>
-                <h2 className="mt-1 text-2xl font-semibold text-black">{selectedJob.title}</h2>
-                <p className="mt-2 text-sm text-gray-600">
-                  {selectedJob.team} - {selectedJob.location}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedJob(null)}
-                className="rounded-lg border-2 border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-[#FF6B00] hover:text-[#FF6B00]"
-              >
-                Fechar
-              </button>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Guid da vaga</p>
-                <p className="mt-2 text-base font-semibold text-black">{selectedJob.jobGuid}</p>
-              </div>
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Criador da vaga</p>
-                <p className="mt-2 text-base font-semibold text-black">{selectedJob.createdBy}</p>
-              </div>
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Data de criacao</p>
-                <p className="mt-2 text-base font-semibold text-black">{selectedJob.createdAt}</p>
-              </div>
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Faixa salarial</p>
-                <p className="mt-2 text-base font-semibold text-black">{selectedJob.salaryRange}</p>
-              </div>
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Modelo de trabalho</p>
-                <p className="mt-2 text-base font-semibold text-black">{selectedJob.workType}</p>
-              </div>
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Relatorio</p>
-                <p className="mt-2 text-sm font-semibold text-gray-700">{selectedJob.reportUrl}</p>
-              </div>
-            </div>
-
-            <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Descricao da vaga</p>
-              <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-gray-700">
-                {selectedJob.description}
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       {hydratedSelectedCandidate ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
