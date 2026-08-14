@@ -23,6 +23,22 @@ describe('submitCandidateProfile', () => {
     })
   })
 
+  it('converts legacy candidate area selections to numeric TB_AREAS IDs', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await submitCandidateProfile({
+      guid_id: 'cand-1',
+      guid_vaga: 'job-1',
+      cd_cnpj: '123',
+      industria: '3',
+      industriaInteresse: '12',
+    } as never)
+
+    const request = fetchMock.mock.calls[0][1]
+    expect(JSON.parse(request.body)).toMatchObject({ industria: 3, industriaInteresse: 12 })
+  })
+
   it('throws when upstream fails', async () => {
     vi.stubGlobal(
       'fetch',

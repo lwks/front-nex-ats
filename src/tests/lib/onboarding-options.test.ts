@@ -5,10 +5,10 @@ import { filterAreaSelectionsByRoles, resolveAreaValuesForRoles, topSectorOption
 describe("onboarding-options area mapping", () => {
   it("combines area values for the selected cargos without duplicates", () => {
     expect(resolveAreaValuesForRoles(["tech-lead", "desenvolvedor-full-stack"])).toEqual([
-      "desenvolvimento-software",
-      "tecnologia-informacao-ti",
-      "financeiro-bancario",
-      "ecommerce-marketplaces",
+      "3",
+      "1",
+      "4",
+      "12",
     ])
   })
 
@@ -16,9 +16,9 @@ describe("onboarding-options area mapping", () => {
     expect(
       filterAreaSelectionsByRoles(
         ["project-manager"],
-        ["tecnologia-informacao-ti", "financeiro-bancario", "construcao-civil"],
+        ["3", "1", "13"],
       ),
-    ).toEqual(["tecnologia-informacao-ti", "construcao-civil"])
+    ).toEqual(["3", "13"])
   })
 
   it("exposes the shared top-sector catalog used across the flow", () => {

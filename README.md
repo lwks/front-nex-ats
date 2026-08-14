@@ -82,7 +82,10 @@ Com `NEXT_PUBLIC_API_BASE_URL=<base>/api`, o front espera estes recursos:
 - `POST /jobs` (criacao de vaga)
 - `POST /candidates` (envio de candidatura)
 - `GET /candidates/by-job-guids` (filtro por `guid_vaga`)
+- `GET /areas` (catalogo publico de areas da `TB_AREAS`; retorna `{ data: [{ ID, DS_AREA }] }`)
 - `GET /zips/:zip` (consulta de localizacao por CEP)
+
+Os campos de area usam o `ID` numerico da `TB_AREAS` no payload. A interface mantem os IDs como strings durante a selecao e usa o snapshot local de 13 areas apenas como fallback explicito quando a API nao estiver disponivel.
 
 ## Estrutura resumida
 

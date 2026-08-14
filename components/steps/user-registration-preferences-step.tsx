@@ -5,6 +5,7 @@ import type React from "react"
 import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { AreaOptionsStatus } from "@/components/area-options-status"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,7 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   defaultContractTypeOptions,
   defaultHardSkillOptions,
-  defaultIndustryOptions,
   defaultSeniorityOptions,
   defaultSoftSkillOptions,
   defaultTravelAvailabilityOptions,
@@ -26,13 +26,13 @@ import { cn } from "@/lib/utils"
 import {
   fetchContractTypeOptions,
   fetchHardSkillOptions,
-  fetchIndustryOptions,
   fetchSeniorityOptions,
   fetchSoftSkillOptions,
   fetchTravelAvailabilityOptions,
   fetchWorkTypeOptions,
 } from "@/services/onboarding-options-service"
 import type { UserRegistrationData } from "@/services/user-registration-service"
+import { useAreaOptions } from "@/hooks/use-area-options"
 
 const BRL_NUMBER_FORMATTER = new Intl.NumberFormat("pt-BR")
 
@@ -94,7 +94,7 @@ export function UserRegistrationPreferencesStep({
   })
   const [workTypeOptions, setWorkTypeOptions] = useState<OnboardingOption[]>(defaultWorkTypeOptions)
   const [contractTypeOptions, setContractTypeOptions] = useState<OnboardingOption[]>(defaultContractTypeOptions)
-  const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
+  const { options: industryOptions, source: areaOptionsSource, error: areaOptionsError, isLoading: isAreaOptionsLoading, reload: reloadAreaOptions } = useAreaOptions()
   const [seniorityOptions, setSeniorityOptions] = useState<OnboardingOption[]>(defaultSeniorityOptions)
   const [hardSkillOptions, setHardSkillOptions] = useState<OnboardingOption[]>(defaultHardSkillOptions)
   const [softSkillOptions, setSoftSkillOptions] = useState<OnboardingOption[]>(defaultSoftSkillOptions)
@@ -161,10 +161,9 @@ export function UserRegistrationPreferencesStep({
     let isMounted = true
 
     const loadOptions = async () => {
-      const [workTypes, contractTypes, industries, seniorities, hardSkills, softSkills, travel] = await Promise.all([
+      const [workTypes, contractTypes, seniorities, hardSkills, softSkills, travel] = await Promise.all([
         fetchWorkTypeOptions(),
         fetchContractTypeOptions(),
-        fetchIndustryOptions(),
         fetchSeniorityOptions(),
         fetchHardSkillOptions(),
         fetchSoftSkillOptions(),
@@ -174,7 +173,6 @@ export function UserRegistrationPreferencesStep({
       if (isMounted) {
         setWorkTypeOptions(workTypes)
         setContractTypeOptions(contractTypes)
-        setIndustryOptions(industries)
         setSeniorityOptions(seniorities)
         setHardSkillOptions(hardSkills)
         setSoftSkillOptions(softSkills)
@@ -238,6 +236,13 @@ export function UserRegistrationPreferencesStep({
                   setTouched((previous) => ({ ...previous, areaPreferencia: true }))
                 }
               }}
+            />
+            <AreaOptionsStatus
+              error={areaOptionsError}
+              isLoading={isAreaOptionsLoading}
+              onReload={() => void reloadAreaOptions()}
+              options={industryOptions}
+              source={areaOptionsSource}
             />
             {preferenceAreaError ? <p className="text-xs text-destructive">{preferenceAreaError}</p> : null}
           </div>
