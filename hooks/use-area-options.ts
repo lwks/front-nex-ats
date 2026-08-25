@@ -3,14 +3,13 @@
 import { useCallback, useEffect, useState } from "react"
 
 import {
-  fallbackAreaOptions,
   loadAreaOptions,
   type AreaOption,
 } from "@/services/areas-service"
 
 export function useAreaOptions() {
-  const [options, setOptions] = useState<AreaOption[]>(fallbackAreaOptions)
-  const [source, setSource] = useState<"api" | "fallback" | null>(null)
+  const [options, setOptions] = useState<AreaOption[]>([])
+  const [source, setSource] = useState<"api" | null>(null)
   const [error, setError] = useState<string | undefined>()
   const [isLoading, setIsLoading] = useState(false)
 

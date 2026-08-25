@@ -40,13 +40,13 @@ describe("areas-service", () => {
     })
   })
 
-  it("returns the explicit local fallback after an API failure", async () => {
+  it("returns no options after an API failure", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503, text: async () => "unavailable" }))
 
     const result = await loadAreaOptions()
 
-    expect(result.source).toBe("fallback")
-    expect(result.options).toEqual(fallbackAreaOptions)
+    expect(result.source).toBe(null)
+    expect(result.options).toEqual([])
     expect(result.error).toContain("503")
   })
 
