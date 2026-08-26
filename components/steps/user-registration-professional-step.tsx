@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import { Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { AreaOptionsStatus } from "@/components/area-options-status"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { MultiSelect } from "@/components/ui/multi-select"
@@ -14,7 +15,6 @@ import {
   defaultCurrentBenefitOptions,
   defaultExperienceOptions,
   defaultHardSkillOptions,
-  defaultIndustryOptions,
   defaultLanguageOptions,
   defaultLanguageProficiencyOptions,
   defaultSeniorityOptions,
@@ -28,13 +28,13 @@ import {
   fetchCurrentBenefitOptions,
   fetchExperienceOptions,
   fetchHardSkillOptions,
-  fetchIndustryOptions,
   fetchLanguageOptions,
   fetchLanguageProficiencyOptions,
   fetchSeniorityOptions,
   fetchSoftSkillOptions,
 } from "@/services/onboarding-options-service"
 import type { UserRegistrationData, UserRegistrationLanguage } from "@/services/user-registration-service"
+import { useAreaOptions } from "@/hooks/use-area-options"
 
 type UserRegistrationProfessionalStepProps = {
   data: Partial<UserRegistrationData>
@@ -103,7 +103,7 @@ export function UserRegistrationProfessionalStep({
     idiomas: false,
   })
   const [experienceOptions, setExperienceOptions] = useState<OnboardingOption[]>(defaultExperienceOptions)
-  const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
+  const { options: industryOptions, source: areaOptionsSource, error: areaOptionsError, isLoading: isAreaOptionsLoading, reload: reloadAreaOptions } = useAreaOptions()
   const [seniorityOptions, setSeniorityOptions] = useState<OnboardingOption[]>(defaultSeniorityOptions)
   const [benefitOptions, setBenefitOptions] = useState<OnboardingOption[]>(defaultCurrentBenefitOptions)
   const [hardSkillOptions, setHardSkillOptions] = useState<OnboardingOption[]>(defaultHardSkillOptions)
@@ -174,7 +174,6 @@ export function UserRegistrationProfessionalStep({
     const loadOptions = async () => {
       const [
         experiences,
-        industries,
         seniorities,
         benefits,
         hardSkills,
@@ -183,7 +182,6 @@ export function UserRegistrationProfessionalStep({
         proficiencies,
       ] = await Promise.all([
         fetchExperienceOptions(),
-        fetchIndustryOptions(),
         fetchSeniorityOptions(),
         fetchCurrentBenefitOptions(),
         fetchHardSkillOptions(),
@@ -194,7 +192,6 @@ export function UserRegistrationProfessionalStep({
 
       if (isMounted) {
         setExperienceOptions(experiences)
-        setIndustryOptions(industries)
         setSeniorityOptions(seniorities)
         setBenefitOptions(benefits)
         setHardSkillOptions(hardSkills)
@@ -385,6 +382,13 @@ export function UserRegistrationProfessionalStep({
                   setTouched((previous) => ({ ...previous, industriaInteresse: true }))
                 }
               }}
+            />
+            <AreaOptionsStatus
+              error={areaOptionsError}
+              isLoading={isAreaOptionsLoading}
+              onReload={() => void reloadAreaOptions()}
+              options={industryOptions}
+              source={areaOptionsSource}
             />
             {areaError ? <p className="text-xs text-destructive">{areaError}</p> : null}
           </div>

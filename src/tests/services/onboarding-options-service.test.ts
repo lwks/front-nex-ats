@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import {
   fetchContractTypeOptions,
@@ -34,8 +34,13 @@ describe("onboarding-options-service", () => {
     await expect(fetchExperienceOptions()).resolves.toEqual(defaultExperienceOptions)
   })
 
-  it("returns default industry options", async () => {
-    await expect(fetchIndustryOptions()).resolves.toEqual(defaultIndustryOptions)
+  it("returns API area options", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{ ID: 1, DS_AREA: "Finanças" }] }),
+    }))
+
+    await expect(fetchIndustryOptions()).resolves.toEqual([{ value: "1", label: "Finanças" }])
   })
 
   it("returns default work type options", async () => {

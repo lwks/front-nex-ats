@@ -5,6 +5,7 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { AreaOptionsStatus } from "@/components/area-options-status"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -12,15 +13,14 @@ import type { CandidateData } from "../candidate-onboarding"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   defaultContractTypeOptions,
-  defaultIndustryOptions,
   defaultWorkTypeOptions,
   type OnboardingOption,
 } from "@/lib/onboarding-options"
 import {
   fetchContractTypeOptions,
-  fetchIndustryOptions,
   fetchWorkTypeOptions,
 } from "@/services/onboarding-options-service"
+import { useAreaOptions } from "@/hooks/use-area-options"
 
 interface ProfessionalInterestsStepProps {
   data: Partial<CandidateData>
@@ -51,7 +51,7 @@ export function ProfessionalInterestsStep({
     tipoContratacao: false,
     compartilhamentoAccepted: false,
   })
-  const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
+  const { options: industryOptions, source: areaOptionsSource, error: areaOptionsError, isLoading: isAreaOptionsLoading, reload: reloadAreaOptions } = useAreaOptions()
   const [workTypeOptions, setWorkTypeOptions] = useState<OnboardingOption[]>(defaultWorkTypeOptions)
   const [contractTypeOptions, setContractTypeOptions] = useState<OnboardingOption[]>(defaultContractTypeOptions)
   const isFormComplete =
@@ -79,14 +79,12 @@ export function ProfessionalInterestsStep({
     let isMounted = true
 
     const loadOptions = async () => {
-      const [industries, workTypes, contractTypes] = await Promise.all([
-        fetchIndustryOptions(),
+      const [workTypes, contractTypes] = await Promise.all([
         fetchWorkTypeOptions(),
         fetchContractTypeOptions(),
       ])
 
       if (isMounted) {
-        setIndustryOptions(industries)
         setWorkTypeOptions(workTypes)
         setContractTypeOptions(contractTypes)
       }
@@ -152,6 +150,13 @@ export function ProfessionalInterestsStep({
               ))}
             </SelectContent>
           </Select>
+          <AreaOptionsStatus
+            error={areaOptionsError}
+            isLoading={isAreaOptionsLoading}
+            onReload={() => void reloadAreaOptions()}
+            options={industryOptions}
+            source={areaOptionsSource}
+          />
           {industryError ? <p className="text-xs text-destructive">{industryError}</p> : null}
         </div>
 

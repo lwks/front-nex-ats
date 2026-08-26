@@ -4,16 +4,17 @@ import type React from "react"
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { AreaOptionsStatus } from "@/components/area-options-status"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { CandidateData } from "../candidate-onboarding"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   defaultExperienceOptions,
-  defaultIndustryOptions,
   type OnboardingOption,
 } from "@/lib/onboarding-options"
-import { fetchExperienceOptions, fetchIndustryOptions } from "@/services/onboarding-options-service"
+import { fetchExperienceOptions } from "@/services/onboarding-options-service"
+import { useAreaOptions } from "@/hooks/use-area-options"
 import { cn } from "@/lib/utils"
 
 interface ProfessionalDataStepProps {
@@ -53,7 +54,7 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
     cargoInteresse: false,
   })
   const [experienceOptions, setExperienceOptions] = useState<OnboardingOption[]>(defaultExperienceOptions)
-  const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
+  const { options: industryOptions, source: areaOptionsSource, error: areaOptionsError, isLoading: isAreaOptionsLoading, reload: reloadAreaOptions } = useAreaOptions()
   const isFormComplete =
     Boolean(formData.experiencia) &&
     Boolean(formData.industria) &&
@@ -72,11 +73,10 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
     let isMounted = true
 
     const loadOptions = async () => {
-      const [experiences, industries] = await Promise.all([fetchExperienceOptions(), fetchIndustryOptions()])
+      const experiences = await fetchExperienceOptions()
 
       if (isMounted) {
         setExperienceOptions(experiences)
-        setIndustryOptions(industries)
       }
     }
 
@@ -166,8 +166,15 @@ export function ProfessionalDataStep({ data, onUpdate, onNext, onBack }: Profess
                   </SelectItem>
                 ))}
               </SelectContent>
-            </Select>
-            {industryError ? <p className="text-xs text-destructive">{industryError}</p> : null}
+          </Select>
+          <AreaOptionsStatus
+            error={areaOptionsError}
+            isLoading={isAreaOptionsLoading}
+            onReload={() => void reloadAreaOptions()}
+            options={industryOptions}
+            source={areaOptionsSource}
+          />
+          {industryError ? <p className="text-xs text-destructive">{industryError}</p> : null}
           </div>
         </div>
 

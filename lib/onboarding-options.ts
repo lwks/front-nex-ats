@@ -209,24 +209,19 @@ export const defaultInterestRoleOptions: OnboardingOption[] = [
 ]
 
 export const defaultInterestRoleAreaMap: Record<string, string[]> = {
-  "analista-dados": ["tecnologia-informacao-ti", "financeiro-bancario", "ecommerce-marketplaces"],
-  "analista-produto": ["tecnologia-informacao-ti", "ecommerce-marketplaces", "financeiro-bancario"],
-  "designer-ux-ui": ["tecnologia-informacao-ti", "ecommerce-marketplaces", "educacao-ensino"],
-  "desenvolvedor-front-end": ["desenvolvimento-software", "tecnologia-informacao-ti", "ecommerce-marketplaces"],
-  "desenvolvedor-back-end": ["desenvolvimento-software", "tecnologia-informacao-ti", "financeiro-bancario"],
-  "desenvolvedor-full-stack": [
-    "desenvolvimento-software",
-    "tecnologia-informacao-ti",
-    "financeiro-bancario",
-    "ecommerce-marketplaces",
-  ],
-  "devops-sre": ["desenvolvimento-software", "tecnologia-informacao-ti", "telecomunicacoes"],
-  "engenheiro-dados": ["tecnologia-informacao-ti", "financeiro-bancario", "saude-servicos-hospitalares"],
-  "gerente-produto": ["tecnologia-informacao-ti", "ecommerce-marketplaces", "financeiro-bancario"],
-  "product-owner": ["tecnologia-informacao-ti", "ecommerce-marketplaces", "educacao-ensino"],
-  "project-manager": ["tecnologia-informacao-ti", "engenharia-projetos-industriais", "construcao-civil"],
-  "qa-teste": ["desenvolvimento-software", "tecnologia-informacao-ti", "saude-servicos-hospitalares"],
-  "tech-lead": ["desenvolvimento-software", "tecnologia-informacao-ti", "financeiro-bancario"],
+  "analista-dados": ["4", "1", "12"],
+  "analista-produto": ["3", "12", "1"],
+  "designer-ux-ui": ["3", "12", "5"],
+  "desenvolvedor-front-end": ["3", "12", "5"],
+  "desenvolvedor-back-end": ["3", "1", "4"],
+  "desenvolvedor-full-stack": ["3", "1", "12"],
+  "devops-sre": ["3", "8", "7"],
+  "engenheiro-dados": ["4", "1", "3"],
+  "gerente-produto": ["3", "12", "1"],
+  "product-owner": ["3", "12", "5"],
+  "project-manager": ["3", "7", "13"],
+  "qa-teste": ["3", "4", "7"],
+  "tech-lead": ["3", "1", "4"],
 }
 
 export function resolveAreaValuesForRoles(

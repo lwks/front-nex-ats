@@ -20,7 +20,7 @@ function createValidFormState(overrides: Partial<JobFormState> = {}): JobFormSta
     cargo: "desenvolvedor-front-end",
     nivel: "sr",
     setor: "Tecnologia",
-    area: ["desenvolvimento-software", "tecnologia-informacao-ti"],
+  area: ["3", "12"],
     time: "Produto",
     localizacao: "01001000",
     cidade: "Sao Paulo",
@@ -45,7 +45,7 @@ describe("/jobs/create payload helpers", () => {
       cargo: "desenvolvedor-front-end",
       nivel: "sr",
       setor: "Tecnologia",
-      area: ["desenvolvimento-software", "tecnologia-informacao-ti"],
+      area: [3, 12],
       time: "Produto",
       guid_id: "job-guid-1",
       publicada_em: "2026-07-23",
@@ -69,7 +69,7 @@ describe("/jobs/create payload helpers", () => {
     expect(() =>
       validateJobFormState(
         createValidFormState({
-          area: ["desenvolvimento-software", "tecnologia-informacao-ti", "financeiro-bancario", "ecommerce-marketplaces"],
+          area: ["3", "12", "1", "4"],
         }),
       ),
     ).toThrow("Selecione no maximo 3 areas.")
