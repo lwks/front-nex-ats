@@ -3,7 +3,6 @@ import {
   defaultCurrentBenefitOptions,
   defaultExperienceOptions,
   defaultHardSkillOptions,
-  defaultIndustryOptions,
   defaultInterestRoleOptions,
   defaultInterestRoleAreaMap,
   defaultLanguageOptions,
@@ -14,13 +13,14 @@ import {
   defaultTravelAvailabilityOptions,
   defaultWorkTypeOptions,
 } from "@/lib/onboarding-options"
+import { fetchAreaOptions } from "@/services/areas-service"
 
 export function fetchExperienceOptions() {
   return Promise.resolve(defaultExperienceOptions)
 }
 
 export function fetchIndustryOptions() {
-  return Promise.resolve(defaultIndustryOptions)
+  return fetchAreaOptions()
 }
 
 export function fetchWorkTypeOptions() {

@@ -5,6 +5,7 @@ import type React from "react"
 import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { AreaOptionsStatus } from "@/components/area-options-status"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,7 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   defaultContractTypeOptions,
   defaultHardSkillOptions,
-  defaultIndustryOptions,
   defaultSeniorityOptions,
   defaultSoftSkillOptions,
   defaultTravelAvailabilityOptions,
@@ -23,16 +23,17 @@ import {
   type TravelAvailabilityOption,
 } from "@/lib/onboarding-options"
 import { cn } from "@/lib/utils"
+import { getCompetencyOptionsForAreas } from "@/services/areas-service"
 import {
   fetchContractTypeOptions,
   fetchHardSkillOptions,
-  fetchIndustryOptions,
   fetchSeniorityOptions,
   fetchSoftSkillOptions,
   fetchTravelAvailabilityOptions,
   fetchWorkTypeOptions,
 } from "@/services/onboarding-options-service"
 import type { UserRegistrationData } from "@/services/user-registration-service"
+import { useAreaOptions } from "@/hooks/use-area-options"
 
 const BRL_NUMBER_FORMATTER = new Intl.NumberFormat("pt-BR")
 
@@ -94,7 +95,8 @@ export function UserRegistrationPreferencesStep({
   })
   const [workTypeOptions, setWorkTypeOptions] = useState<OnboardingOption[]>(defaultWorkTypeOptions)
   const [contractTypeOptions, setContractTypeOptions] = useState<OnboardingOption[]>(defaultContractTypeOptions)
-  const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
+  const { options: industryOptions, source: areaOptionsSource, error: areaOptionsError, isLoading: isAreaOptionsLoading, reload: reloadAreaOptions } = useAreaOptions()
+  const teamOptions = getCompetencyOptionsForAreas(formData.areaPreferencia, industryOptions)
   const [seniorityOptions, setSeniorityOptions] = useState<OnboardingOption[]>(defaultSeniorityOptions)
   const [hardSkillOptions, setHardSkillOptions] = useState<OnboardingOption[]>(defaultHardSkillOptions)
   const [softSkillOptions, setSoftSkillOptions] = useState<OnboardingOption[]>(defaultSoftSkillOptions)
@@ -161,10 +163,9 @@ export function UserRegistrationPreferencesStep({
     let isMounted = true
 
     const loadOptions = async () => {
-      const [workTypes, contractTypes, industries, seniorities, hardSkills, softSkills, travel] = await Promise.all([
+      const [workTypes, contractTypes, seniorities, hardSkills, softSkills, travel] = await Promise.all([
         fetchWorkTypeOptions(),
         fetchContractTypeOptions(),
-        fetchIndustryOptions(),
         fetchSeniorityOptions(),
         fetchHardSkillOptions(),
         fetchSoftSkillOptions(),
@@ -174,7 +175,6 @@ export function UserRegistrationPreferencesStep({
       if (isMounted) {
         setWorkTypeOptions(workTypes)
         setContractTypeOptions(contractTypes)
-        setIndustryOptions(industries)
         setSeniorityOptions(seniorities)
         setHardSkillOptions(hardSkills)
         setSoftSkillOptions(softSkills)
@@ -233,11 +233,23 @@ export function UserRegistrationPreferencesStep({
               placeholder="Selecione ate 3 areas"
               value={formData.areaPreferencia}
               onChange={(value) => {
-                setFormData({ ...formData, areaPreferencia: value })
+                const nextTeamOptions = getCompetencyOptionsForAreas(value, industryOptions)
+                setFormData({
+                  ...formData,
+                  areaPreferencia: value,
+                  time: nextTeamOptions.some((option) => option.value === formData.time) ? formData.time : "",
+                })
                 if (!touched.areaPreferencia) {
                   setTouched((previous) => ({ ...previous, areaPreferencia: true }))
                 }
               }}
+            />
+            <AreaOptionsStatus
+              error={areaOptionsError}
+              isLoading={isAreaOptionsLoading}
+              onReload={() => void reloadAreaOptions()}
+              options={industryOptions}
+              source={areaOptionsSource}
             />
             {preferenceAreaError ? <p className="text-xs text-destructive">{preferenceAreaError}</p> : null}
           </div>
@@ -273,18 +285,39 @@ export function UserRegistrationPreferencesStep({
 
           <div className="space-y-2">
             <Label htmlFor="time">Time</Label>
-            <Input
-              id="time"
+            <Select
               value={formData.time}
-              onChange={(event) => setFormData({ ...formData, time: event.target.value })}
-              onBlur={() => {
+              onValueChange={(value) => {
+                setFormData({ ...formData, time: value })
                 if (!touched.time) {
                   setTouched((previous) => ({ ...previous, time: true }))
                 }
               }}
-              className={cn(teamError && "border-destructive focus-visible:ring-destructive/40")}
-              aria-invalid={teamError ? "true" : "false"}
-            />
+            >
+              <SelectTrigger
+                id="time"
+                disabled={isAreaOptionsLoading || (teamOptions.length === 0 && !formData.time)}
+                className={cn("w-full", teamError && "border-destructive focus-visible:ring-destructive/40")}
+                aria-invalid={teamError ? "true" : "false"}
+              >
+                <SelectValue
+                  placeholder={
+                    isAreaOptionsLoading
+                      ? "Carregando times..."
+                      : teamOptions.length > 0
+                        ? "Selecione o time"
+                        : "Selecione uma area primeiro"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {teamOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {teamError ? <p className="text-xs text-destructive">{teamError}</p> : null}
           </div>
 

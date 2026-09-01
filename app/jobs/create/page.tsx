@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { FormEvent, useEffect, useRef, useState } from "react"
 
 import { JOBS_API_PROXY_URL, ZIPS_API_PROXY_URL } from "@/config"
+import { AreaOptionsStatus } from "@/components/area-options-status"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -11,7 +12,6 @@ import { Label } from "@/components/ui/label"
 import { MultiSelect } from "@/components/ui/multi-select"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-  defaultIndustryOptions,
   defaultInterestRoleAreaMap,
   defaultInterestRoleOptions,
   filterAreaSelectionsByRoles,
@@ -19,6 +19,8 @@ import {
   topSectorOptions,
   type OnboardingOption,
 } from "@/lib/onboarding-options"
+import { areaValuesToNumbers } from "@/services/areas-service"
+import { useAreaOptions } from "@/hooks/use-area-options"
 import {
   formatZipSummary,
   isRecord,
@@ -28,7 +30,6 @@ import {
 } from "@/lib/zip-utils"
 import { cn } from "@/lib/utils"
 import {
-  fetchIndustryOptions,
   fetchInterestRoleAreaMap,
   fetchInterestRoleOptions,
 } from "@/services/onboarding-options-service"
@@ -182,7 +183,12 @@ export function validateJobFormState(formState: JobFormState) {
   }
 }
 
-export function buildJobPayload(formState: JobFormState, guidId: string, publishedAt: string) {
+export function buildJobPayload(
+  formState: JobFormState,
+  guidId: string,
+  publishedAt: string,
+  areaOptions?: OnboardingOption[],
+) {
   validateJobFormState(formState)
 
   return {
@@ -191,7 +197,7 @@ export function buildJobPayload(formState: JobFormState, guidId: string, publish
     cargo: formState.cargo,
     nivel: formState.nivel,
     setor: formState.setor.trim(),
-    area: formState.area,
+    area: areaValuesToNumbers(formState.area, areaOptions),
     time: formState.time.trim(),
     localizacao: formState.localizacao.trim(),
     modelo_trabalho: formState.modelo_trabalho,
@@ -225,7 +231,7 @@ export default function CreateJobPage() {
   const [zipLookupError, setZipLookupError] = useState<string | null>(null)
   const [zipLookupResult, setZipLookupResult] = useState<ZipLookupResponse | null>(null)
   const [hasAttemptedZipLookup, setHasAttemptedZipLookup] = useState(false)
-  const [industryOptions, setIndustryOptions] = useState<OnboardingOption[]>(defaultIndustryOptions)
+  const { options: industryOptions, source: areaOptionsSource, error: areaOptionsError, isLoading: isAreaOptionsLoading, reload: reloadAreaOptions } = useAreaOptions()
   const [interestRoleOptions, setInterestRoleOptions] = useState<OnboardingOption[]>(defaultInterestRoleOptions)
   const [roleAreaMap, setRoleAreaMap] = useState<Record<string, string[]>>(defaultInterestRoleAreaMap)
   const zipLookupController = useRef<AbortController | null>(null)
@@ -251,14 +257,12 @@ export default function CreateJobPage() {
     let isMounted = true
 
     const loadOptions = async () => {
-      const [industries, interestRoles, mappedAreas] = await Promise.all([
-        fetchIndustryOptions(),
+      const [interestRoles, mappedAreas] = await Promise.all([
         fetchInterestRoleOptions(),
         fetchInterestRoleAreaMap(),
       ])
 
       if (isMounted) {
-        setIndustryOptions(industries)
         setInterestRoleOptions(interestRoles)
         setRoleAreaMap(mappedAreas)
       }
@@ -570,6 +574,7 @@ export default function CreateJobPage() {
       formState,
       generateGuid(),
       new Date().toISOString().split("T")[0],
+      industryOptions,
     )
 
     try {
@@ -845,6 +850,13 @@ export default function CreateJobPage() {
                       area: value,
                     }))
                   }
+                />
+                <AreaOptionsStatus
+                  error={areaOptionsError}
+                  isLoading={isAreaOptionsLoading}
+                  onReload={() => void reloadAreaOptions()}
+                  options={industryOptions}
+                  source={areaOptionsSource}
                 />
                 {areaValidationMessage ? <p className="text-xs text-destructive">{areaValidationMessage}</p> : null}
               </div>
