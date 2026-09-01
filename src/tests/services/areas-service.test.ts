@@ -4,6 +4,7 @@ import {
   areaValuesToNumbers,
   fallbackAreaOptions,
   fetchAreaOptions,
+  getCompetencyOptionsForAreas,
   loadAreaOptions,
   normalizeAreaResponse,
 } from "@/services/areas-service"
@@ -56,5 +57,45 @@ describe("areas-service", () => {
     expect(areaValuesToNumbers(["1"], options)).toEqual([1])
     expect(() => areaValuesToNumbers(["slug"], options)).toThrow("Selecione apenas áreas válidas.")
     expect(() => areaValuesToNumbers(["2"], options)).toThrow("Selecione apenas áreas válidas.")
+  })
+
+  it("returns unique competencies for the selected areas", () => {
+    expect(
+      getCompetencyOptionsForAreas(["1", "2"], [
+        {
+          value: "1",
+          label: "Finanças",
+          competencias: [
+            { DS_COMPETENCIA: "Planejamento", DS_TIPO_COMPETENCIA: "Hardskill" },
+            { DS_COMPETENCIA: "Gestão", DS_TIPO_COMPETENCIA: "Softskill" },
+          ],
+        },
+        {
+          value: "2",
+          label: "Dados",
+          competencias: [
+            { DS_COMPETENCIA: "Gestão", DS_TIPO_COMPETENCIA: "Softskill" },
+            { DS_COMPETENCIA: "SQL", DS_TIPO_COMPETENCIA: "Hardskill" },
+          ],
+        },
+      ]),
+    ).toEqual([
+      { value: "Planejamento", label: "Planejamento" },
+      { value: "Gestão", label: "Gestão" },
+      { value: "SQL", label: "SQL" },
+    ])
+  })
+
+  it("returns no team options when the area is unknown or has malformed competencies", () => {
+    expect(
+      getCompetencyOptionsForAreas(["999"], [
+        { value: "1", label: "Finanças", competencias: [{ DS_COMPETENCIA: "Planejamento", DS_TIPO_COMPETENCIA: "Hardskill" }] },
+      ]),
+    ).toEqual([])
+    expect(
+      getCompetencyOptionsForAreas(["1"], [
+        { value: "1", label: "Finanças", competencias: [{ DS_COMPETENCIA: " ", DS_TIPO_COMPETENCIA: "Hardskill" }] },
+      ]),
+    ).toEqual([])
   })
 })
