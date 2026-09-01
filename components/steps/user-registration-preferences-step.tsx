@@ -23,6 +23,7 @@ import {
   type TravelAvailabilityOption,
 } from "@/lib/onboarding-options"
 import { cn } from "@/lib/utils"
+import { getCompetencyOptionsForAreas } from "@/services/areas-service"
 import {
   fetchContractTypeOptions,
   fetchHardSkillOptions,
@@ -95,6 +96,7 @@ export function UserRegistrationPreferencesStep({
   const [workTypeOptions, setWorkTypeOptions] = useState<OnboardingOption[]>(defaultWorkTypeOptions)
   const [contractTypeOptions, setContractTypeOptions] = useState<OnboardingOption[]>(defaultContractTypeOptions)
   const { options: industryOptions, source: areaOptionsSource, error: areaOptionsError, isLoading: isAreaOptionsLoading, reload: reloadAreaOptions } = useAreaOptions()
+  const teamOptions = getCompetencyOptionsForAreas(formData.areaPreferencia, industryOptions)
   const [seniorityOptions, setSeniorityOptions] = useState<OnboardingOption[]>(defaultSeniorityOptions)
   const [hardSkillOptions, setHardSkillOptions] = useState<OnboardingOption[]>(defaultHardSkillOptions)
   const [softSkillOptions, setSoftSkillOptions] = useState<OnboardingOption[]>(defaultSoftSkillOptions)
@@ -231,7 +233,12 @@ export function UserRegistrationPreferencesStep({
               placeholder="Selecione ate 3 areas"
               value={formData.areaPreferencia}
               onChange={(value) => {
-                setFormData({ ...formData, areaPreferencia: value })
+                const nextTeamOptions = getCompetencyOptionsForAreas(value, industryOptions)
+                setFormData({
+                  ...formData,
+                  areaPreferencia: value,
+                  time: nextTeamOptions.some((option) => option.value === formData.time) ? formData.time : "",
+                })
                 if (!touched.areaPreferencia) {
                   setTouched((previous) => ({ ...previous, areaPreferencia: true }))
                 }
@@ -278,18 +285,39 @@ export function UserRegistrationPreferencesStep({
 
           <div className="space-y-2">
             <Label htmlFor="time">Time</Label>
-            <Input
-              id="time"
+            <Select
               value={formData.time}
-              onChange={(event) => setFormData({ ...formData, time: event.target.value })}
-              onBlur={() => {
+              onValueChange={(value) => {
+                setFormData({ ...formData, time: value })
                 if (!touched.time) {
                   setTouched((previous) => ({ ...previous, time: true }))
                 }
               }}
-              className={cn(teamError && "border-destructive focus-visible:ring-destructive/40")}
-              aria-invalid={teamError ? "true" : "false"}
-            />
+            >
+              <SelectTrigger
+                id="time"
+                disabled={isAreaOptionsLoading || (teamOptions.length === 0 && !formData.time)}
+                className={cn("w-full", teamError && "border-destructive focus-visible:ring-destructive/40")}
+                aria-invalid={teamError ? "true" : "false"}
+              >
+                <SelectValue
+                  placeholder={
+                    isAreaOptionsLoading
+                      ? "Carregando times..."
+                      : teamOptions.length > 0
+                        ? "Selecione o time"
+                        : "Selecione uma area primeiro"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {teamOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {teamError ? <p className="text-xs text-destructive">{teamError}</p> : null}
           </div>
 

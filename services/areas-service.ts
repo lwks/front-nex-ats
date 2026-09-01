@@ -3,6 +3,7 @@ import { apiFetch } from "@/services/api-client"
 export type AreaCompetency = { DS_COMPETENCIA: string; DS_TIPO_COMPETENCIA: string }
 export type AreaApiRecord = { ID: number; DS_AREA: string; competencias?: AreaCompetency[] }
 export type AreaOption = { value: string; label: string; competencias?: AreaCompetency[] }
+export type AreaCompetencyOption = { value: string; label: string }
 export type AreaOptionsLoadResult = { options: AreaOption[]; source: "api" | null; error?: string }
 
 function normalizeAreaRecord(area: AreaApiRecord): AreaOption {
@@ -24,6 +25,27 @@ export async function loadAreaOptions(): Promise<AreaOptionsLoadResult> {
   try { return { options: await fetchAreaOptions(), source: "api" } }
   catch (error) { return { options: [], source: null, error: error instanceof Error ? error.message : "Não foi possível carregar as áreas." } }
 }
+
+export function getCompetencyOptionsForAreas(
+  selectedAreaValues: string[],
+  areaOptions: AreaOption[],
+): AreaCompetencyOption[] {
+  const selectedAreas = new Set(selectedAreaValues)
+  const competencyOptions = new Map<string, AreaCompetencyOption>()
+
+  areaOptions
+    .filter((area) => selectedAreas.has(area.value))
+    .flatMap((area) => (Array.isArray(area.competencias) ? area.competencias : []))
+    .forEach((competency) => {
+      const label = String(competency?.DS_COMPETENCIA ?? "").trim()
+      if (label && !competencyOptions.has(label)) {
+        competencyOptions.set(label, { value: label, label })
+      }
+    })
+
+  return [...competencyOptions.values()]
+}
+
 export function areaValuesToNumbers(values: string[], options?: AreaOption[]): number[] {
   const allowedValues = options ? new Set(options.map((option) => option.value)) : undefined
   return values.map((value) => {
