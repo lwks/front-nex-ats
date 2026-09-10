@@ -16,14 +16,15 @@ import {
   defaultHardSkillOptions,
   defaultSeniorityOptions,
   defaultSoftSkillOptions,
+  defaultTeamOptions,
   defaultTravelAvailabilityOptions,
   defaultWorkTypeOptions,
+  normalizeTeamValue,
   topSectorOptions,
   type OnboardingOption,
   type TravelAvailabilityOption,
 } from "@/lib/onboarding-options"
 import { cn } from "@/lib/utils"
-import { getCompetencyOptionsForAreas } from "@/services/areas-service"
 import {
   fetchContractTypeOptions,
   fetchHardSkillOptions,
@@ -66,7 +67,7 @@ export function UserRegistrationPreferencesStep({
 }: UserRegistrationPreferencesStepProps) {
   const [formData, setFormData] = useState({
     setor: data.setor || "",
-    time: data.time || "",
+    time: normalizeTeamValue(data.time),
     senioridadePreferencia: data.senioridadePreferencia || "",
     areaPreferencia: data.areaPreferencia || [],
     tipoContratacao: data.tipoContratacao || [],
@@ -96,7 +97,6 @@ export function UserRegistrationPreferencesStep({
   const [workTypeOptions, setWorkTypeOptions] = useState<OnboardingOption[]>(defaultWorkTypeOptions)
   const [contractTypeOptions, setContractTypeOptions] = useState<OnboardingOption[]>(defaultContractTypeOptions)
   const { options: industryOptions, source: areaOptionsSource, error: areaOptionsError, isLoading: isAreaOptionsLoading, reload: reloadAreaOptions } = useAreaOptions()
-  const teamOptions = getCompetencyOptionsForAreas(formData.areaPreferencia, industryOptions)
   const [seniorityOptions, setSeniorityOptions] = useState<OnboardingOption[]>(defaultSeniorityOptions)
   const [hardSkillOptions, setHardSkillOptions] = useState<OnboardingOption[]>(defaultHardSkillOptions)
   const [softSkillOptions, setSoftSkillOptions] = useState<OnboardingOption[]>(defaultSoftSkillOptions)
@@ -233,11 +233,9 @@ export function UserRegistrationPreferencesStep({
               placeholder="Selecione ate 3 areas"
               value={formData.areaPreferencia}
               onChange={(value) => {
-                const nextTeamOptions = getCompetencyOptionsForAreas(value, industryOptions)
                 setFormData({
                   ...formData,
                   areaPreferencia: value,
-                  time: nextTeamOptions.some((option) => option.value === formData.time) ? formData.time : "",
                 })
                 if (!touched.areaPreferencia) {
                   setTouched((previous) => ({ ...previous, areaPreferencia: true }))
@@ -296,22 +294,17 @@ export function UserRegistrationPreferencesStep({
             >
               <SelectTrigger
                 id="time"
-                disabled={isAreaOptionsLoading || (teamOptions.length === 0 && !formData.time)}
                 className={cn("w-full", teamError && "border-destructive focus-visible:ring-destructive/40")}
                 aria-invalid={teamError ? "true" : "false"}
               >
                 <SelectValue
                   placeholder={
-                    isAreaOptionsLoading
-                      ? "Carregando times..."
-                      : teamOptions.length > 0
-                        ? "Selecione o time"
-                        : "Selecione uma area primeiro"
+                    "Selecione o time"
                   }
                 />
               </SelectTrigger>
               <SelectContent>
-                {teamOptions.map((option) => (
+                {defaultTeamOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>

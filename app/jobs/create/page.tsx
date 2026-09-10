@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   defaultInterestRoleAreaMap,
   defaultInterestRoleOptions,
+  defaultTeamOptions,
   filterAreaSelectionsByRoles,
   resolveAreaValuesForRoles,
   topSectorOptions,
@@ -819,15 +820,26 @@ export default function CreateJobPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="time">Time</Label>
-                <Input
-                  id="time"
-                  name="time"
+                <Select
                   value={formState.time}
-                  onChange={handleChange("time")}
-                  required
-                  aria-invalid={teamValidationMessage ? "true" : "false"}
-                  className={cn(teamValidationMessage && "border-destructive focus-visible:ring-destructive/40")}
-                />
+                  onValueChange={(value) => setFormState((previous) => ({ ...previous, time: value }))}
+                >
+                  <SelectTrigger
+                    id="time"
+                    name="time"
+                    aria-invalid={teamValidationMessage ? "true" : "false"}
+                    className={cn("w-full", teamValidationMessage && "border-destructive focus-visible:ring-destructive/40")}
+                  >
+                    <SelectValue placeholder="Selecione o time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {defaultTeamOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {teamValidationMessage ? <p className="text-xs text-destructive">{teamValidationMessage}</p> : null}
               </div>
 

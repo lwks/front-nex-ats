@@ -5,7 +5,7 @@ import {
   validateJobFormState,
   type JobFormState,
 } from "@/app/jobs/create/page"
-import { topSectorOptions } from "@/lib/onboarding-options"
+import { defaultTeamOptions, normalizeTeamValue, topSectorOptions } from "@/lib/onboarding-options"
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -79,5 +79,56 @@ describe("/jobs/create payload helpers", () => {
     expect(topSectorOptions).toHaveLength(15)
     expect(topSectorOptions.map((option) => option.value)).toContain("tecnologia-informacao-ti")
     expect(topSectorOptions.map((option) => option.value)).toContain("agronegocio")
+  })
+
+  it("provides the 39 team options in alphabetical order with matching values and labels", () => {
+    expect(defaultTeamOptions).toHaveLength(39)
+    expect(defaultTeamOptions.every((option) => option.value === option.label)).toBe(true)
+    expect(defaultTeamOptions.map((option) => option.label)).toEqual([
+      "Análise de desempenho",
+      "Apresentação de ideias",
+      "Apresentação Executiva",
+      "Avaliação de desempenho",
+      "Colaboração",
+      "Definição e acompanhamento de indicadores (KPIs)",
+      "Desenvolvimento de pessoas",
+      "Desenvolvimento e capacitação de equipes",
+      "Disciplina",
+      "Elaboração de dashboards gerenciais",
+      "Gestão de conflitos",
+      "Gestão de contratos e fornecedores",
+      "Gestão de Equipes",
+      "Gestão de orçamento e recursos",
+      "Gestão de projetos",
+      "Gestão de riscos",
+      "Gestão de stakeholders",
+      "Gestão de talentos e sucessão",
+      "Gestão do tempo",
+      "Gestão por OKRs",
+      "Lean e melhoria contínua",
+      "Metodologias ágeis (Scrum, Kanban, SAFe)",
+      "Mentoria",
+      "Motivação de equipes",
+      "Networking",
+      "Orientação para resultados",
+      "Organização",
+      "P&L",
+      "Pensamento analítico",
+      "Pensamento crítico",
+      "Planejamento",
+      "Planejamento estratégico",
+      "PMBOK ou metodologias de gerenciamento de projetos",
+      "Priorização",
+      "Projetos Internacionais",
+      "Resolução de problemas",
+      "Storytelling",
+      "Tomada de decisão",
+      "Trabalho em equipe",
+    ])
+  })
+
+  it("clears a legacy team value that is not in the fixed options", () => {
+    expect(normalizeTeamValue("Produto")).toBe("")
+    expect(normalizeTeamValue(" Planejamento ")).toBe("Planejamento")
   })
 })

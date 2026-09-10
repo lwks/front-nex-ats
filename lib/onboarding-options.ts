@@ -13,6 +13,53 @@ export type TravelAvailabilityOption = {
   label: string
 }
 
+export const defaultTeamOptions: OnboardingOption[] = [
+  { value: "Análise de desempenho", label: "Análise de desempenho" },
+  { value: "Apresentação de ideias", label: "Apresentação de ideias" },
+  { value: "Apresentação Executiva", label: "Apresentação Executiva" },
+  { value: "Avaliação de desempenho", label: "Avaliação de desempenho" },
+  { value: "Colaboração", label: "Colaboração" },
+  { value: "Definição e acompanhamento de indicadores (KPIs)", label: "Definição e acompanhamento de indicadores (KPIs)" },
+  { value: "Desenvolvimento de pessoas", label: "Desenvolvimento de pessoas" },
+  { value: "Desenvolvimento e capacitação de equipes", label: "Desenvolvimento e capacitação de equipes" },
+  { value: "Disciplina", label: "Disciplina" },
+  { value: "Elaboração de dashboards gerenciais", label: "Elaboração de dashboards gerenciais" },
+  { value: "Gestão de conflitos", label: "Gestão de conflitos" },
+  { value: "Gestão de contratos e fornecedores", label: "Gestão de contratos e fornecedores" },
+  { value: "Gestão de Equipes", label: "Gestão de Equipes" },
+  { value: "Gestão de orçamento e recursos", label: "Gestão de orçamento e recursos" },
+  { value: "Gestão de projetos", label: "Gestão de projetos" },
+  { value: "Gestão de riscos", label: "Gestão de riscos" },
+  { value: "Gestão de stakeholders", label: "Gestão de stakeholders" },
+  { value: "Gestão de talentos e sucessão", label: "Gestão de talentos e sucessão" },
+  { value: "Gestão do tempo", label: "Gestão do tempo" },
+  { value: "Gestão por OKRs", label: "Gestão por OKRs" },
+  { value: "Lean e melhoria contínua", label: "Lean e melhoria contínua" },
+  { value: "Metodologias ágeis (Scrum, Kanban, SAFe)", label: "Metodologias ágeis (Scrum, Kanban, SAFe)" },
+  { value: "Mentoria", label: "Mentoria" },
+  { value: "Motivação de equipes", label: "Motivação de equipes" },
+  { value: "Networking", label: "Networking" },
+  { value: "Orientação para resultados", label: "Orientação para resultados" },
+  { value: "Organização", label: "Organização" },
+  { value: "P&L", label: "P&L" },
+  { value: "Pensamento analítico", label: "Pensamento analítico" },
+  { value: "Pensamento crítico", label: "Pensamento crítico" },
+  { value: "Planejamento", label: "Planejamento" },
+  { value: "Planejamento estratégico", label: "Planejamento estratégico" },
+  { value: "PMBOK ou metodologias de gerenciamento de projetos", label: "PMBOK ou metodologias de gerenciamento de projetos" },
+  { value: "Priorização", label: "Priorização" },
+  { value: "Projetos Internacionais", label: "Projetos Internacionais" },
+  { value: "Resolução de problemas", label: "Resolução de problemas" },
+  { value: "Storytelling", label: "Storytelling" },
+  { value: "Tomada de decisão", label: "Tomada de decisão" },
+  { value: "Trabalho em equipe", label: "Trabalho em equipe" },
+]
+
+export function normalizeTeamValue(value: unknown): string {
+  const normalizedValue = String(value ?? "").trim()
+  return defaultTeamOptions.some((option) => option.value === normalizedValue) ? normalizedValue : ""
+}
+
 export const defaultExperienceOptions: OnboardingOption[] = [
   { value: "estagio", label: "Estagio" },
   { value: "junior", label: "1-3 anos" },
