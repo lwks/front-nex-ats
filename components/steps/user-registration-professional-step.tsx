@@ -19,12 +19,13 @@ import {
   defaultLanguageProficiencyOptions,
   defaultSeniorityOptions,
   defaultSoftSkillOptions,
+  defaultTeamOptions,
+  normalizeTeamValue,
   topSectorOptions,
   type LanguageProficiencyOption,
   type OnboardingOption,
 } from "@/lib/onboarding-options"
 import { cn } from "@/lib/utils"
-import { getCompetencyOptionsForAreas } from "@/services/areas-service"
 import {
   fetchCurrentBenefitOptions,
   fetchExperienceOptions,
@@ -83,7 +84,7 @@ export function UserRegistrationProfessionalStep({
     empresaAtual: data.empresaAtual || "",
     senioridade: data.senioridade || "",
     setorAtual: data.setorAtual || "",
-    timeAtual: data.timeAtual || "",
+    timeAtual: normalizeTeamValue(data.timeAtual),
     beneficiosAtuais: data.beneficiosAtuais || [],
     industriaInteresse: data.industriaInteresse || [],
     hardSkillsProfissionais: data.hardSkillsProfissionais || [],
@@ -105,7 +106,6 @@ export function UserRegistrationProfessionalStep({
   })
   const [experienceOptions, setExperienceOptions] = useState<OnboardingOption[]>(defaultExperienceOptions)
   const { options: industryOptions, source: areaOptionsSource, error: areaOptionsError, isLoading: isAreaOptionsLoading, reload: reloadAreaOptions } = useAreaOptions()
-  const teamOptions = getCompetencyOptionsForAreas(formData.industriaInteresse, industryOptions)
   const [seniorityOptions, setSeniorityOptions] = useState<OnboardingOption[]>(defaultSeniorityOptions)
   const [benefitOptions, setBenefitOptions] = useState<OnboardingOption[]>(defaultCurrentBenefitOptions)
   const [hardSkillOptions, setHardSkillOptions] = useState<OnboardingOption[]>(defaultHardSkillOptions)
@@ -379,13 +379,9 @@ export function UserRegistrationProfessionalStep({
               placeholder="Selecione ate 3 areas"
               value={formData.industriaInteresse}
               onChange={(value) => {
-                const nextTeamOptions = getCompetencyOptionsForAreas(value, industryOptions)
                 setFormData({
                   ...formData,
                   industriaInteresse: value,
-                  timeAtual: nextTeamOptions.some((option) => option.value === formData.timeAtual)
-                    ? formData.timeAtual
-                    : "",
                 })
                 if (!touched.industriaInteresse) {
                   setTouched((previous) => ({ ...previous, industriaInteresse: true }))
@@ -415,22 +411,17 @@ export function UserRegistrationProfessionalStep({
             >
               <SelectTrigger
                 id="timeAtual"
-                disabled={isAreaOptionsLoading || (teamOptions.length === 0 && !formData.timeAtual)}
                 className={cn("w-full", currentTeamError && "border-destructive focus-visible:ring-destructive/40")}
                 aria-invalid={currentTeamError ? "true" : "false"}
               >
                 <SelectValue
                   placeholder={
-                    isAreaOptionsLoading
-                      ? "Carregando times..."
-                      : teamOptions.length > 0
-                        ? "Selecione o time"
-                        : "Selecione uma area primeiro"
+                    "Selecione o time"
                   }
                 />
               </SelectTrigger>
               <SelectContent>
-                {teamOptions.map((option) => (
+                {defaultTeamOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
