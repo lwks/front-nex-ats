@@ -87,7 +87,7 @@ describe("UserRegistrationPage", () => {
       <UserRegistrationPreferencesStep
         data={{
           setor: "tecnologia",
-          time: "Produto",
+          time: "Planejamento",
           senioridadePreferencia: "senior",
           areaPreferencia: ["tecnologia-informacao-ti"],
           tipoContratacao: ["clt"],
