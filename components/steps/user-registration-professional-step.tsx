@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   defaultCurrentBenefitOptions,
   defaultExperienceOptions,
-  defaultHardSkillOptions,
   defaultLanguageOptions,
   defaultLanguageProficiencyOptions,
   defaultSeniorityOptions,
@@ -29,7 +28,6 @@ import { cn } from "@/lib/utils"
 import {
   fetchCurrentBenefitOptions,
   fetchExperienceOptions,
-  fetchHardSkillOptions,
   fetchLanguageOptions,
   fetchLanguageProficiencyOptions,
   fetchSeniorityOptions,
@@ -37,6 +35,7 @@ import {
 } from "@/services/onboarding-options-service"
 import type { UserRegistrationData, UserRegistrationLanguage } from "@/services/user-registration-service"
 import { useAreaOptions } from "@/hooks/use-area-options"
+import { getHardSkillOptionsForAreas } from "@/services/hard-skills-service"
 
 type UserRegistrationProfessionalStepProps = {
   data: Partial<UserRegistrationData>
@@ -108,11 +107,14 @@ export function UserRegistrationProfessionalStep({
   const { options: industryOptions, source: areaOptionsSource, error: areaOptionsError, isLoading: isAreaOptionsLoading, reload: reloadAreaOptions } = useAreaOptions()
   const [seniorityOptions, setSeniorityOptions] = useState<OnboardingOption[]>(defaultSeniorityOptions)
   const [benefitOptions, setBenefitOptions] = useState<OnboardingOption[]>(defaultCurrentBenefitOptions)
-  const [hardSkillOptions, setHardSkillOptions] = useState<OnboardingOption[]>(defaultHardSkillOptions)
   const [softSkillOptions, setSoftSkillOptions] = useState<OnboardingOption[]>(defaultSoftSkillOptions)
   const [languageOptions, setLanguageOptions] = useState<OnboardingOption[]>(defaultLanguageOptions)
   const [languageProficiencyOptions, setLanguageProficiencyOptions] = useState<LanguageProficiencyOption[]>(
     defaultLanguageProficiencyOptions,
+  )
+  const hardSkillOptions = useMemo(
+    () => getHardSkillOptionsForAreas(formData.industriaInteresse, industryOptions),
+    [formData.industriaInteresse, industryOptions],
   )
 
   const isFormComplete =
@@ -178,7 +180,6 @@ export function UserRegistrationProfessionalStep({
         experiences,
         seniorities,
         benefits,
-        hardSkills,
         softSkills,
         languages,
         proficiencies,
@@ -186,7 +187,6 @@ export function UserRegistrationProfessionalStep({
         fetchExperienceOptions(),
         fetchSeniorityOptions(),
         fetchCurrentBenefitOptions(),
-        fetchHardSkillOptions(),
         fetchSoftSkillOptions(),
         fetchLanguageOptions(),
         fetchLanguageProficiencyOptions(),
@@ -196,7 +196,6 @@ export function UserRegistrationProfessionalStep({
         setExperienceOptions(experiences)
         setSeniorityOptions(seniorities)
         setBenefitOptions(benefits)
-        setHardSkillOptions(hardSkills)
         setSoftSkillOptions(softSkills)
         setLanguageOptions(languages)
         setLanguageProficiencyOptions(proficiencies)
@@ -209,6 +208,18 @@ export function UserRegistrationProfessionalStep({
       isMounted = false
     }
   }, [])
+
+  useEffect(() => {
+    if (industryOptions.length === 0) {
+      return
+    }
+
+    const allowedValues = new Set(hardSkillOptions.map((option) => option.value))
+    setFormData((previous) => ({
+      ...previous,
+      hardSkillsProfissionais: previous.hardSkillsProfissionais.filter((value) => allowedValues.has(value)),
+    }))
+  }, [hardSkillOptions, industryOptions.length])
 
   const handleLanguageChange = (index: number, field: keyof UserRegistrationLanguage, value: string) => {
     setFormData((previous) => ({
@@ -379,10 +390,12 @@ export function UserRegistrationProfessionalStep({
               placeholder="Selecione ate 3 areas"
               value={formData.industriaInteresse}
               onChange={(value) => {
-                setFormData({
-                  ...formData,
+                const allowedValues = new Set(getHardSkillOptionsForAreas(value, industryOptions).map((option) => option.value))
+                setFormData((previous) => ({
+                  ...previous,
                   industriaInteresse: value,
-                })
+                  hardSkillsProfissionais: previous.hardSkillsProfissionais.filter((skill) => allowedValues.has(skill)),
+                }))
                 if (!touched.industriaInteresse) {
                   setTouched((previous) => ({ ...previous, industriaInteresse: true }))
                 }
@@ -487,7 +500,8 @@ export function UserRegistrationProfessionalStep({
               id="hardSkillsProfissionais"
               maxSelections={7}
               options={hardSkillOptions}
-              placeholder="Selecione ate 7 hard skills"
+              placeholder={formData.industriaInteresse.length > 0 ? "Selecione ate 7 hard skills" : "Selecione uma area primeiro"}
+              disabled={hardSkillOptions.length === 0}
               value={formData.hardSkillsProfissionais}
               onChange={(value) => {
                 setFormData({ ...formData, hardSkillsProfissionais: value })

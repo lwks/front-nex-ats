@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { AreaOptionsStatus } from "@/components/area-options-status"
@@ -13,7 +13,6 @@ import { MultiSelect } from "@/components/ui/multi-select"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   defaultContractTypeOptions,
-  defaultHardSkillOptions,
   defaultSeniorityOptions,
   defaultSoftSkillOptions,
   defaultTeamOptions,
@@ -27,7 +26,6 @@ import {
 import { cn } from "@/lib/utils"
 import {
   fetchContractTypeOptions,
-  fetchHardSkillOptions,
   fetchSeniorityOptions,
   fetchSoftSkillOptions,
   fetchTravelAvailabilityOptions,
@@ -35,6 +33,7 @@ import {
 } from "@/services/onboarding-options-service"
 import type { UserRegistrationData } from "@/services/user-registration-service"
 import { useAreaOptions } from "@/hooks/use-area-options"
+import { getHardSkillOptionsForAreas } from "@/services/hard-skills-service"
 
 const BRL_NUMBER_FORMATTER = new Intl.NumberFormat("pt-BR")
 
@@ -98,9 +97,12 @@ export function UserRegistrationPreferencesStep({
   const [contractTypeOptions, setContractTypeOptions] = useState<OnboardingOption[]>(defaultContractTypeOptions)
   const { options: industryOptions, source: areaOptionsSource, error: areaOptionsError, isLoading: isAreaOptionsLoading, reload: reloadAreaOptions } = useAreaOptions()
   const [seniorityOptions, setSeniorityOptions] = useState<OnboardingOption[]>(defaultSeniorityOptions)
-  const [hardSkillOptions, setHardSkillOptions] = useState<OnboardingOption[]>(defaultHardSkillOptions)
   const [softSkillOptions, setSoftSkillOptions] = useState<OnboardingOption[]>(defaultSoftSkillOptions)
   const [travelOptions, setTravelOptions] = useState<TravelAvailabilityOption[]>(defaultTravelAvailabilityOptions)
+  const hardSkillOptions = useMemo(
+    () => getHardSkillOptionsForAreas(formData.areaPreferencia, industryOptions),
+    [formData.areaPreferencia, industryOptions],
+  )
 
   const isFormComplete =
     Boolean(formData.setor.trim()) &&
@@ -163,11 +165,10 @@ export function UserRegistrationPreferencesStep({
     let isMounted = true
 
     const loadOptions = async () => {
-      const [workTypes, contractTypes, seniorities, hardSkills, softSkills, travel] = await Promise.all([
+      const [workTypes, contractTypes, seniorities, softSkills, travel] = await Promise.all([
         fetchWorkTypeOptions(),
         fetchContractTypeOptions(),
         fetchSeniorityOptions(),
-        fetchHardSkillOptions(),
         fetchSoftSkillOptions(),
         fetchTravelAvailabilityOptions(),
       ])
@@ -176,7 +177,6 @@ export function UserRegistrationPreferencesStep({
         setWorkTypeOptions(workTypes)
         setContractTypeOptions(contractTypes)
         setSeniorityOptions(seniorities)
-        setHardSkillOptions(hardSkills)
         setSoftSkillOptions(softSkills)
         setTravelOptions(travel)
       }
@@ -188,6 +188,18 @@ export function UserRegistrationPreferencesStep({
       isMounted = false
     }
   }, [])
+
+  useEffect(() => {
+    if (industryOptions.length === 0) {
+      return
+    }
+
+    const allowedValues = new Set(hardSkillOptions.map((option) => option.value))
+    setFormData((previous) => ({
+      ...previous,
+      hardSkills: previous.hardSkills.filter((value) => allowedValues.has(value)),
+    }))
+  }, [hardSkillOptions, industryOptions.length])
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -233,10 +245,12 @@ export function UserRegistrationPreferencesStep({
               placeholder="Selecione ate 3 areas"
               value={formData.areaPreferencia}
               onChange={(value) => {
-                setFormData({
-                  ...formData,
+                const allowedValues = new Set(getHardSkillOptionsForAreas(value, industryOptions).map((option) => option.value))
+                setFormData((previous) => ({
+                  ...previous,
                   areaPreferencia: value,
-                })
+                  hardSkills: previous.hardSkills.filter((skill) => allowedValues.has(skill)),
+                }))
                 if (!touched.areaPreferencia) {
                   setTouched((previous) => ({ ...previous, areaPreferencia: true }))
                 }
@@ -437,7 +451,8 @@ export function UserRegistrationPreferencesStep({
               id="hardSkills"
               maxSelections={7}
               options={hardSkillOptions}
-              placeholder="Selecione ate 7 hard skills"
+              placeholder={formData.areaPreferencia.length > 0 ? "Selecione ate 7 hard skills" : "Selecione uma area primeiro"}
+              disabled={hardSkillOptions.length === 0}
               value={formData.hardSkills}
               onChange={(value) => {
                 setFormData({ ...formData, hardSkills: value })
