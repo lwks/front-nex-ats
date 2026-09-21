@@ -13,12 +13,14 @@ import { MultiSelect } from "@/components/ui/multi-select"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   defaultContractTypeOptions,
+  MAX_SKILL_SELECTIONS,
   defaultSeniorityOptions,
   defaultSoftSkillOptions,
-  defaultTeamOptions,
   defaultTravelAvailabilityOptions,
   defaultWorkTypeOptions,
+  getTeamOptionsForAreas,
   normalizeTeamValue,
+  normalizeTeamValueForAreas,
   topSectorOptions,
   type OnboardingOption,
   type TravelAvailabilityOption,
@@ -103,6 +105,20 @@ export function UserRegistrationPreferencesStep({
     () => getHardSkillOptionsForAreas(formData.areaPreferencia, industryOptions),
     [formData.areaPreferencia, industryOptions],
   )
+  const teamOptions = useMemo(
+    () => getTeamOptionsForAreas(formData.areaPreferencia, industryOptions),
+    [formData.areaPreferencia, industryOptions],
+  )
+
+  useEffect(() => {
+    setFormData((previous) => {
+      if (previous.areaPreferencia.length > 0 && industryOptions.length === 0 && !areaOptionsSource && !areaOptionsError) {
+        return previous
+      }
+      const nextTime = normalizeTeamValueForAreas(previous.time, previous.areaPreferencia, industryOptions)
+      return nextTime === previous.time ? previous : { ...previous, time: nextTime }
+    })
+  }, [areaOptionsError, areaOptionsSource, formData.areaPreferencia, industryOptions])
 
   const isFormComplete =
     Boolean(formData.setor.trim()) &&
@@ -113,9 +129,9 @@ export function UserRegistrationPreferencesStep({
     formData.tipoContratacao.length > 0 &&
     formData.modeloTrabalho.length > 0 &&
     formData.hardSkills.length > 0 &&
-    formData.hardSkills.length <= 7 &&
+    formData.hardSkills.length <= MAX_SKILL_SELECTIONS &&
     formData.softSkills.length > 0 &&
-    formData.softSkills.length <= 7 &&
+    formData.softSkills.length <= MAX_SKILL_SELECTIONS &&
     Boolean(formData.viagemTrabalho) &&
     Boolean(formData.pretensaoSalarial.trim()) &&
     Boolean(formData.sobreVoce.trim()) &&
@@ -142,14 +158,14 @@ export function UserRegistrationPreferencesStep({
   const hardSkillError =
     touched.hardSkills && formData.hardSkills.length === 0
       ? "Selecione ao menos uma hard skill."
-      : touched.hardSkills && formData.hardSkills.length > 7
-        ? "Selecione no maximo 7 hard skills."
+      : touched.hardSkills && formData.hardSkills.length > MAX_SKILL_SELECTIONS
+        ? `Selecione no maximo ${MAX_SKILL_SELECTIONS} hard skills.`
         : ""
   const softSkillError =
     touched.softSkills && formData.softSkills.length === 0
       ? "Selecione ao menos uma soft skill."
-      : touched.softSkills && formData.softSkills.length > 7
-        ? "Selecione no maximo 7 soft skills."
+      : touched.softSkills && formData.softSkills.length > MAX_SKILL_SELECTIONS
+        ? `Selecione no maximo ${MAX_SKILL_SELECTIONS} soft skills.`
         : ""
   const travelError =
     touched.viagemTrabalho && !formData.viagemTrabalho ? "Selecione a disponibilidade para viagem de trabalho." : ""
@@ -249,6 +265,7 @@ export function UserRegistrationPreferencesStep({
                 setFormData((previous) => ({
                   ...previous,
                   areaPreferencia: value,
+                  time: normalizeTeamValueForAreas(previous.time, value, industryOptions),
                   hardSkills: previous.hardSkills.filter((skill) => allowedValues.has(skill)),
                 }))
                 if (!touched.areaPreferencia) {
@@ -299,6 +316,7 @@ export function UserRegistrationPreferencesStep({
             <Label htmlFor="time">Time</Label>
             <Select
               value={formData.time}
+              disabled={teamOptions.length === 0}
               onValueChange={(value) => {
                 setFormData({ ...formData, time: value })
                 if (!touched.time) {
@@ -313,12 +331,16 @@ export function UserRegistrationPreferencesStep({
               >
                 <SelectValue
                   placeholder={
-                    "Selecione o time"
+                    formData.areaPreferencia.length === 0
+                      ? "Selecione uma área primeiro"
+                      : teamOptions.length === 0
+                        ? "Nenhum time disponível"
+                        : "Selecione o time"
                   }
                 />
               </SelectTrigger>
               <SelectContent>
-                {defaultTeamOptions.map((option) => (
+                {teamOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -449,9 +471,9 @@ export function UserRegistrationPreferencesStep({
             <Label htmlFor="hardSkills">Hard Skills</Label>
             <MultiSelect
               id="hardSkills"
-              maxSelections={7}
+              maxSelections={MAX_SKILL_SELECTIONS}
               options={hardSkillOptions}
-              placeholder={formData.areaPreferencia.length > 0 ? "Selecione ate 7 hard skills" : "Selecione uma area primeiro"}
+              placeholder={formData.areaPreferencia.length > 0 ? `Selecione ate ${MAX_SKILL_SELECTIONS} hard skills` : "Selecione uma area primeiro"}
               disabled={hardSkillOptions.length === 0}
               value={formData.hardSkills}
               onChange={(value) => {
@@ -467,9 +489,9 @@ export function UserRegistrationPreferencesStep({
             <Label htmlFor="softSkills">Soft Skills</Label>
             <MultiSelect
               id="softSkills"
-              maxSelections={7}
+              maxSelections={MAX_SKILL_SELECTIONS}
               options={softSkillOptions}
-              placeholder="Selecione ate 7 soft skills"
+              placeholder={`Selecione ate ${MAX_SKILL_SELECTIONS} soft skills`}
               value={formData.softSkills}
               onChange={(value) => {
                 setFormData({ ...formData, softSkills: value })

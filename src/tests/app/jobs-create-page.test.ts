@@ -81,50 +81,19 @@ describe("/jobs/create payload helpers", () => {
     expect(topSectorOptions.map((option) => option.value)).toContain("agronegocio")
   })
 
-  it("provides the 39 team options in alphabetical order with matching values and labels", () => {
-    expect(defaultTeamOptions).toHaveLength(39)
+  it("provides the 53 team options in alphabetical order with matching values and labels", () => {
+    expect(defaultTeamOptions).toHaveLength(53)
     expect(defaultTeamOptions.every((option) => option.value === option.label)).toBe(true)
-    expect(defaultTeamOptions.map((option) => option.label)).toEqual([
-      "Análise de Dados",
-      "Arquitetura de Dados",
-      "Arquitetura de Software",
-      "Auditoria",
-      "Business Intelligence (BI)",
-      "Business Partner",
-      "Ciência de Dados",
-      "Cloud Engineering",
-      "Compras/Procurement",
-      "Contabilidade",
-      "Contas a Pagar/Contas a Receber",
-      "Controladoria",
-      "Crédito e Risco",
-      "Departamento Pessoal",
-      "Desenvolvimento Back-end",
-      "Desenvolvimento Front-end",
-      "Desenvolvimento Full Stack",
-      "DevOps",
-      "Employer Branding",
-      "Engenharia de Dados",
-      "Engenharia de IA",
-      "Engenharia de Software",
-      "FP&A (Planejamento Financeiro)",
-      "Help Desk",
-      "HR Operations",
-      "Infraestrutura de TI",
-      "Investimentos",
-      "Machine Learning",
-      "People Analytics",
-      "Quality Assurance (QA)",
-      "Redes",
-      "Remuneração e Beneficios",
-      "Segurança da Informação",
-      "Site Reliability Engineering (SRE)",
-      "Talent Acquisition",
-      "Tesouraria",
-      "Treinamento e Desenvolvimento",
-      "UI Design",
-      "UX Design",
-    ])
+    const labels = defaultTeamOptions.map((option) => option.label)
+    expect(labels).toEqual([...labels].sort((first, second) => first.localeCompare(second, "pt-BR")))
+    expect(labels).toEqual(expect.arrayContaining([
+      "Customer Success",
+      "Remuneração e Benefícios",
+      "Pós-Vendas",
+      "Sales Ops / Revenue Ops",
+      "Supply Chain / Logística",
+    ]))
+    expect(labels).not.toEqual(expect.arrayContaining(["Costumer Success", "Remuneração e Beneficios", "Pós -Vendas"]))
   })
 
   it("clears a legacy team value that is not in the fixed options", () => {

@@ -13,51 +13,137 @@ export type TravelAvailabilityOption = {
   label: string
 }
 
-export const defaultTeamOptions: OnboardingOption[] = [
-  { value: "Análise de Dados", label: "Análise de Dados" },
-  { value: "Arquitetura de Dados", label: "Arquitetura de Dados" },
-  { value: "Arquitetura de Software", label: "Arquitetura de Software" },
-  { value: "Auditoria", label: "Auditoria" },
-  { value: "Business Intelligence (BI)", label: "Business Intelligence (BI)" },
-  { value: "Business Partner", label: "Business Partner" },
-  { value: "Ciência de Dados", label: "Ciência de Dados" },
-  { value: "Cloud Engineering", label: "Cloud Engineering" },
-  { value: "Compras/Procurement", label: "Compras/Procurement" },
-  { value: "Contabilidade", label: "Contabilidade" },
-  { value: "Contas a Pagar/Contas a Receber", label: "Contas a Pagar/Contas a Receber" },
-  { value: "Controladoria", label: "Controladoria" },
-  { value: "Crédito e Risco", label: "Crédito e Risco" },
-  { value: "Departamento Pessoal", label: "Departamento Pessoal" },
-  { value: "Desenvolvimento Back-end", label: "Desenvolvimento Back-end" },
-  { value: "Desenvolvimento Front-end", label: "Desenvolvimento Front-end" },
-  { value: "Desenvolvimento Full Stack", label: "Desenvolvimento Full Stack" },
-  { value: "DevOps", label: "DevOps" },
-  { value: "Employer Branding", label: "Employer Branding" },
-  { value: "Engenharia de Dados", label: "Engenharia de Dados" },
-  { value: "Engenharia de IA", label: "Engenharia de IA" },
-  { value: "Engenharia de Software", label: "Engenharia de Software" },
-  { value: "FP&A (Planejamento Financeiro)", label: "FP&A (Planejamento Financeiro)" },
-  { value: "Help Desk", label: "Help Desk" },
-  { value: "HR Operations", label: "HR Operations" },
-  { value: "Infraestrutura de TI", label: "Infraestrutura de TI" },
-  { value: "Investimentos", label: "Investimentos" },
-  { value: "Machine Learning", label: "Machine Learning" },
-  { value: "People Analytics", label: "People Analytics" },
-  { value: "Quality Assurance (QA)", label: "Quality Assurance (QA)" },
-  { value: "Redes", label: "Redes" },
-  { value: "Remuneração e Beneficios", label: "Remuneração e Beneficios" },
-  { value: "Segurança da Informação", label: "Segurança da Informação" },
-  { value: "Site Reliability Engineering (SRE)", label: "Site Reliability Engineering (SRE)" },
-  { value: "Talent Acquisition", label: "Talent Acquisition" },
-  { value: "Tesouraria", label: "Tesouraria" },
-  { value: "Treinamento e Desenvolvimento", label: "Treinamento e Desenvolvimento" },
-  { value: "UI Design", label: "UI Design" },
-  { value: "UX Design", label: "UX Design" },
-]
+export const MAX_SKILL_SELECTIONS = 12
+
+export type TeamCategory = "tecnologia" | "rh" | "financas" | "vendas" | "operacoes"
+
+export const defaultTeamOptionsByCategory: Record<TeamCategory, OnboardingOption[]> = {
+  tecnologia: [
+    { value: "Análise de Dados", label: "Análise de Dados" },
+    { value: "Arquitetura de Dados", label: "Arquitetura de Dados" },
+    { value: "Arquitetura de Software", label: "Arquitetura de Software" },
+    { value: "Business Intelligence (BI)", label: "Business Intelligence (BI)" },
+    { value: "Ciência de Dados", label: "Ciência de Dados" },
+    { value: "Cloud Engineering", label: "Cloud Engineering" },
+    { value: "Desenvolvimento Back-end", label: "Desenvolvimento Back-end" },
+    { value: "Desenvolvimento Front-end", label: "Desenvolvimento Front-end" },
+    { value: "Desenvolvimento Full Stack", label: "Desenvolvimento Full Stack" },
+    { value: "DevOps", label: "DevOps" },
+    { value: "Engenharia de Dados", label: "Engenharia de Dados" },
+    { value: "Engenharia de IA", label: "Engenharia de IA" },
+    { value: "Engenharia de Software", label: "Engenharia de Software" },
+    { value: "Help Desk", label: "Help Desk" },
+    { value: "Infraestrutura de TI", label: "Infraestrutura de TI" },
+    { value: "Machine Learning", label: "Machine Learning" },
+    { value: "Quality Assurance (QA)", label: "Quality Assurance (QA)" },
+    { value: "Redes", label: "Redes" },
+    { value: "Segurança da Informação", label: "Segurança da Informação" },
+    { value: "Site Reliability Engineering (SRE)", label: "Site Reliability Engineering (SRE)" },
+    { value: "UI Design", label: "UI Design" },
+    { value: "UX Design", label: "UX Design" },
+  ],
+  rh: [
+    { value: "Business Partner", label: "Business Partner" },
+    { value: "Departamento Pessoal", label: "Departamento Pessoal" },
+    { value: "Employer Branding", label: "Employer Branding" },
+    { value: "HR Operations", label: "HR Operations" },
+    { value: "People Analytics", label: "People Analytics" },
+    { value: "Remuneração e Benefícios", label: "Remuneração e Benefícios" },
+    { value: "Talent Acquisition", label: "Talent Acquisition" },
+    { value: "Treinamento e Desenvolvimento", label: "Treinamento e Desenvolvimento" },
+  ],
+  financas: [
+    { value: "Auditoria", label: "Auditoria" },
+    { value: "Compras/Procurement", label: "Compras/Procurement" },
+    { value: "Contabilidade", label: "Contabilidade" },
+    { value: "Contas a Pagar/Contas a Receber", label: "Contas a Pagar/Contas a Receber" },
+    { value: "Controladoria", label: "Controladoria" },
+    { value: "Crédito e Risco", label: "Crédito e Risco" },
+    { value: "FP&A (Planejamento Financeiro)", label: "FP&A (Planejamento Financeiro)" },
+    { value: "Investimentos", label: "Investimentos" },
+    { value: "Tesouraria", label: "Tesouraria" },
+  ],
+  vendas: [
+    { value: "Business Development", label: "Business Development" },
+    { value: "Comercial", label: "Comercial" },
+    { value: "Customer Success", label: "Customer Success" },
+    { value: "Gerente de Contas", label: "Gerente de Contas" },
+    { value: "Pós-Vendas", label: "Pós-Vendas" },
+    { value: "Pré-Vendas", label: "Pré-Vendas" },
+    { value: "RevOps", label: "RevOps" },
+    { value: "Sales Ops / Revenue Ops", label: "Sales Ops / Revenue Ops" },
+    { value: "SDR/BDR", label: "SDR/BDR" },
+  ],
+  operacoes: [
+    { value: "Business Operations", label: "Business Operations" },
+    { value: "Compliance e Risco", label: "Compliance e Risco" },
+    { value: "Customer Ops / CX Ops", label: "Customer Ops / CX Ops" },
+    { value: "Facilities", label: "Facilities" },
+    { value: "Supply Chain / Logística", label: "Supply Chain / Logística" },
+  ],
+}
+
+export const defaultTeamOptions: OnboardingOption[] = Object.values(defaultTeamOptionsByCategory)
+  .flat()
+  .sort((first, second) => first.label.localeCompare(second.label, "pt-BR"))
+
+const teamCategoryByAreaLabel: Record<string, TeamCategory> = {
+  "financas": "financas",
+  "recursos humanos": "rh",
+  "tecnologia da informacao": "tecnologia",
+  "dados": "tecnologia",
+  "comercial e vendas": "vendas",
+  "marketing": "vendas",
+  "operacoes": "operacoes",
+  "supply chain": "operacoes",
+  "juridico e compliance": "operacoes",
+  "riscos e auditoria": "operacoes",
+  "customer success": "vendas",
+  "produtos": "vendas",
+  "administracao e facilities": "operacoes",
+}
+
+function normalizeLookupValue(value: unknown): string {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ")
+}
+
+export function getTeamOptionsForAreas(
+  selectedAreaValues: string[],
+  areaOptions: Array<Pick<OnboardingOption, "value" | "label">>,
+): OnboardingOption[] {
+  const selectedCategories = new Set<TeamCategory>()
+
+  selectedAreaValues.forEach((selectedValue) => {
+    const area = areaOptions.find((option) => option.value === selectedValue)
+    const category = teamCategoryByAreaLabel[normalizeLookupValue(area?.label)]
+    if (category) {
+      selectedCategories.add(category)
+    }
+  })
+
+  return [...new Map([...selectedCategories].flatMap((category) => defaultTeamOptionsByCategory[category]).map((option) => [option.value, option])).values()]
+    .sort((first, second) => first.label.localeCompare(second.label, "pt-BR"))
+}
 
 export function normalizeTeamValue(value: unknown): string {
   const normalizedValue = String(value ?? "").trim()
   return defaultTeamOptions.some((option) => option.value === normalizedValue) ? normalizedValue : ""
+}
+
+export function normalizeTeamValueForAreas(
+  value: unknown,
+  selectedAreaValues: string[],
+  areaOptions: Array<Pick<OnboardingOption, "value" | "label">>,
+): string {
+  const normalizedValue = normalizeTeamValue(value)
+  return getTeamOptionsForAreas(selectedAreaValues, areaOptions).some((option) => option.value === normalizedValue)
+    ? normalizedValue
+    : ""
 }
 
 export const defaultExperienceOptions: OnboardingOption[] = [
