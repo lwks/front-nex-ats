@@ -1,3 +1,5 @@
+import { MAX_SKILL_SELECTIONS } from "@/lib/onboarding-options"
+
 export type UserRegistrationLanguage = {
   idioma: string
   fluencia: string
@@ -139,20 +141,20 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
     throw new Error("Selecione no maximo 3 areas de preferencia.")
   }
 
-  if (data.hardSkillsProfissionais.length > 7) {
-    throw new Error("Selecione no maximo 7 hard skills profissionais.")
+  if (data.hardSkillsProfissionais.length > MAX_SKILL_SELECTIONS) {
+    throw new Error(`Selecione no maximo ${MAX_SKILL_SELECTIONS} hard skills profissionais.`)
   }
 
-  if (data.softSkillsProfissionais.length > 7) {
-    throw new Error("Selecione no maximo 7 soft skills profissionais.")
+  if (data.softSkillsProfissionais.length > MAX_SKILL_SELECTIONS) {
+    throw new Error(`Selecione no maximo ${MAX_SKILL_SELECTIONS} soft skills profissionais.`)
   }
 
-  if (data.hardSkills.length > 7) {
-    throw new Error("Selecione no maximo 7 hard skills.")
+  if (data.hardSkills.length > MAX_SKILL_SELECTIONS) {
+    throw new Error(`Selecione no maximo ${MAX_SKILL_SELECTIONS} hard skills.`)
   }
 
-  if (data.softSkills.length > 7) {
-    throw new Error("Selecione no maximo 7 soft skills.")
+  if (data.softSkills.length > MAX_SKILL_SELECTIONS) {
+    throw new Error(`Selecione no maximo ${MAX_SKILL_SELECTIONS} soft skills.`)
   }
 
   if (data.lgpdAccepted !== true) {

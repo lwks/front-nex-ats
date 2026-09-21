@@ -250,6 +250,20 @@ describe("user-registration-service", () => {
   })
 
   it("enforces selection limits for area, professional skill sets, hard skills and soft skills", () => {
+    const maximumAllowedSkills = Array.from({ length: 12 }, (_, index) => String(index + 1))
+    const tooManySkills = [...maximumAllowedSkills, "13"]
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          hardSkillsProfissionais: maximumAllowedSkills,
+          softSkillsProfissionais: maximumAllowedSkills,
+          hardSkills: maximumAllowedSkills,
+          softSkills: maximumAllowedSkills,
+        }),
+      ),
+    ).not.toThrow()
+
     expect(() =>
       validateUserRegistrationData(
         createInput({
@@ -261,18 +275,18 @@ describe("user-registration-service", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          hardSkillsProfissionais: ["1", "2", "3", "4", "5", "6", "7", "8"],
+          hardSkillsProfissionais: tooManySkills,
         }),
       ),
-    ).toThrow("Selecione no maximo 7 hard skills profissionais.")
+    ).toThrow("Selecione no maximo 12 hard skills profissionais.")
 
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          softSkillsProfissionais: ["1", "2", "3", "4", "5", "6", "7", "8"],
+          softSkillsProfissionais: tooManySkills,
         }),
       ),
-    ).toThrow("Selecione no maximo 7 soft skills profissionais.")
+    ).toThrow("Selecione no maximo 12 soft skills profissionais.")
 
     expect(() =>
       validateUserRegistrationData(
@@ -285,18 +299,18 @@ describe("user-registration-service", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          hardSkills: ["1", "2", "3", "4", "5", "6", "7", "8"],
+          hardSkills: tooManySkills,
         }),
       ),
-    ).toThrow("Selecione no maximo 7 hard skills.")
+    ).toThrow("Selecione no maximo 12 hard skills.")
 
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          softSkills: ["1", "2", "3", "4", "5", "6", "7", "8"],
+          softSkills: tooManySkills,
         }),
       ),
-    ).toThrow("Selecione no maximo 7 soft skills.")
+    ).toThrow("Selecione no maximo 12 soft skills.")
 
   })
 

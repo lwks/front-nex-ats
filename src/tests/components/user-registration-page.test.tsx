@@ -57,6 +57,7 @@ describe("UserRegistrationPage", () => {
     expect(professionalHtml).toContain("Area")
     expect(professionalHtml).toContain("Hard Skills")
     expect(professionalHtml).toContain("Soft Skills")
+    expect(professionalHtml).toContain("Selecione ate 12 soft skills")
     expect(professionalHtml).not.toContain("Cargo")
     expect(professionalHtml).not.toContain("Ferramentas")
     expect(professionalHtml.indexOf("Area")).toBeLessThan(professionalHtml.indexOf("Time"))
@@ -68,6 +69,7 @@ describe("UserRegistrationPage", () => {
     expect(preferencesHtml).toContain("Area")
     expect(preferencesHtml).toContain("Senioridade")
     expect(preferencesHtml).toContain("Soft Skills")
+    expect(preferencesHtml).toContain("Selecione ate 12 soft skills")
     expect(preferencesHtml).not.toContain("Cargo")
     expect(preferencesHtml).not.toContain("Ferramentas")
     expect(preferencesHtml.indexOf("Area")).toBeLessThan(preferencesHtml.indexOf("Time"))
@@ -105,7 +107,8 @@ describe("UserRegistrationPage", () => {
       />,
     )
 
-    expect(html).not.toContain('disabled=""')
+    expect(html).toContain('id="time"')
+    expect(html).toContain('disabled=""')
     expect(html).toContain('id="areaPreferencia"')
     expect(html).toContain('id="setor"')
     expect(html).toContain('id="time"')
