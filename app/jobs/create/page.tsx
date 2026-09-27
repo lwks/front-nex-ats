@@ -16,6 +16,7 @@ import {
   defaultInterestRoleOptions,
   filterAreaSelectionsByRoles,
   getTeamOptionsForAreas,
+  MAX_TEAM_SELECTIONS,
   normalizeTeamValueForAreas,
   resolveAreaValuesForRoles,
   topSectorOptions,
@@ -43,7 +44,7 @@ export type JobFormState = {
   nivel: string
   setor: string
   area: string[]
-  time: string
+  time: string[]
   localizacao: string
   cidade: string
   estado: string
@@ -85,7 +86,7 @@ function createDefaultFormState(): JobFormState {
     nivel: "",
     setor: "",
     area: [],
-    time: "",
+    time: [],
     localizacao: "",
     cidade: "",
     estado: "",
@@ -168,8 +169,12 @@ export function validateJobFormState(formState: JobFormState) {
     throw new Error(`Selecione no maximo ${MAX_JOB_AREA_SELECTIONS} areas.`)
   }
 
-  if (!formState.time.trim()) {
-    throw new Error("Informe o time.")
+  if (formState.time.length === 0) {
+    throw new Error("Selecione ao menos um time.")
+  }
+
+  if (formState.time.length > MAX_TEAM_SELECTIONS) {
+    throw new Error(`Selecione no maximo ${MAX_TEAM_SELECTIONS} times.`)
   }
 
   if (!formState.valor_inicial.trim() || !formState.valor_final.trim()) {
@@ -200,7 +205,7 @@ export function buildJobPayload(
     nivel: formState.nivel,
     setor: formState.setor.trim(),
     area: areaValuesToNumbers(formState.area, areaOptions),
-    time: formState.time.trim(),
+    time: formState.time,
     localizacao: formState.localizacao.trim(),
     modelo_trabalho: formState.modelo_trabalho,
     publicada_em: publishedAt,
@@ -307,7 +312,9 @@ export default function CreateJobPage() {
         return previous
       }
       const nextTime = normalizeTeamValueForAreas(previous.time, previous.area, industryOptions)
-      return nextTime === previous.time ? previous : { ...previous, time: nextTime }
+      return nextTime.length === previous.time.length && nextTime.every((team, index) => team === previous.time[index])
+        ? previous
+        : { ...previous, time: nextTime }
     })
   }, [areaOptionsError, areaOptionsSource, formState.area, industryOptions])
 
@@ -319,7 +326,8 @@ export default function CreateJobPage() {
   const isSectorMissing = formState.setor.trim().length === 0
   const isAreaMissing = formState.area.length === 0
   const isAreaInvalid = formState.area.length > MAX_JOB_AREA_SELECTIONS
-  const isTeamMissing = formState.time.trim().length === 0
+  const isTeamMissing = formState.time.length === 0
+  const isTeamInvalid = formState.time.length > MAX_TEAM_SELECTIONS
   const isCepMissing = formState.localizacao.trim().length === 0
   const isCepIncomplete =
     formState.localizacao.length > 0 && formState.localizacao.length < CEP_LENGTH
@@ -353,7 +361,11 @@ export default function CreateJobPage() {
     : isAreaInvalid
       ? `Selecione no maximo ${MAX_JOB_AREA_SELECTIONS} areas.`
       : null
-  const teamValidationMessage = isTeamMissing ? "Informe o time." : null
+  const teamValidationMessage = isTeamMissing
+    ? "Selecione ao menos um time."
+    : isTeamInvalid
+      ? `Selecione no maximo ${MAX_TEAM_SELECTIONS} times.`
+      : null
   const zipValidationMessage = isZipLookupLoading
     ? "Consultando CEP..."
     : zipLookupError
@@ -867,35 +879,21 @@ export default function CreateJobPage() {
 
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="time">Time</Label>
-                <Select
+                <MultiSelect
+                  id="time"
+                  maxSelections={MAX_TEAM_SELECTIONS}
+                  options={teamOptions}
                   value={formState.time}
                   disabled={teamOptions.length === 0}
-                  onValueChange={(value) => setFormState((previous) => ({ ...previous, time: value }))}
-                >
-                  <SelectTrigger
-                    id="time"
-                    name="time"
-                    aria-invalid={teamValidationMessage ? "true" : "false"}
-                    className={cn("w-full", teamValidationMessage && "border-destructive focus-visible:ring-destructive/40")}
-                  >
-                    <SelectValue
-                      placeholder={
-                        formState.area.length === 0
-                          ? "Selecione uma área primeiro"
-                          : teamOptions.length === 0
-                            ? "Nenhum time disponível"
-                            : "Selecione o time"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teamOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder={
+                    formState.area.length === 0
+                      ? "Selecione uma área primeiro"
+                      : teamOptions.length === 0
+                        ? "Nenhum time disponível"
+                        : `Selecione ate ${MAX_TEAM_SELECTIONS} times`
+                  }
+                  onChange={(value) => setFormState((previous) => ({ ...previous, time: value }))}
+                />
                 {teamValidationMessage ? <p className="text-xs text-destructive">{teamValidationMessage}</p> : null}
               </div>
 

@@ -4,7 +4,9 @@ import {
   defaultTeamOptionsByCategory,
   filterAreaSelectionsByRoles,
   getTeamOptionsForAreas,
+  normalizeSeniorityValues,
   normalizeTeamValueForAreas,
+  normalizeTeamValues,
   resolveAreaValuesForRoles,
   topSectorOptions,
 } from "@/lib/onboarding-options"
@@ -94,8 +96,44 @@ describe("onboarding-options area mapping", () => {
   it("clears a team that is not allowed by the selected areas", () => {
     const areaOptions = [{ value: "1", label: "Finanças" }]
 
-    expect(normalizeTeamValueForAreas("Controladoria", ["1"], areaOptions)).toBe("Controladoria")
-    expect(normalizeTeamValueForAreas("Desenvolvimento Front-end", ["1"], areaOptions)).toBe("")
-    expect(normalizeTeamValueForAreas("Costumer Success", ["1"], areaOptions)).toBe("")
+    expect(normalizeTeamValueForAreas(["Controladoria"], ["1"], areaOptions)).toEqual(["Controladoria"])
+    expect(normalizeTeamValueForAreas(["Controladoria", "Desenvolvimento Front-end"], ["1"], areaOptions)).toEqual([
+      "Controladoria",
+    ])
+    expect(normalizeTeamValueForAreas(["Costumer Success"], ["1"], areaOptions)).toEqual([])
+  })
+
+  it("normalizes legacy scalar values and caps team selections at three", () => {
+    const areaOptions = [{ value: "3", label: "Tecnologia da Informação" }]
+
+    expect(normalizeTeamValueForAreas("Desenvolvimento Front-end", ["3"], areaOptions)).toEqual([
+      "Desenvolvimento Front-end",
+    ])
+    expect(
+      normalizeTeamValueForAreas(
+        ["Desenvolvimento Front-end", "Desenvolvimento Back-end", "DevOps", "UX Design"],
+        ["3"],
+        areaOptions,
+      ),
+    ).toEqual(["Desenvolvimento Front-end", "Desenvolvimento Back-end", "DevOps"])
+  })
+
+  it("normalizes legacy team selections into unique catalog values", () => {
+    expect(normalizeTeamValues(" Desenvolvimento Front-end ")).toEqual(["Desenvolvimento Front-end"])
+    expect(
+      normalizeTeamValues([
+        "Desenvolvimento Front-end",
+        "Desenvolvimento Front-end",
+        "DevOps",
+        "UX Design",
+        "Time desconhecido",
+      ]),
+    ).toEqual(["Desenvolvimento Front-end", "DevOps", "UX Design"])
+  })
+
+  it("normalizes legacy seniority preferences and caps them at three", () => {
+    expect(normalizeSeniorityValues("senior")).toEqual(["senior"])
+    expect(normalizeSeniorityValues(["pleno", "senior", "senior", "especialista", "gerente", "desconhecida"]))
+      .toEqual(["pleno", "senior", "especialista"])
   })
 })

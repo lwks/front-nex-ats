@@ -87,6 +87,8 @@ Com `NEXT_PUBLIC_API_BASE_URL=<base>/api`, o front espera estes recursos:
 
 Os campos de area usam o `ID` numerico da `TB_AREAS` no payload. A interface mantem os IDs como strings durante a selecao e usa o snapshot local de 13 areas apenas como fallback explicito quando a API nao estiver disponivel.
 
+No cadastro de usuario (`/users/create`), os campos `industriaInteresse` e `areaPreferencia` aceitam um unico ID de area. Os campos `timeAtual` e `time` aceitam ate tres valores, e `setor` aceita ate tres valores nas preferencias profissionais. Esses campos de time e setor sao representados como arrays no contrato do formulario.
+
 ## Estrutura resumida
 
 - `app/`: paginas do App Router e handlers server internos

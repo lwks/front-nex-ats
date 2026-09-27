@@ -14,6 +14,10 @@ export type TravelAvailabilityOption = {
 }
 
 export const MAX_SKILL_SELECTIONS = 12
+export const MAX_AREA_SELECTIONS = 1
+export const MAX_TEAM_SELECTIONS = 3
+export const MAX_PREFERENCE_SECTOR_SELECTIONS = 5
+export const MAX_PREFERENCE_SENIORITY_SELECTIONS = 3
 
 export type TeamCategory = "tecnologia" | "rh" | "financas" | "vendas" | "operacoes"
 
@@ -88,18 +92,18 @@ export const defaultTeamOptions: OnboardingOption[] = Object.values(defaultTeamO
   .sort((first, second) => first.label.localeCompare(second.label, "pt-BR"))
 
 const teamCategoryByAreaLabel: Record<string, TeamCategory> = {
-  "financas": "financas",
+  financas: "financas",
   "recursos humanos": "rh",
   "tecnologia da informacao": "tecnologia",
-  "dados": "tecnologia",
+  dados: "tecnologia",
   "comercial e vendas": "vendas",
-  "marketing": "vendas",
-  "operacoes": "operacoes",
+  marketing: "vendas",
+  operacoes: "operacoes",
   "supply chain": "operacoes",
   "juridico e compliance": "operacoes",
   "riscos e auditoria": "operacoes",
   "customer success": "vendas",
-  "produtos": "vendas",
+  produtos: "vendas",
   "administracao e facilities": "operacoes",
 }
 
@@ -121,13 +125,14 @@ export function getTeamOptionsForAreas(
   selectedAreaValues.forEach((selectedValue) => {
     const area = areaOptions.find((option) => option.value === selectedValue)
     const category = teamCategoryByAreaLabel[normalizeLookupValue(area?.label)]
-    if (category) {
-      selectedCategories.add(category)
-    }
+    if (category) selectedCategories.add(category)
   })
 
-  return [...new Map([...selectedCategories].flatMap((category) => defaultTeamOptionsByCategory[category]).map((option) => [option.value, option])).values()]
-    .sort((first, second) => first.label.localeCompare(second.label, "pt-BR"))
+  return [...new Map(
+    [...selectedCategories]
+      .flatMap((category) => defaultTeamOptionsByCategory[category])
+      .map((option) => [option.value, option]),
+  ).values()].sort((first, second) => first.label.localeCompare(second.label, "pt-BR"))
 }
 
 export function normalizeTeamValue(value: unknown): string {
@@ -135,15 +140,18 @@ export function normalizeTeamValue(value: unknown): string {
   return defaultTeamOptions.some((option) => option.value === normalizedValue) ? normalizedValue : ""
 }
 
+export function normalizeTeamValues(value: unknown): string[] {
+  const values = Array.isArray(value) ? value : [value]
+  return [...new Set(values.map(normalizeTeamValue).filter(Boolean))].slice(0, MAX_TEAM_SELECTIONS)
+}
+
 export function normalizeTeamValueForAreas(
   value: unknown,
   selectedAreaValues: string[],
   areaOptions: Array<Pick<OnboardingOption, "value" | "label">>,
-): string {
-  const normalizedValue = normalizeTeamValue(value)
-  return getTeamOptionsForAreas(selectedAreaValues, areaOptions).some((option) => option.value === normalizedValue)
-    ? normalizedValue
-    : ""
+): string[] {
+  const allowedValues = new Set(getTeamOptionsForAreas(selectedAreaValues, areaOptions).map((option) => option.value))
+  return normalizeTeamValues(value).filter((team) => allowedValues.has(team))
 }
 
 export const defaultExperienceOptions: OnboardingOption[] = [
@@ -238,6 +246,14 @@ export const defaultSeniorityOptions: OnboardingOption[] = [
   { value: "gerente", label: "Gerente" },
   { value: "diretor", label: "Diretor" },
 ]
+
+export function normalizeSeniorityValues(value: unknown): string[] {
+  const values = Array.isArray(value) ? value : [value]
+  const allowedValues = new Set(defaultSeniorityOptions.map((option) => option.value))
+
+  return [...new Set(values.map((item) => String(item ?? "").trim()).filter((item) => allowedValues.has(item)))]
+    .slice(0, MAX_PREFERENCE_SENIORITY_SELECTIONS)
+}
 
 export const defaultLanguageOptions: OnboardingOption[] = [
   { value: "portugues", label: "Portugues" },

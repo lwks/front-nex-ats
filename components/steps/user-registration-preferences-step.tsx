@@ -13,14 +13,19 @@ import { MultiSelect } from "@/components/ui/multi-select"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   defaultContractTypeOptions,
+  MAX_AREA_SELECTIONS,
+  MAX_PREFERENCE_SENIORITY_SELECTIONS,
+  MAX_PREFERENCE_SECTOR_SELECTIONS,
   MAX_SKILL_SELECTIONS,
+  MAX_TEAM_SELECTIONS,
   defaultSeniorityOptions,
   defaultSoftSkillOptions,
   defaultTravelAvailabilityOptions,
   defaultWorkTypeOptions,
   getTeamOptionsForAreas,
-  normalizeTeamValue,
   normalizeTeamValueForAreas,
+  normalizeTeamValues,
+  normalizeSeniorityValues,
   topSectorOptions,
   type OnboardingOption,
   type TravelAvailabilityOption,
@@ -67,9 +72,9 @@ export function UserRegistrationPreferencesStep({
   onUpdate,
 }: UserRegistrationPreferencesStepProps) {
   const [formData, setFormData] = useState({
-    setor: data.setor || "",
-    time: normalizeTeamValue(data.time),
-    senioridadePreferencia: data.senioridadePreferencia || "",
+    setor: data.setor || [],
+    time: normalizeTeamValues(data.time),
+    senioridadePreferencia: normalizeSeniorityValues(data.senioridadePreferencia),
     areaPreferencia: data.areaPreferencia || [],
     tipoContratacao: data.tipoContratacao || [],
     modeloTrabalho: data.modeloTrabalho || [],
@@ -116,16 +121,21 @@ export function UserRegistrationPreferencesStep({
         return previous
       }
       const nextTime = normalizeTeamValueForAreas(previous.time, previous.areaPreferencia, industryOptions)
-      return nextTime === previous.time ? previous : { ...previous, time: nextTime }
+      return nextTime.length === previous.time.length && nextTime.every((team, index) => team === previous.time[index])
+        ? previous
+        : { ...previous, time: nextTime }
     })
   }, [areaOptionsError, areaOptionsSource, formData.areaPreferencia, industryOptions])
 
   const isFormComplete =
-    Boolean(formData.setor.trim()) &&
-    Boolean(formData.time.trim()) &&
-    Boolean(formData.senioridadePreferencia) &&
+    formData.setor.length > 0 &&
+    formData.setor.length <= MAX_PREFERENCE_SECTOR_SELECTIONS &&
+    formData.time.length > 0 &&
+    formData.time.length <= MAX_TEAM_SELECTIONS &&
+    formData.senioridadePreferencia.length > 0 &&
+    formData.senioridadePreferencia.length <= MAX_PREFERENCE_SENIORITY_SELECTIONS &&
     formData.areaPreferencia.length > 0 &&
-    formData.areaPreferencia.length <= 3 &&
+    formData.areaPreferencia.length <= MAX_AREA_SELECTIONS &&
     formData.tipoContratacao.length > 0 &&
     formData.modeloTrabalho.length > 0 &&
     formData.hardSkills.length > 0 &&
@@ -141,17 +151,30 @@ export function UserRegistrationPreferencesStep({
     touched.tipoContratacao && formData.tipoContratacao.length === 0
       ? "Selecione ao menos um tipo de contratacao."
       : ""
-  const sectorError = touched.setor && !formData.setor.trim() ? "Informe o setor." : ""
-  const teamError = touched.time && !formData.time.trim() ? "Informe o time." : ""
+  const sectorError =
+    touched.setor && formData.setor.length === 0
+      ? "Selecione ao menos um setor."
+      : touched.setor && formData.setor.length > MAX_PREFERENCE_SECTOR_SELECTIONS
+        ? `Selecione no maximo ${MAX_PREFERENCE_SECTOR_SELECTIONS} setores.`
+        : ""
+  const teamError =
+    touched.time && formData.time.length === 0
+      ? "Selecione ao menos um time."
+      : touched.time && formData.time.length > MAX_TEAM_SELECTIONS
+        ? `Selecione no maximo ${MAX_TEAM_SELECTIONS} times.`
+        : ""
   const seniorityPreferenceError =
-    touched.senioridadePreferencia && !formData.senioridadePreferencia
-      ? "Selecione a senioridade de preferencia."
-      : ""
+    touched.senioridadePreferencia && formData.senioridadePreferencia.length === 0
+      ? "Selecione ao menos uma senioridade de preferencia."
+      : touched.senioridadePreferencia &&
+          formData.senioridadePreferencia.length > MAX_PREFERENCE_SENIORITY_SELECTIONS
+        ? `Selecione no maximo ${MAX_PREFERENCE_SENIORITY_SELECTIONS} senioridades de preferencia.`
+        : ""
   const preferenceAreaError =
     touched.areaPreferencia && formData.areaPreferencia.length === 0
       ? "Selecione ao menos uma area de preferencia."
-      : touched.areaPreferencia && formData.areaPreferencia.length > 3
-        ? "Selecione no maximo 3 areas de preferencia."
+      : touched.areaPreferencia && formData.areaPreferencia.length > MAX_AREA_SELECTIONS
+        ? `Selecione no maximo ${MAX_AREA_SELECTIONS} area de preferencia.`
         : ""
   const workTypeError =
     touched.modeloTrabalho && formData.modeloTrabalho.length === 0 ? "Selecione ao menos um modelo de trabalho." : ""
@@ -256,9 +279,9 @@ export function UserRegistrationPreferencesStep({
             <Label htmlFor="areaPreferencia">Area</Label>
             <MultiSelect
               id="areaPreferencia"
-              maxSelections={3}
+              maxSelections={MAX_AREA_SELECTIONS}
               options={industryOptions}
-              placeholder="Selecione ate 3 areas"
+              placeholder="Selecione uma area"
               value={formData.areaPreferencia}
               onChange={(value) => {
                 const allowedValues = new Set(getHardSkillOptionsForAreas(value, industryOptions).map((option) => option.value))
@@ -285,97 +308,60 @@ export function UserRegistrationPreferencesStep({
 
           <div className="space-y-2">
             <Label htmlFor="setor">Setor</Label>
-            <Select
+            <MultiSelect
+              id="setor"
+              maxSelections={MAX_PREFERENCE_SECTOR_SELECTIONS}
+              options={topSectorOptions}
+              placeholder={`Selecione ate ${MAX_PREFERENCE_SECTOR_SELECTIONS} setores`}
               value={formData.setor}
-              onValueChange={(value) => {
+              onChange={(value) => {
                 setFormData({ ...formData, setor: value })
                 if (!touched.setor) {
                   setTouched((previous) => ({ ...previous, setor: true }))
                 }
               }}
-            >
-              <SelectTrigger
-                id="setor"
-                className={cn("w-full", sectorError && "border-destructive focus-visible:ring-destructive/40")}
-                aria-invalid={sectorError ? "true" : "false"}
-              >
-                <SelectValue placeholder="Selecione o setor" />
-              </SelectTrigger>
-              <SelectContent>
-                {topSectorOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
             {sectorError ? <p className="text-xs text-destructive">{sectorError}</p> : null}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="time">Time</Label>
-            <Select
-              value={formData.time}
+            <MultiSelect
+              id="time"
+              maxSelections={MAX_TEAM_SELECTIONS}
+              options={teamOptions}
               disabled={teamOptions.length === 0}
-              onValueChange={(value) => {
+              placeholder={
+                formData.areaPreferencia.length === 0
+                  ? "Selecione uma area primeiro"
+                  : `Selecione ate ${MAX_TEAM_SELECTIONS} times`
+              }
+              value={formData.time}
+              onChange={(value) => {
                 setFormData({ ...formData, time: value })
                 if (!touched.time) {
                   setTouched((previous) => ({ ...previous, time: true }))
                 }
               }}
-            >
-              <SelectTrigger
-                id="time"
-                className={cn("w-full", teamError && "border-destructive focus-visible:ring-destructive/40")}
-                aria-invalid={teamError ? "true" : "false"}
-              >
-                <SelectValue
-                  placeholder={
-                    formData.areaPreferencia.length === 0
-                      ? "Selecione uma área primeiro"
-                      : teamOptions.length === 0
-                        ? "Nenhum time disponível"
-                        : "Selecione o time"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {teamOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
             {teamError ? <p className="text-xs text-destructive">{teamError}</p> : null}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="senioridadePreferencia">Senioridade</Label>
-            <Select
+            <MultiSelect
+              id="senioridadePreferencia"
+              maxSelections={MAX_PREFERENCE_SENIORITY_SELECTIONS}
+              options={seniorityOptions}
+              placeholder={`Selecione ate ${MAX_PREFERENCE_SENIORITY_SELECTIONS} senioridades`}
               value={formData.senioridadePreferencia}
-              onValueChange={(value) => {
+              onChange={(value) => {
                 setFormData({ ...formData, senioridadePreferencia: value })
                 if (!touched.senioridadePreferencia) {
                   setTouched((previous) => ({ ...previous, senioridadePreferencia: true }))
                 }
               }}
-            >
-              <SelectTrigger
-                id="senioridadePreferencia"
-                className={cn("w-full", seniorityPreferenceError && "border-destructive focus-visible:ring-destructive/40")}
-                aria-invalid={seniorityPreferenceError ? "true" : "false"}
-              >
-                <SelectValue placeholder="Selecione a senioridade" />
-              </SelectTrigger>
-              <SelectContent>
-                {seniorityOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
             {seniorityPreferenceError ? <p className="text-xs text-destructive">{seniorityPreferenceError}</p> : null}
           </div>
         </div>

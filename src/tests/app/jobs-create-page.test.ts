@@ -21,7 +21,7 @@ function createValidFormState(overrides: Partial<JobFormState> = {}): JobFormSta
     nivel: "sr",
     setor: "Tecnologia",
   area: ["3", "12"],
-    time: "Desenvolvimento Front-end",
+    time: ["Desenvolvimento Front-end"],
     localizacao: "01001000",
     cidade: "Sao Paulo",
     estado: "SP",
@@ -37,8 +37,9 @@ function createValidFormState(overrides: Partial<JobFormState> = {}): JobFormSta
 }
 
 describe("/jobs/create payload helpers", () => {
-  it("builds the create-job payload with setor, area and time", () => {
-    const payload = buildJobPayload(createValidFormState(), "job-guid-1", "2026-07-23")
+  it("builds the create-job payload with up to three times", () => {
+    const times = ["Desenvolvimento Front-end", "Desenvolvimento Back-end", "DevOps"]
+    const payload = buildJobPayload(createValidFormState({ time: times }), "job-guid-1", "2026-07-23")
 
     expect(payload).toMatchObject({
       titulo: "Desenvolvedor Front-end",
@@ -46,7 +47,7 @@ describe("/jobs/create payload helpers", () => {
       nivel: "sr",
       setor: "Tecnologia",
       area: [3, 12],
-      time: "Desenvolvimento Front-end",
+      time: times,
       guid_id: "job-guid-1",
       publicada_em: "2026-07-23",
       status: "Aberto",
@@ -59,10 +60,16 @@ describe("/jobs/create payload helpers", () => {
     })
   })
 
-  it("requires setor, area and time before creating the payload", () => {
+  it("requires setor, area and at least one time before creating the payload", () => {
     expect(() => validateJobFormState(createValidFormState({ setor: "" }))).toThrow("Informe o setor.")
     expect(() => validateJobFormState(createValidFormState({ area: [] }))).toThrow("Selecione ao menos uma area.")
-    expect(() => validateJobFormState(createValidFormState({ time: "" }))).toThrow("Informe o time.")
+    expect(() => validateJobFormState(createValidFormState({ time: [] }))).toThrow("Selecione ao menos um time.")
+  })
+
+  it("rejects more than three times", () => {
+    expect(() => validateJobFormState(createValidFormState({ time: ["1", "2", "3", "4"] }))).toThrow(
+      "Selecione no maximo 3 times.",
+    )
   })
 
   it("enforces the same area selection limit used by the registration flow", () => {

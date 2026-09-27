@@ -24,16 +24,16 @@ function createInput(overrides: Partial<UserRegistrationData> = {}): UserRegistr
     experiencia: "pleno",
     salarioAtual: "8.000",
     setorAtual: "Tecnologia",
-    timeAtual: "Plataforma",
-    industriaInteresse: ["desenvolvimento-software", "financeiro-bancario"],
+    timeAtual: ["Plataforma"],
+    industriaInteresse: ["desenvolvimento-software"],
     hardSkillsProfissionais: ["react", "sql"],
     softSkillsProfissionais: ["comunicacao-oral", "trabalho-equipe"],
     tipoContratacao: ["clt", "pj"],
     modeloTrabalho: ["remoto", "hibrido"],
-    setor: "Tecnologia",
-    time: "Produto",
-    senioridadePreferencia: "senior",
-    areaPreferencia: ["tecnologia-informacao-ti", "ecommerce-marketplaces"],
+    setor: ["Tecnologia"],
+    time: ["Produto"],
+    senioridadePreferencia: ["senior"],
+    areaPreferencia: ["tecnologia-informacao-ti"],
     idiomas: [
       { idioma: "portugues", fluencia: "nativo" },
       { idioma: "ingles", fluencia: "avancado" },
@@ -152,34 +152,34 @@ describe("user-registration-service", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          timeAtual: "",
+          timeAtual: [],
         }),
       ),
-    ).toThrow("Informe o time atual.")
+    ).toThrow("Selecione ao menos um time atual.")
 
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          setor: "",
+          setor: [],
         }),
       ),
-    ).toThrow("Informe o setor.")
+    ).toThrow("Selecione ao menos um setor.")
 
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          time: "",
+          time: [],
         }),
       ),
-    ).toThrow("Informe o time.")
+    ).toThrow("Selecione ao menos um time.")
 
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          senioridadePreferencia: "",
+          senioridadePreferencia: [],
         }),
       ),
-    ).toThrow("Selecione a senioridade de preferencia.")
+    ).toThrow("Selecione ao menos uma senioridade de preferencia.")
   })
 
   it("requires all new multi-select fields", () => {
@@ -256,6 +256,10 @@ describe("user-registration-service", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
+          timeAtual: ["1", "2", "3"],
+          setor: ["1", "2", "3", "4", "5"],
+          time: ["1", "2", "3"],
+          senioridadePreferencia: ["1", "2", "3"],
           hardSkillsProfissionais: maximumAllowedSkills,
           softSkillsProfissionais: maximumAllowedSkills,
           hardSkills: maximumAllowedSkills,
@@ -267,10 +271,10 @@ describe("user-registration-service", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          industriaInteresse: ["1", "2", "3", "4"],
+          industriaInteresse: ["1", "2"],
         }),
       ),
-    ).toThrow("Selecione no maximo 3 areas.")
+    ).toThrow("Selecione no maximo 1 area.")
 
     expect(() =>
       validateUserRegistrationData(
@@ -291,10 +295,26 @@ describe("user-registration-service", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          areaPreferencia: ["1", "2", "3", "4"],
+          areaPreferencia: ["1", "2"],
         }),
       ),
-    ).toThrow("Selecione no maximo 3 areas de preferencia.")
+    ).toThrow("Selecione no maximo 1 area de preferencia.")
+
+    expect(() =>
+      validateUserRegistrationData(createInput({ timeAtual: ["1", "2", "3", "4"] })),
+    ).toThrow("Selecione no maximo 3 times atuais.")
+
+    expect(() =>
+      validateUserRegistrationData(createInput({ time: ["1", "2", "3", "4"] })),
+    ).toThrow("Selecione no maximo 3 times.")
+
+    expect(() =>
+      validateUserRegistrationData(createInput({ setor: ["1", "2", "3", "4", "5", "6"] })),
+    ).toThrow("Selecione no maximo 5 setores.")
+
+    expect(() =>
+      validateUserRegistrationData(createInput({ senioridadePreferencia: ["1", "2", "3", "4"] })),
+    ).toThrow("Selecione no maximo 3 senioridades de preferencia.")
 
     expect(() =>
       validateUserRegistrationData(
