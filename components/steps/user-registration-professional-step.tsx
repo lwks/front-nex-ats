@@ -21,7 +21,9 @@ import {
   MAX_TEAM_SELECTIONS,
   defaultSeniorityOptions,
   defaultSoftSkillOptions,
-  defaultTeamOptions,
+  getTeamOptionsForAreas,
+  normalizeTeamValueForAreas,
+  normalizeTeamValues,
   topSectorOptions,
   type LanguageProficiencyOption,
   type OnboardingOption,
@@ -85,7 +87,7 @@ export function UserRegistrationProfessionalStep({
     empresaAtual: data.empresaAtual || "",
     senioridade: data.senioridade || "",
     setorAtual: data.setorAtual || "",
-    timeAtual: data.timeAtual || [],
+    timeAtual: normalizeTeamValues(data.timeAtual),
     beneficiosAtuais: data.beneficiosAtuais || [],
     industriaInteresse: data.industriaInteresse || [],
     hardSkillsProfissionais: data.hardSkillsProfissionais || [],
@@ -129,7 +131,10 @@ export function UserRegistrationProfessionalStep({
         return previous
       }
       const nextTime = normalizeTeamValueForAreas(previous.timeAtual, previous.industriaInteresse, industryOptions)
-      return nextTime === previous.timeAtual ? previous : { ...previous, timeAtual: nextTime }
+      return nextTime.length === previous.timeAtual.length &&
+        nextTime.every((team, index) => team === previous.timeAtual[index])
+        ? previous
+        : { ...previous, timeAtual: nextTime }
     })
   }, [areaOptionsError, areaOptionsSource, formData.industriaInteresse, industryOptions])
 
@@ -438,8 +443,13 @@ export function UserRegistrationProfessionalStep({
             <MultiSelect
               id="timeAtual"
               maxSelections={MAX_TEAM_SELECTIONS}
-              options={defaultTeamOptions}
-              placeholder={`Selecione ate ${MAX_TEAM_SELECTIONS} times`}
+              options={teamOptions}
+              disabled={teamOptions.length === 0}
+              placeholder={
+                formData.industriaInteresse.length === 0
+                  ? "Selecione uma area primeiro"
+                  : `Selecione ate ${MAX_TEAM_SELECTIONS} times`
+              }
               value={formData.timeAtual}
               onChange={(value) => {
                 setFormData({ ...formData, timeAtual: value })

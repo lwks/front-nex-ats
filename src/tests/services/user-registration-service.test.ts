@@ -32,7 +32,7 @@ function createInput(overrides: Partial<UserRegistrationData> = {}): UserRegistr
     modeloTrabalho: ["remoto", "hibrido"],
     setor: ["Tecnologia"],
     time: ["Produto"],
-    senioridadePreferencia: "senior",
+    senioridadePreferencia: ["senior"],
     areaPreferencia: ["tecnologia-informacao-ti"],
     idiomas: [
       { idioma: "portugues", fluencia: "nativo" },
@@ -176,10 +176,10 @@ describe("user-registration-service", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          senioridadePreferencia: "",
+          senioridadePreferencia: [],
         }),
       ),
-    ).toThrow("Selecione a senioridade de preferencia.")
+    ).toThrow("Selecione ao menos uma senioridade de preferencia.")
   })
 
   it("requires all new multi-select fields", () => {
@@ -257,8 +257,9 @@ describe("user-registration-service", () => {
       validateUserRegistrationData(
         createInput({
           timeAtual: ["1", "2", "3"],
-          setor: ["1", "2", "3"],
+          setor: ["1", "2", "3", "4", "5"],
           time: ["1", "2", "3"],
+          senioridadePreferencia: ["1", "2", "3"],
           hardSkillsProfissionais: maximumAllowedSkills,
           softSkillsProfissionais: maximumAllowedSkills,
           hardSkills: maximumAllowedSkills,
@@ -308,8 +309,12 @@ describe("user-registration-service", () => {
     ).toThrow("Selecione no maximo 3 times.")
 
     expect(() =>
-      validateUserRegistrationData(createInput({ setor: ["1", "2", "3", "4"] })),
-    ).toThrow("Selecione no maximo 3 setores.")
+      validateUserRegistrationData(createInput({ setor: ["1", "2", "3", "4", "5", "6"] })),
+    ).toThrow("Selecione no maximo 5 setores.")
+
+    expect(() =>
+      validateUserRegistrationData(createInput({ senioridadePreferencia: ["1", "2", "3", "4"] })),
+    ).toThrow("Selecione no maximo 3 senioridades de preferencia.")
 
     expect(() =>
       validateUserRegistrationData(

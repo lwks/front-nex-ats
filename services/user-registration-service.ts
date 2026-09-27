@@ -1,5 +1,6 @@
 import {
   MAX_AREA_SELECTIONS,
+  MAX_PREFERENCE_SENIORITY_SELECTIONS,
   MAX_PREFERENCE_SECTOR_SELECTIONS,
   MAX_SKILL_SELECTIONS,
   MAX_TEAM_SELECTIONS,
@@ -35,7 +36,7 @@ export type UserRegistrationData = {
   modeloTrabalho: string[]
   setor: string[]
   time: string[]
-  senioridadePreferencia: string
+  senioridadePreferencia: string[]
   areaPreferencia: string[]
   idiomas: UserRegistrationLanguage[]
   hardSkills: string[]
@@ -129,7 +130,7 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
   requireSelection(data.modeloTrabalho, "Selecione ao menos um modelo de trabalho.")
   requireSelection(data.setor, "Selecione ao menos um setor.")
   requireSelection(data.time, "Selecione ao menos um time.")
-  requireNonEmptyValue(data.senioridadePreferencia, "Selecione a senioridade de preferencia.")
+  requireSelection(data.senioridadePreferencia, "Selecione ao menos uma senioridade de preferencia.")
   requireSelection(data.areaPreferencia, "Selecione ao menos uma area de preferencia.")
   requireLanguageSelection(data.idiomas, "Selecione ao menos um idioma.")
   requireSelection(data.hardSkills, "Selecione ao menos uma hard skill.")
@@ -156,6 +157,10 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
 
   if (data.setor.length > MAX_PREFERENCE_SECTOR_SELECTIONS) {
     throw new Error(`Selecione no maximo ${MAX_PREFERENCE_SECTOR_SELECTIONS} setores.`)
+  }
+
+  if (data.senioridadePreferencia.length > MAX_PREFERENCE_SENIORITY_SELECTIONS) {
+    throw new Error(`Selecione no maximo ${MAX_PREFERENCE_SENIORITY_SELECTIONS} senioridades de preferencia.`)
   }
 
   if (data.hardSkillsProfissionais.length > MAX_SKILL_SELECTIONS) {
