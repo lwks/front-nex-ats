@@ -57,6 +57,9 @@ describe("UserRegistrationPage", () => {
     expect(professionalHtml).toContain("Area")
     expect(professionalHtml).toContain("Hard Skills")
     expect(professionalHtml).toContain("Soft Skills")
+    expect(professionalHtml).toContain("Selecione ate 12 soft skills")
+    expect(professionalHtml).toContain("Selecione uma area")
+    expect(professionalHtml).toContain("Selecione ate 3 times")
     expect(professionalHtml).not.toContain("Cargo")
     expect(professionalHtml).not.toContain("Ferramentas")
     expect(professionalHtml.indexOf("Area")).toBeLessThan(professionalHtml.indexOf("Time"))
@@ -68,6 +71,10 @@ describe("UserRegistrationPage", () => {
     expect(preferencesHtml).toContain("Area")
     expect(preferencesHtml).toContain("Senioridade")
     expect(preferencesHtml).toContain("Soft Skills")
+    expect(preferencesHtml).toContain("Selecione ate 12 soft skills")
+    expect(preferencesHtml).toContain("Selecione uma area")
+    expect(preferencesHtml).toContain("Selecione ate 3 setores")
+    expect(preferencesHtml).toContain("Selecione ate 3 times")
     expect(preferencesHtml).not.toContain("Cargo")
     expect(preferencesHtml).not.toContain("Ferramentas")
     expect(preferencesHtml.indexOf("Area")).toBeLessThan(preferencesHtml.indexOf("Time"))
@@ -86,8 +93,8 @@ describe("UserRegistrationPage", () => {
     const html = renderToStaticMarkup(
       <UserRegistrationPreferencesStep
         data={{
-          setor: "tecnologia",
-          time: "Desenvolvimento Front-end",
+          setor: ["tecnologia-informacao-ti"],
+          time: ["Desenvolvimento Front-end"],
           senioridadePreferencia: "senior",
           areaPreferencia: ["tecnologia-informacao-ti"],
           tipoContratacao: ["clt"],

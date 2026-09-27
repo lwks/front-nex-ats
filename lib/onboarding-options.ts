@@ -13,6 +13,11 @@ export type TravelAvailabilityOption = {
   label: string
 }
 
+export const MAX_SKILL_SELECTIONS = 12
+export const MAX_AREA_SELECTIONS = 1
+export const MAX_TEAM_SELECTIONS = 3
+export const MAX_PREFERENCE_SECTOR_SELECTIONS = 3
+
 export const defaultTeamOptions: OnboardingOption[] = [
   { value: "Análise de Dados", label: "Análise de Dados" },
   { value: "Arquitetura de Dados", label: "Arquitetura de Dados" },

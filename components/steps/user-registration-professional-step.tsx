@@ -16,10 +16,12 @@ import {
   defaultExperienceOptions,
   defaultLanguageOptions,
   defaultLanguageProficiencyOptions,
+  MAX_AREA_SELECTIONS,
+  MAX_SKILL_SELECTIONS,
+  MAX_TEAM_SELECTIONS,
   defaultSeniorityOptions,
   defaultSoftSkillOptions,
   defaultTeamOptions,
-  normalizeTeamValue,
   topSectorOptions,
   type LanguageProficiencyOption,
   type OnboardingOption,
@@ -83,7 +85,7 @@ export function UserRegistrationProfessionalStep({
     empresaAtual: data.empresaAtual || "",
     senioridade: data.senioridade || "",
     setorAtual: data.setorAtual || "",
-    timeAtual: normalizeTeamValue(data.timeAtual),
+    timeAtual: data.timeAtual || [],
     beneficiosAtuais: data.beneficiosAtuais || [],
     industriaInteresse: data.industriaInteresse || [],
     hardSkillsProfissionais: data.hardSkillsProfissionais || [],
@@ -123,14 +125,15 @@ export function UserRegistrationProfessionalStep({
     Boolean(formData.empresaAtual.trim()) &&
     Boolean(formData.senioridade) &&
     Boolean(formData.setorAtual.trim()) &&
-    Boolean(formData.timeAtual.trim()) &&
+    formData.timeAtual.length > 0 &&
+    formData.timeAtual.length <= MAX_TEAM_SELECTIONS &&
     formData.beneficiosAtuais.length > 0 &&
     formData.industriaInteresse.length > 0 &&
-    formData.industriaInteresse.length <= 3 &&
+    formData.industriaInteresse.length <= MAX_AREA_SELECTIONS &&
     formData.hardSkillsProfissionais.length > 0 &&
-    formData.hardSkillsProfissionais.length <= 7 &&
+    formData.hardSkillsProfissionais.length <= MAX_SKILL_SELECTIONS &&
     formData.softSkillsProfissionais.length > 0 &&
-    formData.softSkillsProfissionais.length <= 7 &&
+    formData.softSkillsProfissionais.length <= MAX_SKILL_SELECTIONS &&
     hasCompleteLanguages(formData.idiomas)
 
   const experienceError =
@@ -144,7 +147,11 @@ export function UserRegistrationProfessionalStep({
   const currentSectorError =
     touched.setorAtual && !formData.setorAtual.trim() ? "Informe o setor atual." : ""
   const currentTeamError =
-    touched.timeAtual && !formData.timeAtual.trim() ? "Informe o time atual." : ""
+    touched.timeAtual && formData.timeAtual.length === 0
+      ? "Selecione ao menos um time atual."
+      : touched.timeAtual && formData.timeAtual.length > MAX_TEAM_SELECTIONS
+        ? `Selecione no maximo ${MAX_TEAM_SELECTIONS} times atuais.`
+        : ""
   const benefitError =
     touched.beneficiosAtuais && formData.beneficiosAtuais.length === 0
       ? "Selecione ao menos um beneficio atual."
@@ -152,20 +159,20 @@ export function UserRegistrationProfessionalStep({
   const areaError =
     touched.industriaInteresse && formData.industriaInteresse.length === 0
       ? "Selecione ao menos uma area."
-      : touched.industriaInteresse && formData.industriaInteresse.length > 3
-        ? "Selecione no maximo 3 areas."
+      : touched.industriaInteresse && formData.industriaInteresse.length > MAX_AREA_SELECTIONS
+        ? `Selecione no maximo ${MAX_AREA_SELECTIONS} area.`
         : ""
   const hardSkillError =
     touched.hardSkillsProfissionais && formData.hardSkillsProfissionais.length === 0
       ? "Selecione ao menos uma hard skill profissional."
-      : touched.hardSkillsProfissionais && formData.hardSkillsProfissionais.length > 7
-        ? "Selecione no maximo 7 hard skills profissionais."
+      : touched.hardSkillsProfissionais && formData.hardSkillsProfissionais.length > MAX_SKILL_SELECTIONS
+        ? `Selecione no maximo ${MAX_SKILL_SELECTIONS} hard skills profissionais.`
         : ""
   const softSkillError =
     touched.softSkillsProfissionais && formData.softSkillsProfissionais.length === 0
       ? "Selecione ao menos uma soft skill profissional."
-      : touched.softSkillsProfissionais && formData.softSkillsProfissionais.length > 7
-        ? "Selecione no maximo 7 soft skills profissionais."
+      : touched.softSkillsProfissionais && formData.softSkillsProfissionais.length > MAX_SKILL_SELECTIONS
+        ? `Selecione no maximo ${MAX_SKILL_SELECTIONS} soft skills profissionais.`
         : ""
   const languageError =
     touched.idiomas && formData.idiomas.length > 0 && !hasCompleteLanguages(formData.idiomas)
@@ -385,9 +392,9 @@ export function UserRegistrationProfessionalStep({
             <Label htmlFor="industriaInteresse">Area</Label>
             <MultiSelect
               id="industriaInteresse"
-              maxSelections={3}
+              maxSelections={MAX_AREA_SELECTIONS}
               options={industryOptions}
-              placeholder="Selecione ate 3 areas"
+              placeholder="Selecione uma area"
               value={formData.industriaInteresse}
               onChange={(value) => {
                 const allowedValues = new Set(getHardSkillOptionsForAreas(value, industryOptions).map((option) => option.value))
@@ -413,34 +420,19 @@ export function UserRegistrationProfessionalStep({
 
           <div className="space-y-2">
             <Label htmlFor="timeAtual">Time</Label>
-            <Select
+            <MultiSelect
+              id="timeAtual"
+              maxSelections={MAX_TEAM_SELECTIONS}
+              options={defaultTeamOptions}
+              placeholder={`Selecione ate ${MAX_TEAM_SELECTIONS} times`}
               value={formData.timeAtual}
-              onValueChange={(value) => {
+              onChange={(value) => {
                 setFormData({ ...formData, timeAtual: value })
                 if (!touched.timeAtual) {
                   setTouched((previous) => ({ ...previous, timeAtual: true }))
                 }
               }}
-            >
-              <SelectTrigger
-                id="timeAtual"
-                className={cn("w-full", currentTeamError && "border-destructive focus-visible:ring-destructive/40")}
-                aria-invalid={currentTeamError ? "true" : "false"}
-              >
-                <SelectValue
-                  placeholder={
-                    "Selecione o time"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {defaultTeamOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
             {currentTeamError ? <p className="text-xs text-destructive">{currentTeamError}</p> : null}
           </div>
         </div>
@@ -498,9 +490,9 @@ export function UserRegistrationProfessionalStep({
             <Label htmlFor="hardSkillsProfissionais">Hard Skills</Label>
             <MultiSelect
               id="hardSkillsProfissionais"
-              maxSelections={7}
+              maxSelections={MAX_SKILL_SELECTIONS}
               options={hardSkillOptions}
-              placeholder={formData.industriaInteresse.length > 0 ? "Selecione ate 7 hard skills" : "Selecione uma area primeiro"}
+              placeholder={formData.industriaInteresse.length > 0 ? `Selecione ate ${MAX_SKILL_SELECTIONS} hard skills` : "Selecione uma area primeiro"}
               disabled={hardSkillOptions.length === 0}
               value={formData.hardSkillsProfissionais}
               onChange={(value) => {
@@ -517,9 +509,9 @@ export function UserRegistrationProfessionalStep({
             <Label htmlFor="softSkillsProfissionais">Soft Skills</Label>
             <MultiSelect
               id="softSkillsProfissionais"
-              maxSelections={7}
+              maxSelections={MAX_SKILL_SELECTIONS}
               options={softSkillOptions}
-              placeholder="Selecione ate 7 soft skills"
+              placeholder={`Selecione ate ${MAX_SKILL_SELECTIONS} soft skills`}
               value={formData.softSkillsProfissionais}
               onChange={(value) => {
                 setFormData({ ...formData, softSkillsProfissionais: value })

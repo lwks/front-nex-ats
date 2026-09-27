@@ -24,16 +24,16 @@ function createInput(overrides: Partial<UserRegistrationData> = {}): UserRegistr
     experiencia: "pleno",
     salarioAtual: "8.000",
     setorAtual: "Tecnologia",
-    timeAtual: "Plataforma",
-    industriaInteresse: ["desenvolvimento-software", "financeiro-bancario"],
+    timeAtual: ["Plataforma"],
+    industriaInteresse: ["desenvolvimento-software"],
     hardSkillsProfissionais: ["react", "sql"],
     softSkillsProfissionais: ["comunicacao-oral", "trabalho-equipe"],
     tipoContratacao: ["clt", "pj"],
     modeloTrabalho: ["remoto", "hibrido"],
-    setor: "Tecnologia",
-    time: "Produto",
+    setor: ["Tecnologia"],
+    time: ["Produto"],
     senioridadePreferencia: "senior",
-    areaPreferencia: ["tecnologia-informacao-ti", "ecommerce-marketplaces"],
+    areaPreferencia: ["tecnologia-informacao-ti"],
     idiomas: [
       { idioma: "portugues", fluencia: "nativo" },
       { idioma: "ingles", fluencia: "avancado" },
@@ -152,26 +152,26 @@ describe("user-registration-service", () => {
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          timeAtual: "",
+          timeAtual: [],
         }),
       ),
-    ).toThrow("Informe o time atual.")
+    ).toThrow("Selecione ao menos um time atual.")
 
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          setor: "",
+          setor: [],
         }),
       ),
-    ).toThrow("Informe o setor.")
+    ).toThrow("Selecione ao menos um setor.")
 
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          time: "",
+          time: [],
         }),
       ),
-    ).toThrow("Informe o time.")
+    ).toThrow("Selecione ao menos um time.")
 
     expect(() =>
       validateUserRegistrationData(
@@ -250,53 +250,82 @@ describe("user-registration-service", () => {
   })
 
   it("enforces selection limits for area, professional skill sets, hard skills and soft skills", () => {
-    expect(() =>
-      validateUserRegistrationData(
-        createInput({
-          industriaInteresse: ["1", "2", "3", "4"],
-        }),
-      ),
-    ).toThrow("Selecione no maximo 3 areas.")
+    const maximumAllowedSkills = Array.from({ length: 12 }, (_, index) => String(index + 1))
+    const tooManySkills = [...maximumAllowedSkills, "13"]
 
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          hardSkillsProfissionais: ["1", "2", "3", "4", "5", "6", "7", "8"],
+          timeAtual: ["1", "2", "3"],
+          setor: ["1", "2", "3"],
+          time: ["1", "2", "3"],
+          hardSkillsProfissionais: maximumAllowedSkills,
+          softSkillsProfissionais: maximumAllowedSkills,
+          hardSkills: maximumAllowedSkills,
+          softSkills: maximumAllowedSkills,
         }),
       ),
-    ).toThrow("Selecione no maximo 7 hard skills profissionais.")
+    ).not.toThrow()
 
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          softSkillsProfissionais: ["1", "2", "3", "4", "5", "6", "7", "8"],
+          industriaInteresse: ["1", "2"],
         }),
       ),
-    ).toThrow("Selecione no maximo 7 soft skills profissionais.")
+    ).toThrow("Selecione no maximo 1 area.")
 
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          areaPreferencia: ["1", "2", "3", "4"],
+          hardSkillsProfissionais: tooManySkills,
         }),
       ),
-    ).toThrow("Selecione no maximo 3 areas de preferencia.")
+    ).toThrow("Selecione no maximo 12 hard skills profissionais.")
 
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          hardSkills: ["1", "2", "3", "4", "5", "6", "7", "8"],
+          softSkillsProfissionais: tooManySkills,
         }),
       ),
-    ).toThrow("Selecione no maximo 7 hard skills.")
+    ).toThrow("Selecione no maximo 12 soft skills profissionais.")
 
     expect(() =>
       validateUserRegistrationData(
         createInput({
-          softSkills: ["1", "2", "3", "4", "5", "6", "7", "8"],
+          areaPreferencia: ["1", "2"],
         }),
       ),
-    ).toThrow("Selecione no maximo 7 soft skills.")
+    ).toThrow("Selecione no maximo 1 area de preferencia.")
+
+    expect(() =>
+      validateUserRegistrationData(createInput({ timeAtual: ["1", "2", "3", "4"] })),
+    ).toThrow("Selecione no maximo 3 times atuais.")
+
+    expect(() =>
+      validateUserRegistrationData(createInput({ time: ["1", "2", "3", "4"] })),
+    ).toThrow("Selecione no maximo 3 times.")
+
+    expect(() =>
+      validateUserRegistrationData(createInput({ setor: ["1", "2", "3", "4"] })),
+    ).toThrow("Selecione no maximo 3 setores.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          hardSkills: tooManySkills,
+        }),
+      ),
+    ).toThrow("Selecione no maximo 12 hard skills.")
+
+    expect(() =>
+      validateUserRegistrationData(
+        createInput({
+          softSkills: tooManySkills,
+        }),
+      ),
+    ).toThrow("Selecione no maximo 12 soft skills.")
 
   })
 

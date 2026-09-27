@@ -13,12 +13,15 @@ import { MultiSelect } from "@/components/ui/multi-select"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   defaultContractTypeOptions,
+  MAX_AREA_SELECTIONS,
+  MAX_PREFERENCE_SECTOR_SELECTIONS,
+  MAX_SKILL_SELECTIONS,
+  MAX_TEAM_SELECTIONS,
   defaultSeniorityOptions,
   defaultSoftSkillOptions,
   defaultTeamOptions,
   defaultTravelAvailabilityOptions,
   defaultWorkTypeOptions,
-  normalizeTeamValue,
   topSectorOptions,
   type OnboardingOption,
   type TravelAvailabilityOption,
@@ -65,8 +68,8 @@ export function UserRegistrationPreferencesStep({
   onUpdate,
 }: UserRegistrationPreferencesStepProps) {
   const [formData, setFormData] = useState({
-    setor: data.setor || "",
-    time: normalizeTeamValue(data.time),
+    setor: data.setor || [],
+    time: data.time || [],
     senioridadePreferencia: data.senioridadePreferencia || "",
     areaPreferencia: data.areaPreferencia || [],
     tipoContratacao: data.tipoContratacao || [],
@@ -105,17 +108,19 @@ export function UserRegistrationPreferencesStep({
   )
 
   const isFormComplete =
-    Boolean(formData.setor.trim()) &&
-    Boolean(formData.time.trim()) &&
+    formData.setor.length > 0 &&
+    formData.setor.length <= MAX_PREFERENCE_SECTOR_SELECTIONS &&
+    formData.time.length > 0 &&
+    formData.time.length <= MAX_TEAM_SELECTIONS &&
     Boolean(formData.senioridadePreferencia) &&
     formData.areaPreferencia.length > 0 &&
-    formData.areaPreferencia.length <= 3 &&
+    formData.areaPreferencia.length <= MAX_AREA_SELECTIONS &&
     formData.tipoContratacao.length > 0 &&
     formData.modeloTrabalho.length > 0 &&
     formData.hardSkills.length > 0 &&
-    formData.hardSkills.length <= 7 &&
+    formData.hardSkills.length <= MAX_SKILL_SELECTIONS &&
     formData.softSkills.length > 0 &&
-    formData.softSkills.length <= 7 &&
+    formData.softSkills.length <= MAX_SKILL_SELECTIONS &&
     Boolean(formData.viagemTrabalho) &&
     Boolean(formData.pretensaoSalarial.trim()) &&
     Boolean(formData.sobreVoce.trim()) &&
@@ -125,8 +130,18 @@ export function UserRegistrationPreferencesStep({
     touched.tipoContratacao && formData.tipoContratacao.length === 0
       ? "Selecione ao menos um tipo de contratacao."
       : ""
-  const sectorError = touched.setor && !formData.setor.trim() ? "Informe o setor." : ""
-  const teamError = touched.time && !formData.time.trim() ? "Informe o time." : ""
+  const sectorError =
+    touched.setor && formData.setor.length === 0
+      ? "Selecione ao menos um setor."
+      : touched.setor && formData.setor.length > MAX_PREFERENCE_SECTOR_SELECTIONS
+        ? `Selecione no maximo ${MAX_PREFERENCE_SECTOR_SELECTIONS} setores.`
+        : ""
+  const teamError =
+    touched.time && formData.time.length === 0
+      ? "Selecione ao menos um time."
+      : touched.time && formData.time.length > MAX_TEAM_SELECTIONS
+        ? `Selecione no maximo ${MAX_TEAM_SELECTIONS} times.`
+        : ""
   const seniorityPreferenceError =
     touched.senioridadePreferencia && !formData.senioridadePreferencia
       ? "Selecione a senioridade de preferencia."
@@ -134,22 +149,22 @@ export function UserRegistrationPreferencesStep({
   const preferenceAreaError =
     touched.areaPreferencia && formData.areaPreferencia.length === 0
       ? "Selecione ao menos uma area de preferencia."
-      : touched.areaPreferencia && formData.areaPreferencia.length > 3
-        ? "Selecione no maximo 3 areas de preferencia."
+      : touched.areaPreferencia && formData.areaPreferencia.length > MAX_AREA_SELECTIONS
+        ? `Selecione no maximo ${MAX_AREA_SELECTIONS} area de preferencia.`
         : ""
   const workTypeError =
     touched.modeloTrabalho && formData.modeloTrabalho.length === 0 ? "Selecione ao menos um modelo de trabalho." : ""
   const hardSkillError =
     touched.hardSkills && formData.hardSkills.length === 0
       ? "Selecione ao menos uma hard skill."
-      : touched.hardSkills && formData.hardSkills.length > 7
-        ? "Selecione no maximo 7 hard skills."
+      : touched.hardSkills && formData.hardSkills.length > MAX_SKILL_SELECTIONS
+        ? `Selecione no maximo ${MAX_SKILL_SELECTIONS} hard skills.`
         : ""
   const softSkillError =
     touched.softSkills && formData.softSkills.length === 0
       ? "Selecione ao menos uma soft skill."
-      : touched.softSkills && formData.softSkills.length > 7
-        ? "Selecione no maximo 7 soft skills."
+      : touched.softSkills && formData.softSkills.length > MAX_SKILL_SELECTIONS
+        ? `Selecione no maximo ${MAX_SKILL_SELECTIONS} soft skills.`
         : ""
   const travelError =
     touched.viagemTrabalho && !formData.viagemTrabalho ? "Selecione a disponibilidade para viagem de trabalho." : ""
@@ -240,9 +255,9 @@ export function UserRegistrationPreferencesStep({
             <Label htmlFor="areaPreferencia">Area</Label>
             <MultiSelect
               id="areaPreferencia"
-              maxSelections={3}
+              maxSelections={MAX_AREA_SELECTIONS}
               options={industryOptions}
-              placeholder="Selecione ate 3 areas"
+              placeholder="Selecione uma area"
               value={formData.areaPreferencia}
               onChange={(value) => {
                 const allowedValues = new Set(getHardSkillOptionsForAreas(value, industryOptions).map((option) => option.value))
@@ -268,63 +283,37 @@ export function UserRegistrationPreferencesStep({
 
           <div className="space-y-2">
             <Label htmlFor="setor">Setor</Label>
-            <Select
+            <MultiSelect
+              id="setor"
+              maxSelections={MAX_PREFERENCE_SECTOR_SELECTIONS}
+              options={topSectorOptions}
+              placeholder={`Selecione ate ${MAX_PREFERENCE_SECTOR_SELECTIONS} setores`}
               value={formData.setor}
-              onValueChange={(value) => {
+              onChange={(value) => {
                 setFormData({ ...formData, setor: value })
                 if (!touched.setor) {
                   setTouched((previous) => ({ ...previous, setor: true }))
                 }
               }}
-            >
-              <SelectTrigger
-                id="setor"
-                className={cn("w-full", sectorError && "border-destructive focus-visible:ring-destructive/40")}
-                aria-invalid={sectorError ? "true" : "false"}
-              >
-                <SelectValue placeholder="Selecione o setor" />
-              </SelectTrigger>
-              <SelectContent>
-                {topSectorOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
             {sectorError ? <p className="text-xs text-destructive">{sectorError}</p> : null}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="time">Time</Label>
-            <Select
+            <MultiSelect
+              id="time"
+              maxSelections={MAX_TEAM_SELECTIONS}
+              options={defaultTeamOptions}
+              placeholder={`Selecione ate ${MAX_TEAM_SELECTIONS} times`}
               value={formData.time}
-              onValueChange={(value) => {
+              onChange={(value) => {
                 setFormData({ ...formData, time: value })
                 if (!touched.time) {
                   setTouched((previous) => ({ ...previous, time: true }))
                 }
               }}
-            >
-              <SelectTrigger
-                id="time"
-                className={cn("w-full", teamError && "border-destructive focus-visible:ring-destructive/40")}
-                aria-invalid={teamError ? "true" : "false"}
-              >
-                <SelectValue
-                  placeholder={
-                    "Selecione o time"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {defaultTeamOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
             {teamError ? <p className="text-xs text-destructive">{teamError}</p> : null}
           </div>
 
@@ -449,9 +438,9 @@ export function UserRegistrationPreferencesStep({
             <Label htmlFor="hardSkills">Hard Skills</Label>
             <MultiSelect
               id="hardSkills"
-              maxSelections={7}
+              maxSelections={MAX_SKILL_SELECTIONS}
               options={hardSkillOptions}
-              placeholder={formData.areaPreferencia.length > 0 ? "Selecione ate 7 hard skills" : "Selecione uma area primeiro"}
+              placeholder={formData.areaPreferencia.length > 0 ? `Selecione ate ${MAX_SKILL_SELECTIONS} hard skills` : "Selecione uma area primeiro"}
               disabled={hardSkillOptions.length === 0}
               value={formData.hardSkills}
               onChange={(value) => {
@@ -467,9 +456,9 @@ export function UserRegistrationPreferencesStep({
             <Label htmlFor="softSkills">Soft Skills</Label>
             <MultiSelect
               id="softSkills"
-              maxSelections={7}
+              maxSelections={MAX_SKILL_SELECTIONS}
               options={softSkillOptions}
-              placeholder="Selecione ate 7 soft skills"
+              placeholder={`Selecione ate ${MAX_SKILL_SELECTIONS} soft skills`}
               value={formData.softSkills}
               onChange={(value) => {
                 setFormData({ ...formData, softSkills: value })

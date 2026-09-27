@@ -1,3 +1,10 @@
+import {
+  MAX_AREA_SELECTIONS,
+  MAX_PREFERENCE_SECTOR_SELECTIONS,
+  MAX_SKILL_SELECTIONS,
+  MAX_TEAM_SELECTIONS,
+} from "@/lib/onboarding-options"
+
 export type UserRegistrationLanguage = {
   idioma: string
   fluencia: string
@@ -20,14 +27,14 @@ export type UserRegistrationData = {
   experiencia: string
   salarioAtual: string
   setorAtual: string
-  timeAtual: string
+  timeAtual: string[]
   industriaInteresse: string[]
   hardSkillsProfissionais: string[]
   softSkillsProfissionais: string[]
   tipoContratacao: string[]
   modeloTrabalho: string[]
-  setor: string
-  time: string
+  setor: string[]
+  time: string[]
   senioridadePreferencia: string
   areaPreferencia: string[]
   idiomas: UserRegistrationLanguage[]
@@ -112,7 +119,7 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
   requireNonEmptyValue(data.experiencia, "Selecione seu nivel de experiencia.")
   requireNonEmptyValue(data.salarioAtual, "Informe o salario atual.")
   requireNonEmptyValue(data.setorAtual, "Informe o setor atual.")
-  requireNonEmptyValue(data.timeAtual, "Informe o time atual.")
+  requireSelection(data.timeAtual, "Selecione ao menos um time atual.")
   requireSelection(data.industriaInteresse, "Selecione ao menos uma area.")
 
   requireSelection(data.beneficiosAtuais, "Selecione ao menos um beneficio atual.")
@@ -120,8 +127,8 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
   requireSelection(data.softSkillsProfissionais, "Selecione ao menos uma soft skill profissional.")
   requireSelection(data.tipoContratacao, "Selecione ao menos um tipo de contratacao.")
   requireSelection(data.modeloTrabalho, "Selecione ao menos um modelo de trabalho.")
-  requireNonEmptyValue(data.setor, "Informe o setor.")
-  requireNonEmptyValue(data.time, "Informe o time.")
+  requireSelection(data.setor, "Selecione ao menos um setor.")
+  requireSelection(data.time, "Selecione ao menos um time.")
   requireNonEmptyValue(data.senioridadePreferencia, "Selecione a senioridade de preferencia.")
   requireSelection(data.areaPreferencia, "Selecione ao menos uma area de preferencia.")
   requireLanguageSelection(data.idiomas, "Selecione ao menos um idioma.")
@@ -131,28 +138,40 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
   requireNonEmptyValue(data.pretensaoSalarial, "Informe a pretensao salarial.")
   requireNonEmptyValue(data.sobreVoce, "Conte um pouco sobre voce.")
 
-  if (data.industriaInteresse.length > 3) {
-    throw new Error("Selecione no maximo 3 areas.")
+  if (data.industriaInteresse.length > MAX_AREA_SELECTIONS) {
+    throw new Error(`Selecione no maximo ${MAX_AREA_SELECTIONS} area.`)
   }
 
-  if (data.areaPreferencia.length > 3) {
-    throw new Error("Selecione no maximo 3 areas de preferencia.")
+  if (data.areaPreferencia.length > MAX_AREA_SELECTIONS) {
+    throw new Error(`Selecione no maximo ${MAX_AREA_SELECTIONS} area de preferencia.`)
   }
 
-  if (data.hardSkillsProfissionais.length > 7) {
-    throw new Error("Selecione no maximo 7 hard skills profissionais.")
+  if (data.timeAtual.length > MAX_TEAM_SELECTIONS) {
+    throw new Error(`Selecione no maximo ${MAX_TEAM_SELECTIONS} times atuais.`)
   }
 
-  if (data.softSkillsProfissionais.length > 7) {
-    throw new Error("Selecione no maximo 7 soft skills profissionais.")
+  if (data.time.length > MAX_TEAM_SELECTIONS) {
+    throw new Error(`Selecione no maximo ${MAX_TEAM_SELECTIONS} times.`)
   }
 
-  if (data.hardSkills.length > 7) {
-    throw new Error("Selecione no maximo 7 hard skills.")
+  if (data.setor.length > MAX_PREFERENCE_SECTOR_SELECTIONS) {
+    throw new Error(`Selecione no maximo ${MAX_PREFERENCE_SECTOR_SELECTIONS} setores.`)
   }
 
-  if (data.softSkills.length > 7) {
-    throw new Error("Selecione no maximo 7 soft skills.")
+  if (data.hardSkillsProfissionais.length > MAX_SKILL_SELECTIONS) {
+    throw new Error(`Selecione no maximo ${MAX_SKILL_SELECTIONS} hard skills profissionais.`)
+  }
+
+  if (data.softSkillsProfissionais.length > MAX_SKILL_SELECTIONS) {
+    throw new Error(`Selecione no maximo ${MAX_SKILL_SELECTIONS} soft skills profissionais.`)
+  }
+
+  if (data.hardSkills.length > MAX_SKILL_SELECTIONS) {
+    throw new Error(`Selecione no maximo ${MAX_SKILL_SELECTIONS} hard skills.`)
+  }
+
+  if (data.softSkills.length > MAX_SKILL_SELECTIONS) {
+    throw new Error(`Selecione no maximo ${MAX_SKILL_SELECTIONS} soft skills.`)
   }
 
   if (data.lgpdAccepted !== true) {
