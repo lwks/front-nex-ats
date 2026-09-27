@@ -16,12 +16,12 @@ import {
   defaultExperienceOptions,
   defaultLanguageOptions,
   defaultLanguageProficiencyOptions,
+  MAX_AREA_SELECTIONS,
   MAX_SKILL_SELECTIONS,
+  MAX_TEAM_SELECTIONS,
   defaultSeniorityOptions,
   defaultSoftSkillOptions,
-  getTeamOptionsForAreas,
-  normalizeTeamValue,
-  normalizeTeamValueForAreas,
+  defaultTeamOptions,
   topSectorOptions,
   type LanguageProficiencyOption,
   type OnboardingOption,
@@ -85,7 +85,7 @@ export function UserRegistrationProfessionalStep({
     empresaAtual: data.empresaAtual || "",
     senioridade: data.senioridade || "",
     setorAtual: data.setorAtual || "",
-    timeAtual: normalizeTeamValue(data.timeAtual),
+    timeAtual: data.timeAtual || [],
     beneficiosAtuais: data.beneficiosAtuais || [],
     industriaInteresse: data.industriaInteresse || [],
     hardSkillsProfissionais: data.hardSkillsProfissionais || [],
@@ -139,10 +139,11 @@ export function UserRegistrationProfessionalStep({
     Boolean(formData.empresaAtual.trim()) &&
     Boolean(formData.senioridade) &&
     Boolean(formData.setorAtual.trim()) &&
-    Boolean(formData.timeAtual.trim()) &&
+    formData.timeAtual.length > 0 &&
+    formData.timeAtual.length <= MAX_TEAM_SELECTIONS &&
     formData.beneficiosAtuais.length > 0 &&
     formData.industriaInteresse.length > 0 &&
-    formData.industriaInteresse.length <= 3 &&
+    formData.industriaInteresse.length <= MAX_AREA_SELECTIONS &&
     formData.hardSkillsProfissionais.length > 0 &&
     formData.hardSkillsProfissionais.length <= MAX_SKILL_SELECTIONS &&
     formData.softSkillsProfissionais.length > 0 &&
@@ -160,7 +161,11 @@ export function UserRegistrationProfessionalStep({
   const currentSectorError =
     touched.setorAtual && !formData.setorAtual.trim() ? "Informe o setor atual." : ""
   const currentTeamError =
-    touched.timeAtual && !formData.timeAtual.trim() ? "Informe o time atual." : ""
+    touched.timeAtual && formData.timeAtual.length === 0
+      ? "Selecione ao menos um time atual."
+      : touched.timeAtual && formData.timeAtual.length > MAX_TEAM_SELECTIONS
+        ? `Selecione no maximo ${MAX_TEAM_SELECTIONS} times atuais.`
+        : ""
   const benefitError =
     touched.beneficiosAtuais && formData.beneficiosAtuais.length === 0
       ? "Selecione ao menos um beneficio atual."
@@ -168,8 +173,8 @@ export function UserRegistrationProfessionalStep({
   const areaError =
     touched.industriaInteresse && formData.industriaInteresse.length === 0
       ? "Selecione ao menos uma area."
-      : touched.industriaInteresse && formData.industriaInteresse.length > 3
-        ? "Selecione no maximo 3 areas."
+      : touched.industriaInteresse && formData.industriaInteresse.length > MAX_AREA_SELECTIONS
+        ? `Selecione no maximo ${MAX_AREA_SELECTIONS} area.`
         : ""
   const hardSkillError =
     touched.hardSkillsProfissionais && formData.hardSkillsProfissionais.length === 0
@@ -401,9 +406,9 @@ export function UserRegistrationProfessionalStep({
             <Label htmlFor="industriaInteresse">Area</Label>
             <MultiSelect
               id="industriaInteresse"
-              maxSelections={3}
+              maxSelections={MAX_AREA_SELECTIONS}
               options={industryOptions}
-              placeholder="Selecione ate 3 areas"
+              placeholder="Selecione uma area"
               value={formData.industriaInteresse}
               onChange={(value) => {
                 const allowedValues = new Set(getHardSkillOptionsForAreas(value, industryOptions).map((option) => option.value))
@@ -430,39 +435,19 @@ export function UserRegistrationProfessionalStep({
 
           <div className="space-y-2">
             <Label htmlFor="timeAtual">Time</Label>
-            <Select
+            <MultiSelect
+              id="timeAtual"
+              maxSelections={MAX_TEAM_SELECTIONS}
+              options={defaultTeamOptions}
+              placeholder={`Selecione ate ${MAX_TEAM_SELECTIONS} times`}
               value={formData.timeAtual}
-              disabled={teamOptions.length === 0}
-              onValueChange={(value) => {
+              onChange={(value) => {
                 setFormData({ ...formData, timeAtual: value })
                 if (!touched.timeAtual) {
                   setTouched((previous) => ({ ...previous, timeAtual: true }))
                 }
               }}
-            >
-              <SelectTrigger
-                id="timeAtual"
-                className={cn("w-full", currentTeamError && "border-destructive focus-visible:ring-destructive/40")}
-                aria-invalid={currentTeamError ? "true" : "false"}
-              >
-                <SelectValue
-                  placeholder={
-                    formData.industriaInteresse.length === 0
-                      ? "Selecione uma área primeiro"
-                      : teamOptions.length === 0
-                        ? "Nenhum time disponível"
-                        : "Selecione o time"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {teamOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
             {currentTeamError ? <p className="text-xs text-destructive">{currentTeamError}</p> : null}
           </div>
         </div>
