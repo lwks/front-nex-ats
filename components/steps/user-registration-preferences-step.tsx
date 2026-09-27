@@ -19,7 +19,6 @@ import {
   MAX_TEAM_SELECTIONS,
   defaultSeniorityOptions,
   defaultSoftSkillOptions,
-  defaultTeamOptions,
   defaultTravelAvailabilityOptions,
   defaultWorkTypeOptions,
   topSectorOptions,
@@ -106,6 +105,20 @@ export function UserRegistrationPreferencesStep({
     () => getHardSkillOptionsForAreas(formData.areaPreferencia, industryOptions),
     [formData.areaPreferencia, industryOptions],
   )
+  const teamOptions = useMemo(
+    () => getTeamOptionsForAreas(formData.areaPreferencia, industryOptions),
+    [formData.areaPreferencia, industryOptions],
+  )
+
+  useEffect(() => {
+    setFormData((previous) => {
+      if (previous.areaPreferencia.length > 0 && industryOptions.length === 0 && !areaOptionsSource && !areaOptionsError) {
+        return previous
+      }
+      const nextTime = normalizeTeamValueForAreas(previous.time, previous.areaPreferencia, industryOptions)
+      return nextTime === previous.time ? previous : { ...previous, time: nextTime }
+    })
+  }, [areaOptionsError, areaOptionsSource, formData.areaPreferencia, industryOptions])
 
   const isFormComplete =
     formData.setor.length > 0 &&
@@ -264,6 +277,7 @@ export function UserRegistrationPreferencesStep({
                 setFormData((previous) => ({
                   ...previous,
                   areaPreferencia: value,
+                  time: normalizeTeamValueForAreas(previous.time, value, industryOptions),
                   hardSkills: previous.hardSkills.filter((skill) => allowedValues.has(skill)),
                 }))
                 if (!touched.areaPreferencia) {

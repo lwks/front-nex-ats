@@ -112,7 +112,8 @@ describe("UserRegistrationPage", () => {
       />,
     )
 
-    expect(html).not.toContain('disabled=""')
+    expect(html).toContain('id="time"')
+    expect(html).toContain('disabled=""')
     expect(html).toContain('id="areaPreferencia"')
     expect(html).toContain('id="setor"')
     expect(html).toContain('id="time"')

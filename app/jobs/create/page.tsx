@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { FormEvent, useEffect, useRef, useState } from "react"
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react"
 
 import { JOBS_API_PROXY_URL, ZIPS_API_PROXY_URL } from "@/config"
 import { AreaOptionsStatus } from "@/components/area-options-status"
@@ -14,8 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   defaultInterestRoleAreaMap,
   defaultInterestRoleOptions,
-  defaultTeamOptions,
   filterAreaSelectionsByRoles,
+  getTeamOptionsForAreas,
+  normalizeTeamValueForAreas,
   resolveAreaValuesForRoles,
   topSectorOptions,
   type OnboardingOption,
@@ -294,6 +295,21 @@ export default function CreateJobPage() {
       }
     })
   }, [roleAreaMap, formState.cargo])
+
+  const teamOptions = useMemo(
+    () => getTeamOptionsForAreas(formState.area, industryOptions),
+    [formState.area, industryOptions],
+  )
+
+  useEffect(() => {
+    setFormState((previous) => {
+      if (previous.area.length > 0 && industryOptions.length === 0 && !areaOptionsSource && !areaOptionsError) {
+        return previous
+      }
+      const nextTime = normalizeTeamValueForAreas(previous.time, previous.area, industryOptions)
+      return nextTime === previous.time ? previous : { ...previous, time: nextTime }
+    })
+  }, [areaOptionsError, areaOptionsSource, formState.area, industryOptions])
 
   const zipSummary = zipLookupResult ? formatZipSummary(zipLookupResult) : null
   const isNivelDisabled = formState.cargo === "estagiario"
@@ -818,31 +834,6 @@ export default function CreateJobPage() {
                 {sectorValidationMessage ? <p className="text-xs text-destructive">{sectorValidationMessage}</p> : null}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="time">Time</Label>
-                <Select
-                  value={formState.time}
-                  onValueChange={(value) => setFormState((previous) => ({ ...previous, time: value }))}
-                >
-                  <SelectTrigger
-                    id="time"
-                    name="time"
-                    aria-invalid={teamValidationMessage ? "true" : "false"}
-                    className={cn("w-full", teamValidationMessage && "border-destructive focus-visible:ring-destructive/40")}
-                  >
-                    <SelectValue placeholder="Selecione o time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {defaultTeamOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {teamValidationMessage ? <p className="text-xs text-destructive">{teamValidationMessage}</p> : null}
-              </div>
-
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="area">Area</Label>
                 <MultiSelect
@@ -860,6 +851,7 @@ export default function CreateJobPage() {
                     setFormState((previous) => ({
                       ...previous,
                       area: value,
+                      time: normalizeTeamValueForAreas(previous.time, value, industryOptions),
                     }))
                   }
                 />
@@ -871,6 +863,40 @@ export default function CreateJobPage() {
                   source={areaOptionsSource}
                 />
                 {areaValidationMessage ? <p className="text-xs text-destructive">{areaValidationMessage}</p> : null}
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="time">Time</Label>
+                <Select
+                  value={formState.time}
+                  disabled={teamOptions.length === 0}
+                  onValueChange={(value) => setFormState((previous) => ({ ...previous, time: value }))}
+                >
+                  <SelectTrigger
+                    id="time"
+                    name="time"
+                    aria-invalid={teamValidationMessage ? "true" : "false"}
+                    className={cn("w-full", teamValidationMessage && "border-destructive focus-visible:ring-destructive/40")}
+                  >
+                    <SelectValue
+                      placeholder={
+                        formState.area.length === 0
+                          ? "Selecione uma área primeiro"
+                          : teamOptions.length === 0
+                            ? "Nenhum time disponível"
+                            : "Selecione o time"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {teamValidationMessage ? <p className="text-xs text-destructive">{teamValidationMessage}</p> : null}
               </div>
 
               <div className="md:col-span-2 grid gap-4 md:grid-cols-4">

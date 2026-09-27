@@ -65,6 +65,17 @@ export function normalizeTeamValue(value: unknown): string {
   return defaultTeamOptions.some((option) => option.value === normalizedValue) ? normalizedValue : ""
 }
 
+export function normalizeTeamValueForAreas(
+  value: unknown,
+  selectedAreaValues: string[],
+  areaOptions: Array<Pick<OnboardingOption, "value" | "label">>,
+): string {
+  const normalizedValue = normalizeTeamValue(value)
+  return getTeamOptionsForAreas(selectedAreaValues, areaOptions).some((option) => option.value === normalizedValue)
+    ? normalizedValue
+    : ""
+}
+
 export const defaultExperienceOptions: OnboardingOption[] = [
   { value: "estagio", label: "Estagio" },
   { value: "junior", label: "1-3 anos" },

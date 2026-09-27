@@ -118,6 +118,20 @@ export function UserRegistrationProfessionalStep({
     () => getHardSkillOptionsForAreas(formData.industriaInteresse, industryOptions),
     [formData.industriaInteresse, industryOptions],
   )
+  const teamOptions = useMemo(
+    () => getTeamOptionsForAreas(formData.industriaInteresse, industryOptions),
+    [formData.industriaInteresse, industryOptions],
+  )
+
+  useEffect(() => {
+    setFormData((previous) => {
+      if (previous.industriaInteresse.length > 0 && industryOptions.length === 0 && !areaOptionsSource && !areaOptionsError) {
+        return previous
+      }
+      const nextTime = normalizeTeamValueForAreas(previous.timeAtual, previous.industriaInteresse, industryOptions)
+      return nextTime === previous.timeAtual ? previous : { ...previous, timeAtual: nextTime }
+    })
+  }, [areaOptionsError, areaOptionsSource, formData.industriaInteresse, industryOptions])
 
   const isFormComplete =
     Boolean(formData.experiencia) &&
@@ -401,6 +415,7 @@ export function UserRegistrationProfessionalStep({
                 setFormData((previous) => ({
                   ...previous,
                   industriaInteresse: value,
+                  timeAtual: normalizeTeamValueForAreas(previous.timeAtual, value, industryOptions),
                   hardSkillsProfissionais: previous.hardSkillsProfissionais.filter((skill) => allowedValues.has(skill)),
                 }))
                 if (!touched.industriaInteresse) {
