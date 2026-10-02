@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { GET, OPTIONS } from '@/app/api/candidates/by-job-guids/route'
 import { CANDIDATES_BY_JOB_GUIDS_API_URL } from '@/config'
+vi.mock('@/lib/auth/require-api-account-type', () => ({ accountTypeError: vi.fn().mockResolvedValue(null) }))
 
 describe('/api/candidates/by-job-guids route', () => {
   afterEach(() => {

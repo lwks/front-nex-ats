@@ -12,7 +12,7 @@ export default defineConfig({
       reporter: ['text', 'json-summary'],
       include: [
         'app/api/auth/**/*.ts',
-        'lib/auth/cognito.ts',
+        'lib/auth/supabase.ts',
       ],
       thresholds: {
         lines: 90,

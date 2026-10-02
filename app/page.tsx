@@ -1,28 +1,13 @@
-import { CompanyApplicationsPage } from "@/components/company-applications-page"
-import { cookies } from "next/headers"
-import { headers } from "next/headers"
-import { redirect } from "next/navigation"
-import {
-  ACCESS_TOKEN_COOKIE,
-  ID_TOKEN_COOKIE,
-  TOKEN_EXPIRES_AT_COOKIE,
-  getSessionState,
-  isAuthEnabled,
-} from "@/lib/auth/cognito"
+import { redirect } from 'next/navigation'
+import { LoginPage } from '@/components/login-page'
+import { accountTypeFromClaims, destinationForAccountType } from '@/lib/auth/supabase'
+import { getVerifiedClaims } from '@/lib/auth/supabase-server'
 
-export default async function HomePage() {
-  const cookieStore = await cookies()
-  const headerStore = await headers()
-  const authEnabled = isAuthEnabled(headerStore.get("x-forwarded-host") ?? headerStore.get("host"))
-  const session = getSessionState({
-    accessToken: cookieStore.get(ACCESS_TOKEN_COOKIE)?.value ?? null,
-    idToken: cookieStore.get(ID_TOKEN_COOKIE)?.value ?? null,
-    expiresAt: cookieStore.get(TOKEN_EXPIRES_AT_COOKIE)?.value ?? null,
-  })
-
-  if (authEnabled && !session.authenticated) {
-    redirect("/api/auth/login")
-  }
-
-  return <CompanyApplicationsPage />
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
+  const { mode } = await searchParams
+  const claims = await getVerifiedClaims()
+  const type = accountTypeFromClaims(claims)
+  if (type && mode !== 'recover') redirect(destinationForAccountType(type))
+  if (claims && !type && mode !== 'complete' && mode !== 'recover') redirect('/?mode=complete')
+  return <LoginPage />
 }

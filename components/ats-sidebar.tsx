@@ -35,7 +35,7 @@ type AtsSidebarProps = {
 export const ATS_NAV_ITEMS: AtsSidebarItem[] = [
   {
     key: "ats",
-    href: "/",
+    href: "/empresa/candidaturas",
     label: "ATS",
     description: "Sistema de Rastreamento",
     icon: Users,
@@ -143,6 +143,7 @@ export function AtsSidebar({ activeItem }: AtsSidebarProps) {
 
       {!isSidebarCollapsed ? (
         <div className="border-t border-[#333333] p-4">
+          <a href="/api/auth/logout" className="mb-4 block rounded-lg border border-[#555] px-4 py-2 text-center text-sm text-gray-200 hover:border-white">Sair</a>
           <div className="rounded-lg bg-gradient-to-r from-[#FF6B00] to-[#FF8C00] p-4 text-white shadow-xl">
             <Lock className="mb-2 size-5" />
             <p className="text-sm font-semibold">Modulos bloqueados</p>

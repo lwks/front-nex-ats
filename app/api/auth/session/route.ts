@@ -1,16 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { ACCESS_TOKEN_COOKIE, ID_TOKEN_COOKIE, TOKEN_EXPIRES_AT_COOKIE, getSessionState, isAuthEnabled } from '../../../../lib/auth/cognito'
+import { NextResponse } from 'next/server'
+import { accountTypeFromClaims, supabaseConfig } from '@/lib/auth/supabase'
+import { getVerifiedClaims } from '@/lib/auth/supabase-server'
 
-export async function GET(request: NextRequest) {
-  const authEnabled = isAuthEnabled(request.nextUrl.hostname)
-  const session = getSessionState({
-    accessToken: request.cookies.get(ACCESS_TOKEN_COOKIE)?.value ?? null,
-    idToken: request.cookies.get(ID_TOKEN_COOKIE)?.value ?? null,
-    expiresAt: request.cookies.get(TOKEN_EXPIRES_AT_COOKIE)?.value ?? null,
-  })
-
+export async function GET() {
+  const claims = await getVerifiedClaims()
   return NextResponse.json({
-    ...session,
-    authEnabled,
+    authEnabled: Boolean(supabaseConfig()),
+    authenticated: Boolean(claims),
+    expiresAt: typeof claims?.exp === 'number' ? new Date(claims.exp * 1000).toISOString() : null,
+    accountType: accountTypeFromClaims(claims),
+    user: claims ? { sub: claims.sub, email: claims.email ?? undefined } : null,
   })
 }
