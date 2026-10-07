@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test'
 
+test('reports Supabase auth as enabled when public Supabase variables are present', async ({ request }) => {
+  const response = await request.get('/api/auth/session')
+  expect(response.status()).toBe(200)
+  expect(await response.json()).toMatchObject({ authEnabled: true, authenticated: false })
+})
+
 test('shows the new login on the initial route and rejects incomplete credentials', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Cluster' })).toBeVisible()
