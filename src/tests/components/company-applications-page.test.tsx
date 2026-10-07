@@ -75,7 +75,7 @@ describe("CompanyApplicationsView", () => {
     expect(html).toContain("Salario:")
     expect(html).toContain("Relatorio:")
     expect(html).not.toContain("Detalhes da vaga")
-    expect(html).toContain('href="/"')
+    expect(html).toContain('href="/empresa/candidaturas"')
     expect(html).toContain("Board carregado")
   })
 

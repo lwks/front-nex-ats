@@ -187,11 +187,12 @@ export function PublicJobsBoardView({
                 </Link>
               </Button>
               <Button asChild className="rounded-full bg-[#FF6B00] px-5 text-white hover:bg-[#E55F00]">
-                <Link href="/api/auth/login">
+                <Link href="/">
                   <LogIn className="size-4" />
                   Entrar no ATS
                 </Link>
               </Button>
+              <a href="/api/auth/logout" className="text-sm text-slate-500 hover:text-slate-900">Sair</a>
             </div>
           </div>
         </div>
@@ -422,7 +423,7 @@ export function PublicJobsBoardView({
             <div className="mt-4 space-y-3 text-sm text-slate-400">
               <Link href="/jobs/list" className="block transition hover:text-[#FF6B00]">Todas as vagas</Link>
               <Link href="/users/create" className="block transition hover:text-[#FF6B00]">Criar usuario</Link>
-              <Link href="/api/auth/login" className="block transition hover:text-[#FF6B00]">Entrar no ATS</Link>
+              <Link href="/" className="block transition hover:text-[#FF6B00]">Entrar no ATS</Link>
             </div>
           </div>
           <div>

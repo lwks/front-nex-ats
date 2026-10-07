@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { OPTIONS, POST } from '@/app/api/candidates/route'
+vi.mock('@/lib/auth/require-api-account-type', () => ({ accountTypeError: vi.fn().mockResolvedValue(null) }))
 
 describe('/api/candidates route', () => {
 

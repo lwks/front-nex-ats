@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { OPTIONS, PUT } from "@/app/api/candidates/[id]/route"
+vi.mock('@/lib/auth/require-api-account-type', () => ({ accountTypeError: vi.fn().mockResolvedValue(null) }))
 
 describe("/api/candidates/[id] route", () => {
   it("proxies candidate note updates with upstream status", async () => {

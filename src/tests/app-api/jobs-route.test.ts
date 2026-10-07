@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { GET, OPTIONS, POST } from '@/app/api/jobs/route'
+vi.mock('@/lib/auth/require-api-account-type', () => ({ accountTypeError: vi.fn().mockResolvedValue(null) }))
 
 describe('/api/jobs route', () => {
   it('proxies GET response with limit and lastKey', async () => {
