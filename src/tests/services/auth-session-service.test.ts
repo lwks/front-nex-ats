@@ -28,6 +28,7 @@ describe("auth-session-service", () => {
     expect(session).toEqual({
       authEnabled: true,
       authenticated: true,
+      accountType: null,
       expiresAt: "2026-03-22T12:00:00.000Z",
       user: {
         sub: "abc",
@@ -57,6 +58,7 @@ describe("auth-session-service", () => {
     await expect(fetchAuthSession()).resolves.toEqual({
       authEnabled: true,
       authenticated: false,
+      accountType: null,
       expiresAt: null,
       user: null,
     })
@@ -76,6 +78,7 @@ describe("auth-session-service", () => {
     await expect(fetchAuthSession()).resolves.toEqual({
       authEnabled: false,
       authenticated: false,
+      accountType: null,
       expiresAt: null,
       user: null,
     })
@@ -91,6 +94,7 @@ describe("auth-session-service", () => {
     expect(session).toEqual({
       authEnabled: true,
       authenticated: false,
+      accountType: null,
       expiresAt: null,
       user: null,
     })

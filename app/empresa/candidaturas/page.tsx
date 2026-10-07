@@ -1,5 +1,7 @@
 import { CompanyApplicationsPage } from "@/components/company-applications-page"
+import { requireAccountType } from '@/lib/auth/supabase-server'
 
-export default function CompanyApplicationsRoute() {
+export default async function CompanyApplicationsRoute() {
+  await requireAccountType('COMPANY')
   return <CompanyApplicationsPage />
 }

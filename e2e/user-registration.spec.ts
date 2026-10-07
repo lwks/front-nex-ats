@@ -1,5 +1,13 @@
 import { expect, test, type Page } from "@playwright/test"
 
+async function signIn(page: Page, type: 'candidate' | 'company') {
+  await page.goto('/')
+  await page.getByLabel('E-mail').fill(`${type}@example.com`)
+  await page.getByLabel('Senha').fill('correct-password')
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click()
+  await expect(page).toHaveURL(type === 'company' ? /\/empresa\/candidaturas/ : /\/jobs\/list/)
+}
+
 async function selectOption(page: Page, id: string, label: string) {
   await page.locator(`#${id}`).click()
   await page.getByRole("option", { name: label, exact: true }).click()
@@ -14,6 +22,7 @@ async function selectMultipleOptions(page: Page, id: string, labels: string[]) {
 }
 
 test("opens the candidate registration flow", async ({ page }) => {
+  await signIn(page, 'candidate')
   await page.goto("/users/create")
 
   await expect(page.getByRole("heading", { name: "Crie seu cadastro oficial na plataforma." })).toBeVisible()
@@ -22,6 +31,7 @@ test("opens the candidate registration flow", async ({ page }) => {
 })
 
 test("limits vacancy team selection to three teams from the selected area", async ({ page }) => {
+  await signIn(page, 'company')
   await page.route("**/api/areas", async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -51,6 +61,7 @@ test("limits vacancy team selection to three teams from the selected area", asyn
 
 test("allows five sectors and three preferred seniorities in candidate preferences", async ({ page }) => {
   test.setTimeout(60_000)
+  await signIn(page, 'candidate')
 
   await page.route("**/api/areas", async (route) => {
     await route.fulfill({

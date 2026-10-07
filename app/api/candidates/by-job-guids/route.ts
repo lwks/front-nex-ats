@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { CANDIDATES_BY_JOB_GUIDS_API_URL } from "@/config"
 
 import { CORS_HEADERS, corsOptionsResponse } from "../../cors"
+import { accountTypeError } from '@/lib/auth/require-api-account-type'
 
 export const dynamic = "force-dynamic"
 
@@ -12,6 +13,8 @@ export async function OPTIONS() {
 
 
 export async function GET(request: Request) {
+  const denied = await accountTypeError('COMPANY')
+  if (denied) return denied
   try {
     const url = new URL(request.url)
     const guidVagas = url.searchParams

@@ -9,6 +9,7 @@ export type AuthSessionState = {
   authenticated: boolean
   expiresAt: string | null
   user: AuthSessionUser | null
+  accountType: 'CANDIDATE' | 'COMPANY' | null
 }
 
 const ANONYMOUS_SESSION: AuthSessionState = {
@@ -16,6 +17,7 @@ const ANONYMOUS_SESSION: AuthSessionState = {
   authenticated: false,
   expiresAt: null,
   user: null,
+  accountType: null,
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -61,6 +63,7 @@ function normalizeSession(payload: unknown): AuthSessionState {
     authenticated: true,
     expiresAt: readString(payload.expiresAt) ?? null,
     user: normalizeUser(payload.user),
+    accountType: payload.accountType === 'CANDIDATE' || payload.accountType === 'COMPANY' ? payload.accountType : null,
   }
 }
 

@@ -6,7 +6,7 @@ Aplicacao web do fluxo ATS da ClusterHR, com:
 - Candidatura de candidatos (onboarding em etapas)
 - Criacao de novas vagas
 - Painel de candidaturas por vaga (visao empresa)
-- Autenticacao Cognito via OAuth2 + PKCE
+- Autenticacao Supabase por e-mail, GitHub e LinkedIn
 
 ## Stack
 
@@ -49,30 +49,25 @@ Aplicacao local: `http://localhost:3000`
   - Exemplo: `https://seu-endpoint.lambda-url.../api`
   - Se ausente, o projeto usa um endpoint default definido em `config.ts`.
 
-### Cognito (OAuth2/PKCE)
+### Supabase Auth
 
-- `COGNITO_ENABLED` ou `NEXT_PUBLIC_COGNITO_ENABLED`:
-  - Liga/desliga a autenticacao no runtime.
-  - Aceita `true/false`, `1/0`, `yes/no`, `on/off`.
-  - Se ausente, o projeto desabilita auth automaticamente em `localhost`/`127.0.0.1`/`::1` e mantem habilitado nos demais hosts.
-- `COGNITO_CLIENT_ID` ou `NEXT_PUBLIC_COGNITO_CLIENT_ID` (obrigatorio para login)
-- `COGNITO_DOMAIN` ou `NEXT_PUBLIC_COGNITO_DOMAIN` (opcional; possui default no projeto)
-- `COGNITO_CLIENT_SECRET` ou `NEXT_PUBLIC_COGNITO_CLIENT_SECRET` (opcional)
-- `COGNITO_REDIRECT_URI` ou `NEXT_PUBLIC_COGNITO_REDIRECT_URI` (opcional; fallback para `<origin>/api/auth/callback`)
-- `COGNITO_SCOPE` ou `NEXT_PUBLIC_COGNITO_SCOPE` (opcional; default `openid email profile`)
-- `COGNITO_LOGOUT_URI` ou `NEXT_PUBLIC_COGNITO_LOGOUT_URI` (opcional; habilita logout no Hosted UI)
+- `NEXT_PUBLIC_SUPABASE_URL`: URL do projeto Supabase.
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: chave publicavel do projeto.
+- `SUPABASE_SERVICE_ROLE_KEY`: chave administrativa somente no servidor; fixa `app_metadata.account_type` no primeiro acesso.
+
+Habilite GitHub e LinkedIn OIDC no painel Supabase e inclua `<origin>/auth/callback` e `<origin>/auth/confirm` na lista de URLs de retorno para cada ambiente. No modelo de confirmacao de cadastro, use `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email`; no modelo de recuperacao, use `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery`. A autenticacao interna fica indisponivel sem as variaveis acima.
 
 Importante: nao versione segredos reais em `.env.local`.
 
 ## Rotas de pagina (UI)
 
-- `/`: pipeline de candidaturas por vaga, com guard de autenticacao Cognito quando habilitado
+- `/`: login e cadastro Supabase, escolha entre Candidato e Empresa e recuperacao de senha
 - `/jobs/list`: pagina publica de vagas, com filtros e links de candidatura
-- `/users/create`: cadastro de usuario/candidato
-- `/candidaturas`: onboarding do candidato em 4 etapas; aceita `?vagaGuid=...` para iniciar a candidatura a uma vaga especifica
-- `/jobs/create`: formulario de criacao de vaga com validacoes e consulta de CEP
-- `/empresa/candidaturas`: quadro de candidaturas por vaga (`guid_vaga`)
-- `/empresa/relatorio`: indicadores operacionais de vagas e candidaturas
+- `/users/create`: cadastro ATS de Candidato autenticado
+- `/candidaturas`: onboarding de Candidato autenticado em 4 etapas; aceita `?vagaGuid=...`
+- `/jobs/create`: formulario de criacao de vaga para Empresa autenticada
+- `/empresa/candidaturas`: quadro ATS de candidaturas por vaga para Empresa autenticada
+- `/empresa/relatorio`: indicadores operacionais para Empresa autenticada
 
 ## Endpoints externos esperados (backend ATS)
 
@@ -94,7 +89,7 @@ No cadastro de usuario (`/users/create`), os campos `industriaInteresse` e `area
 - `app/`: paginas do App Router e handlers server internos
 - `components/`: UI e fluxos (vagas, onboarding, board)
 - `services/`: chamadas HTTP usadas pelo front
-- `lib/auth/cognito.ts`: utilitarios de auth, cookies e sessao
+- `lib/auth/supabase.ts` e clientes Supabase: tipo de conta, sessao e guardas de pagina
 - `src/tests/`: testes de rotas e services
 
 ## Testes
@@ -112,17 +107,18 @@ A configuracao de cobertura em `vitest.config.mjs` aplica threshold global de `9
 
 ## Validacao E2E
 
-Para executar a validacao visual e funcional do quadro de candidaturas, instale
-os navegadores do Playwright uma vez e rode os testes:
+Para executar os fluxos de autenticacao e cadastro no navegador, instale o
+Chromium do Playwright uma vez e rode os testes:
 
     npx playwright install chromium
     npm run test:e2e
 
-Os cenarios usam dados descartaveis e interceptam as APIs locais da tela. Eles
-nao exercitam login Cognito nem alteram candidatos reais.
+Os cenarios iniciam um Supabase simulado localmente e usam dados descartaveis.
+Eles nao validam as credenciais, os provedores nem os modelos de e-mail do
+projeto Supabase real e nao alteram candidatos reais.
 
 ## Observacoes atuais
 
-- O quadro de candidaturas em `/` e `/empresa/candidaturas` permite mover candidatos entre etapas e persiste a mudanca via `PUT /api/candidates/:id`.
+- O quadro de candidaturas em `/empresa/candidaturas` permite mover candidatos entre etapas e persiste a mudanca via `PUT /api/candidates/:id`.
 - O onboarding de candidato ainda gera `guid_id` e `cd_cnpj` no front para envio de payload.
-- O projeto possui servicos/testes legados de auth em `services/auth-service.ts`; o runtime principal de autenticacao usa `lib/auth/cognito.ts` + handlers server internos.
+- As guardas de tipo cobrem paginas e handlers Next.js. A API ATS externa ainda nao verifica o JWT Supabase e pode ser chamada diretamente; integrar sua autorizacao fica para outra etapa.

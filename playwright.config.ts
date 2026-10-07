@@ -14,10 +14,22 @@ export default defineConfig({
     video: "off",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: {
-    command: "npm run dev -- --hostname 127.0.0.1",
-    url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: 'node e2e/mock-supabase.mjs',
+      url: 'http://localhost:54329/health',
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: "npm.cmd run dev -- --hostname 127.0.0.1",
+      url: "http://localhost:3000",
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: {
+        NEXT_PUBLIC_SUPABASE_URL: 'http://localhost:54329',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'e2e-public-key',
+        SUPABASE_SERVICE_ROLE_KEY: 'e2e-server-key',
+      },
+    },
+  ],
 })
