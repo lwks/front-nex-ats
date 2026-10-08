@@ -2,7 +2,10 @@ import { defineConfig, devices } from "@playwright/test"
 
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: true,
+  // The local Supabase mock keeps shared auth state, so these scenarios must not
+  // revoke or mutate one another's sessions concurrently.
+  fullyParallel: false,
+  workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: [["html", { outputFolder: "playwright-report", open: "never" }]],
