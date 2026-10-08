@@ -37,3 +37,7 @@ next-env.d.ts
 # Playwright
 /playwright-report/
 /test-results/
+/playwright-report-production/
+/production-e2e-reports/
+/e2e-reports/
+/e2e

@@ -9,7 +9,8 @@
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:production": "playwright test --config=playwright.production.config.ts"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "1.1.3",

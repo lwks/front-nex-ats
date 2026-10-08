@@ -39,6 +39,8 @@ Aplicacao local: `http://localhost:3000`
 - `npm run lint`: lint via ESLint
 - `npm run test`: executa testes (Vitest)
 - `npm run test:watch`: testes em modo watch
+- `npm run test:e2e`: E2E local com Supabase simulado
+- `npm run test:e2e:production`: E2E serial contra o deploy publicado
 
 ## Variaveis de ambiente
 
@@ -116,6 +118,34 @@ Chromium do Playwright uma vez e rode os testes:
 Os cenarios iniciam um Supabase simulado localmente e usam dados descartaveis.
 Eles nao validam as credenciais, os provedores nem os modelos de e-mail do
 projeto Supabase real e nao alteram candidatos reais.
+
+### Validacao E2E do deploy publicado
+
+A suite de producao e separada dos E2E locais, usa um unico worker e nao sobe
+servidores locais. Por padrao, ela valida
+`https://dainty-sprinkles-4f0492.netlify.app/`:
+
+    npm run test:e2e:production
+
+Variaveis aceitas apenas no ambiente local que executa o Playwright:
+
+- `PRODUCTION_E2E_BASE_URL`: URL do deploy a validar.
+- `PRODUCTION_E2E_ATS_API_BASE_URL`: base da API ATS usada pelo deploy.
+- `PRODUCTION_E2E_SUPABASE_URL`: URL do projeto Supabase de producao.
+- `PRODUCTION_E2E_SUPABASE_SERVICE_ROLE_KEY`: chave administrativa usada
+  somente pelo processo Node para criar e remover usuarios temporarios.
+
+Sem as credenciais administrativas, os testes publicos continuam e os cenarios
+que exigem contas descartaveis ficam marcados como bloqueados. A chave, senhas
+e tokens nunca sao gravados nos relatorios. A execucao gera:
+
+- HTML em `playwright-report-production/`;
+- traces e screenshots de falhas em `test-results/production/`;
+- Markdown por execucao em `production-e2e-reports/<E2E-data-run>.md`.
+
+Vagas, candidaturas e anotacoes criadas recebem o identificador `E2E-...` e
+ficam relacionadas no Markdown, pois a interface atual nao oferece exclusao.
+Usuarios temporarios sao removidos pela Admin API inclusive depois de falhas.
 
 ## Observacoes atuais
 
