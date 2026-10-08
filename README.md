@@ -57,8 +57,6 @@ Aplicacao local: `http://localhost:3000`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: chave publicavel do projeto.
 - `SUPABASE_SERVICE_ROLE_KEY`: chave administrativa somente no servidor; fixa `app_metadata.account_type` no primeiro acesso.
 
-No deploy pela Netlify, `netlify.toml` disponibiliza a URL e a chave publicavel durante o build do Next.js. Para usar outro projeto Supabase por ambiente, configure esses mesmos nomes nas variaveis de ambiente da Netlify.
-
 Habilite GitHub e LinkedIn OIDC no painel Supabase e inclua `<origin>/auth/callback` e `<origin>/auth/confirm` na lista de URLs de retorno para cada ambiente. No modelo de confirmacao de cadastro, use `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email`; no modelo de recuperacao, use `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery`. A autenticacao interna fica indisponivel sem as variaveis acima.
 
 Importante: nao versione segredos reais em `.env.local`.
