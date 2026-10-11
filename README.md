@@ -64,7 +64,7 @@ Importante: nao versione segredos reais em `.env.local`.
 ## Rotas de pagina (UI)
 
 - `/`: login e cadastro Supabase, escolha entre Candidato e Empresa e recuperacao de senha
-- `/jobs/list`: pagina publica de vagas, com filtros e links de candidatura
+- `/jobs/list`: vagas publicas com filtros e links de candidatura; mostra nome ou e-mail e opcao de sair quando autenticado
 - `/users/create`: cadastro ATS de Candidato autenticado
 - `/candidaturas`: onboarding de Candidato autenticado em 4 etapas; aceita `?vagaGuid=...`
 - `/jobs/create`: formulario de criacao de vaga para Empresa autenticada

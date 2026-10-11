@@ -64,6 +64,26 @@ describe("PublicJobsBoardView", () => {
     expect(html).toContain("Carregar mais vagas")
   })
 
+  it("shows the signed-in user's identity and logout action", () => {
+    const html = renderToStaticMarkup(
+      <PublicJobsBoardView {...createViewProps({ authenticatedUser: "Joana Silva" })} />,
+    )
+
+    expect(html).toContain('aria-label="Usuário conectado">Joana Silva</span>')
+    expect(html).toContain('href="/api/auth/logout"')
+    expect(html.match(/<header.*?<\/header>/)?.[0]).not.toContain("Entrar no ATS")
+  })
+
+  it("keeps sign-in and signup actions for anonymous visitors", () => {
+    const html = renderToStaticMarkup(<PublicJobsBoardView {...createViewProps()} />)
+
+    const header = html.match(/<header.*?<\/header>/)?.[0] ?? ""
+    expect(header).toContain("Entrar no ATS")
+    expect(header).toContain("Criar usuario")
+    expect(header).not.toContain('aria-label="Usuário conectado"')
+    expect(header).not.toContain('href="/api/auth/logout"')
+  })
+
   it("renders the empty search state when no job matches the query", () => {
     const html = renderToStaticMarkup(
       <PublicJobsBoardView {...createViewProps({ query: "inexistente" })} />,
