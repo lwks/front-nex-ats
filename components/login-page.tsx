@@ -11,6 +11,7 @@ import {
 } from '@/lib/auth/supabase'
 
 type Screen = 'login' | 'register' | 'complete' | 'recover'
+type RegistrationFeedback = { type: 'success' | 'error'; message: string }
 
 export function LoginPage() {
   const params = useSearchParams()
@@ -23,14 +24,31 @@ export function LoginPage() {
   const [message, setMessage] = useState(params.get('error') ? 'Não foi possível concluir a autenticação. Tente novamente.' : '')
   const [error, setError] = useState(Boolean(params.get('error')))
   const [busy, setBusy] = useState(false)
+  const [registrationFeedback, setRegistrationFeedback] = useState<RegistrationFeedback | null>(null)
   const autoFinalized = useRef(false)
   const client = useMemo(() => createSupabaseBrowserClient(), [])
 
   const notice = useCallback((value: string, isError = false) => { setMessage(value); setError(isError) }, [])
-  function changeScreen(next: Screen) { setScreen(next); setMessage(''); setType(null) }
+  function changeScreen(next: Screen) { setScreen(next); setMessage(''); setRegistrationFeedback(null); setType(null) }
+  const showRegistrationFeedback = useCallback((value: string, isError = false) => {
+    setMessage('')
+    setRegistrationFeedback({ type: isError ? 'error' : 'success', message: value })
+  }, [])
+  function dismissRegistrationFeedback() {
+    const isSuccess = registrationFeedback?.type === 'success'
+    setRegistrationFeedback(null)
+    if (isSuccess) {
+      setScreen('login')
+      setType(null)
+      setName('')
+      setPassword('')
+      setConfirm('')
+      setMessage('')
+    }
+  }
 
-  const finalizeAccount = useCallback(async (accountType?: AccountType | null) => {
-    if (!client) return notice('Supabase não configurado.', true)
+  const finalizeAccount = useCallback(async (accountType?: AccountType | null, redirectAfterFinalize = true) => {
+    if (!client) { notice('Supabase não configurado.', true); return false }
     try {
       const response = await fetch('/api/auth/account-type', {
         method: 'POST',
@@ -38,13 +56,15 @@ export function LoginPage() {
         body: JSON.stringify({ accountType }),
       })
       const result = await response.json() as { accountType?: AccountType; destination?: string; message?: string }
-      if (!response.ok || !result.accountType) return notice(result.message ?? 'Não foi possível concluir o cadastro.', true)
+      if (!response.ok || !result.accountType) { notice(result.message ?? 'Não foi possível concluir o cadastro.', true); return false }
       const refreshed = await client.auth.refreshSession()
-      if (refreshed.error) return notice('Não foi possível atualizar a sessão. Entre novamente.', true)
+      if (refreshed.error) { notice('Não foi possível atualizar a sessão. Entre novamente.', true); return false }
       sessionStorage.removeItem('cluster_pending_account_type')
-      window.location.assign(result.destination ?? destinationForAccountType(result.accountType))
+      if (redirectAfterFinalize) window.location.assign(result.destination ?? destinationForAccountType(result.accountType))
+      return true
     } catch {
       notice('Não foi possível concluir o cadastro. Tente novamente.', true)
+      return false
     }
   }, [client, notice])
 
@@ -52,11 +72,23 @@ export function LoginPage() {
     if (params.get('mode') !== 'complete' || !client || autoFinalized.current) return
     const pending = sessionStorage.getItem('cluster_pending_account_type')
     if (pending === 'CANDIDATE' || pending === 'COMPANY') {
-      const timer = window.setTimeout(() => { autoFinalized.current = true; void finalizeAccount(pending) }, 0)
+      const timer = window.setTimeout(() => {
+        autoFinalized.current = true
+        void (async () => {
+          const finalized = await finalizeAccount(pending, false)
+          if (!finalized) {
+            showRegistrationFeedback('Não foi possível concluir o cadastro. Tente novamente.', true)
+            return
+          }
+          const { error: signOutError } = await client.auth.signOut()
+          if (signOutError) showRegistrationFeedback('Cadastro concluído. Saia da sessão atual para entrar com a nova conta.', true)
+          else showRegistrationFeedback('Cadastro concluído com sucesso. Entre com seu e-mail e senha para validar o acesso.')
+        })()
+      }, 0)
       return () => window.clearTimeout(timer)
     }
     // The callback may also be a first OAuth login without a chosen account type.
-  }, [client, params, finalizeAccount])
+  }, [client, params, finalizeAccount, showRegistrationFeedback])
 
   async function finishSignIn() {
     if (!client) return notice('Supabase não configurado.', true)
@@ -85,19 +117,35 @@ export function LoginPage() {
 
   async function register(event: FormEvent) {
     event.preventDefault()
-    if (!type) return notice('Selecione Candidato ou Empresa.', true)
-    if (!name || !email || !password || !confirm) return notice('Preencha todos os campos.', true)
-    if (password !== confirm) return notice('As senhas não são iguais.', true)
-    if (!client) return notice('Supabase não configurado.', true)
+    if (!type) return showRegistrationFeedback('Selecione Candidato ou Empresa.', true)
+    if (!name || !email || !password || !confirm) return showRegistrationFeedback('Preencha todos os campos.', true)
+    if (password !== confirm) return showRegistrationFeedback('As senhas não são iguais.', true)
+    if (!client) return showRegistrationFeedback('Supabase não configurado.', true)
     setBusy(true)
-    const { data, error: signUpError } = await client.auth.signUp({
-      email, password,
-      options: { data: { full_name: name, account_type: type }, emailRedirectTo: `${window.location.origin}/auth/confirm` },
-    })
-    if (signUpError) notice(signUpError.message, true)
-    else if (!data.session) notice('Cadastro realizado! Confirme seu e-mail antes de entrar.')
-    else await finalizeAccount(type)
-    setBusy(false)
+    try {
+      const { data, error: signUpError } = await client.auth.signUp({
+        email, password,
+        options: { data: { full_name: name, account_type: type }, emailRedirectTo: `${window.location.origin}/auth/confirm` },
+      })
+      if (signUpError) {
+        showRegistrationFeedback(signUpError.message, true)
+      } else if (!data.session) {
+        showRegistrationFeedback('Cadastro realizado! Confirme seu e-mail antes de entrar.')
+      } else {
+        const finalized = await finalizeAccount(type, false)
+        if (!finalized) {
+          showRegistrationFeedback('Sua conta foi criada, mas não foi possível concluir o cadastro. Tente entrar novamente ou contate o suporte.', true)
+        } else {
+          const { error: signOutError } = await client.auth.signOut()
+          if (signOutError) showRegistrationFeedback('Cadastro concluído. Saia da sessão atual para entrar com a nova conta.', true)
+          else showRegistrationFeedback('Cadastro concluído com sucesso. Entre com seu e-mail e senha para validar o acesso.')
+        }
+      }
+    } catch {
+      showRegistrationFeedback('Não foi possível concluir o cadastro. Tente novamente.', true)
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function oauth(provider: 'github' | 'linkedin_oidc', registration = false) {
@@ -111,7 +159,8 @@ export function LoginPage() {
     })
     if (oauthError) {
       sessionStorage.removeItem('cluster_pending_account_type')
-      notice(oauthError.message, true)
+      if (registration) showRegistrationFeedback(oauthError.message, true)
+      else notice(oauthError.message, true)
     }
     setBusy(false)
   }
@@ -200,6 +249,18 @@ export function LoginPage() {
         </form>
       </>}
       {message && <p role="status" className={`mt-4 rounded-md p-3 text-sm ${error ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>{message}</p>}
+      {registrationFeedback && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6" role="alertdialog" aria-modal="true" aria-labelledby="registration-feedback-title" aria-describedby="registration-feedback-message">
+        <section className="w-full max-w-md rounded-2xl bg-white p-7 text-center shadow-2xl">
+          <div className={`mx-auto mb-4 flex size-14 items-center justify-center rounded-full ${registrationFeedback.type === 'success' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`} aria-hidden="true">
+            {registrationFeedback.type === 'success' ? '✓' : '!'}
+          </div>
+          <h2 id="registration-feedback-title" className="text-xl font-bold text-slate-950">{registrationFeedback.type === 'success' ? 'Cadastro realizado' : 'Não foi possível concluir o cadastro'}</h2>
+          <p id="registration-feedback-message" className="mt-3 text-sm leading-6 text-slate-600">{registrationFeedback.message}</p>
+          <button type="button" className="mt-6 w-full rounded-lg bg-[#FF6B00] px-4 py-3 font-semibold text-white hover:bg-[#E55F00]" onClick={dismissRegistrationFeedback}>
+            {registrationFeedback.type === 'success' ? 'Ir para login' : 'Revisar cadastro'}
+          </button>
+        </section>
+      </div>}
     </section>
   </main>
 }
