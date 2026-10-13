@@ -30,6 +30,7 @@ const STATS = [
 ] as const
 
 export type PublicJobsBoardViewProps = {
+  authenticatedUser?: string | null
   jobs: JobBoardJob[]
   query: string
   onQueryChange: (value: string) => void
@@ -50,9 +51,11 @@ export function hasInitialPublicJobs(initialJobs?: JobBoardJob[]) {
 export function PublicJobsBoard({
   initialJobs,
   initialLastKey = null,
+  authenticatedUser = null,
 }: {
   initialJobs?: JobBoardJob[]
   initialLastKey?: string | null
+  authenticatedUser?: string | null
 }) {
   const resolvedInitialJobs = initialJobs ?? EMPTY_INITIAL_JOBS
   const hasInitialJobs = hasInitialPublicJobs(resolvedInitialJobs)
@@ -126,6 +129,7 @@ export function PublicJobsBoard({
 
   return (
     <PublicJobsBoardView
+      authenticatedUser={authenticatedUser}
       jobs={jobs}
       query={query}
       onQueryChange={handleQueryChange}
@@ -142,6 +146,7 @@ export function PublicJobsBoard({
 }
 
 export function PublicJobsBoardView({
+  authenticatedUser = null,
   jobs,
   query,
   onQueryChange,
@@ -180,19 +185,23 @@ export function PublicJobsBoardView({
               <a href="#contato" className="transition hover:text-[#FF6B00]">Contato</a>
             </nav>
             <div className="flex items-center gap-3">
-              <Button asChild variant="outline" className="rounded-full border-[#FF6B00]/25 px-5 text-[#C44E00] hover:bg-[#FFF1E8] hover:text-[#C44E00]">
-                <Link href="/users/create">
-                  <UserPlus className="size-4" />
-                  Criar usuario
-                </Link>
-              </Button>
-              <Button asChild className="rounded-full bg-[#FF6B00] px-5 text-white hover:bg-[#E55F00]">
-                <Link href="/">
-                  <LogIn className="size-4" />
-                  Entrar no ATS
-                </Link>
-              </Button>
-              <a href="/api/auth/logout" className="text-sm text-slate-500 hover:text-slate-900">Sair</a>
+              {authenticatedUser ? <>
+                <span className="max-w-48 truncate text-sm font-semibold text-slate-700" aria-label="Usuário conectado">{authenticatedUser}</span>
+                <a href="/api/auth/logout" className="text-sm text-slate-500 hover:text-slate-900">Sair</a>
+              </> : <>
+                <Button asChild variant="outline" className="rounded-full border-[#FF6B00]/25 px-5 text-[#C44E00] hover:bg-[#FFF1E8] hover:text-[#C44E00]">
+                  <Link href="/users/create">
+                    <UserPlus className="size-4" />
+                    Criar usuario
+                  </Link>
+                </Button>
+                <Button asChild className="rounded-full bg-[#FF6B00] px-5 text-white hover:bg-[#E55F00]">
+                  <Link href="/">
+                    <LogIn className="size-4" />
+                    Entrar no ATS
+                  </Link>
+                </Button>
+              </>}
             </div>
           </div>
         </div>
