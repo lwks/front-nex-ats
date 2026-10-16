@@ -21,7 +21,7 @@ export function UserRegistrationCvStep({
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#C44E00]">Cadastro oficial</p>
         <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Upload de CV</h2>
         <p className="mt-3 text-sm leading-6 text-slate-600">
-          O envio de curriculo ficara disponivel em breve. Por enquanto, voce ja pode concluir seu cadastro sem anexar arquivo.
+          O envio do currículo ficará disponível em breve. Por enquanto, você pode enviar sua candidatura sem anexar um arquivo.
         </p>
       </div>
 
@@ -31,7 +31,7 @@ export function UserRegistrationCvStep({
         </div>
         <p className="mt-5 text-base font-medium text-slate-900">Upload temporariamente desativado</p>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Quando a funcionalidade for liberada, voce podera enviar seu CV em PDF diretamente nesta etapa.
+          Quando a funcionalidade for liberada, você poderá enviar seu CV em PDF diretamente nesta etapa.
         </p>
         <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-500">
           <Lock className="size-4" aria-hidden="true" />
@@ -57,7 +57,7 @@ export function UserRegistrationCvStep({
           size="lg"
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Finalizando..." : "Finalizar cadastro"}
+          {isSubmitting ? "Enviando..." : "Enviar candidatura"}
         </Button>
       </div>
     </div>

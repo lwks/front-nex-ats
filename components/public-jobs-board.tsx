@@ -31,6 +31,7 @@ const STATS = [
 
 export type PublicJobsBoardViewProps = {
   authenticatedUser?: string | null
+  notice?: "select-job" | null
   jobs: JobBoardJob[]
   query: string
   onQueryChange: (value: string) => void
@@ -52,10 +53,12 @@ export function PublicJobsBoard({
   initialJobs,
   initialLastKey = null,
   authenticatedUser = null,
+  notice = null,
 }: {
   initialJobs?: JobBoardJob[]
   initialLastKey?: string | null
   authenticatedUser?: string | null
+  notice?: "select-job" | null
 }) {
   const resolvedInitialJobs = initialJobs ?? EMPTY_INITIAL_JOBS
   const hasInitialJobs = hasInitialPublicJobs(resolvedInitialJobs)
@@ -130,6 +133,7 @@ export function PublicJobsBoard({
   return (
     <PublicJobsBoardView
       authenticatedUser={authenticatedUser}
+      notice={notice}
       jobs={jobs}
       query={query}
       onQueryChange={handleQueryChange}
@@ -147,6 +151,7 @@ export function PublicJobsBoard({
 
 export function PublicJobsBoardView({
   authenticatedUser = null,
+  notice = null,
   jobs,
   query,
   onQueryChange,
@@ -190,9 +195,9 @@ export function PublicJobsBoardView({
                 <a href="/api/auth/logout" className="text-sm text-slate-500 hover:text-slate-900">Sair</a>
               </> : <>
                 <Button asChild variant="outline" className="rounded-full border-[#FF6B00]/25 px-5 text-[#C44E00] hover:bg-[#FFF1E8] hover:text-[#C44E00]">
-                  <Link href="/users/create">
+                  <Link href="/?mode=register">
                     <UserPlus className="size-4" />
-                    Criar usuario
+                    Criar conta
                   </Link>
                 </Button>
                 <Button asChild className="rounded-full bg-[#FF6B00] px-5 text-white hover:bg-[#E55F00]">
@@ -277,6 +282,11 @@ export function PublicJobsBoardView({
       </section>
 
       <main id="vagas" className="mx-auto w-full max-w-6xl px-4 py-12">
+        {notice === "select-job" ? (
+          <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950" role="status">
+            Para enviar uma candidatura, escolha primeiro uma vaga na lista abaixo.
+          </div>
+        ) : null}
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[#FF6B00]">Vagas em destaque</p>
@@ -431,7 +441,7 @@ export function PublicJobsBoardView({
             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-orange-200">Acesso rápido</p>
             <div className="mt-4 space-y-3 text-sm text-slate-400">
               <Link href="/jobs/list" className="block transition hover:text-[#FF6B00]">Todas as vagas</Link>
-              <Link href="/users/create" className="block transition hover:text-[#FF6B00]">Criar usuario</Link>
+              <Link href="/?mode=register" className="block transition hover:text-[#FF6B00]">Criar conta</Link>
               <Link href="/" className="block transition hover:text-[#FF6B00]">Entrar no ATS</Link>
             </div>
           </div>
