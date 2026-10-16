@@ -65,8 +65,7 @@ Importante: nao versione segredos reais em `.env.local`.
 
 - `/`: login e cadastro Supabase, escolha entre Candidato e Empresa e recuperacao de senha
 - `/jobs/list`: vagas publicas com filtros e links de candidatura; mostra nome ou e-mail e opcao de sair quando autenticado
-- `/users/create`: cadastro ATS de Candidato autenticado
-- `/candidaturas`: onboarding de Candidato autenticado em 4 etapas; aceita `?vagaGuid=...`
+- `/candidaturas`: candidatura completa de Candidato autenticado em 4 etapas; exige `?vagaGuid=...` e retorna à listagem com orientação quando a vaga não foi informada
 - `/jobs/create`: formulario de criacao de vaga para Empresa autenticada
 - `/empresa/candidaturas`: quadro ATS de candidaturas por vaga para Empresa autenticada
 - `/empresa/relatorio`: indicadores operacionais para Empresa autenticada
@@ -84,7 +83,7 @@ Com `NEXT_PUBLIC_API_BASE_URL=<base>/api`, o front espera estes recursos:
 
 Os campos de area usam o `ID` numerico da `TB_AREAS` no payload. A interface mantem os IDs como strings durante a selecao e usa o snapshot local de 13 areas apenas como fallback explicito quando a API nao estiver disponivel.
 
-No cadastro de usuario (`/users/create`), os campos `industriaInteresse` e `areaPreferencia` aceitam um unico ID de area. Os campos `timeAtual` e `time` aceitam ate tres valores, e `setor` aceita ate tres valores nas preferencias profissionais. Esses campos de time e setor sao representados como arrays no contrato do formulario.
+Na candidatura (`/candidaturas`), `industriaInteresse` e `areaPreferencia` usam IDs de área. Os campos `timeAtual` e `time` aceitam até três valores, e `setor` aceita até cinco valores nas preferências profissionais. Os campos de time e setor são representados como arrays no contrato do formulário. A etapa de CV informa que o upload ainda não está disponível; é possível finalizar sem anexar arquivo.
 
 ## Estrutura resumida
 
@@ -150,5 +149,5 @@ Usuarios temporarios sao removidos pela Admin API inclusive depois de falhas.
 ## Observacoes atuais
 
 - O quadro de candidaturas em `/empresa/candidaturas` permite mover candidatos entre etapas e persiste a mudanca via `PUT /api/candidates/:id`.
-- O onboarding de candidato ainda gera `guid_id` e `cd_cnpj` no front para envio de payload.
+- A candidatura gera `guid_id` no front e envia `guid_vaga` junto com os dados completos do perfil; nenhum CNPJ aleatório é gerado.
 - As guardas de tipo cobrem paginas e handlers Next.js. A API ATS externa ainda nao verifica o JWT Supabase e pode ser chamada diretamente; integrar sua autorizacao fica para outra etapa.

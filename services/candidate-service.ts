@@ -1,20 +1,22 @@
-import type { CandidateData } from "@/components/candidate-onboarding"
 import { CANDIDATES_API_PROXY_URL } from "@/config"
 import { areaValuesToNumbers } from "@/services/areas-service"
+import { validateUserRegistrationData, type UserRegistrationData } from "@/services/user-registration-service"
 
-export type CandidateProfilePayload = CandidateData & {
+export type CandidateProfilePayload = UserRegistrationData & {
   guid_id: string
   guid_vaga: string
-  cd_cnpj: string
 }
 
 export async function submitCandidateProfile(data: CandidateProfilePayload) {
+  validateUserRegistrationData(data)
+  if (!data.guid_id.trim() || !data.guid_vaga.trim()) {
+    throw new Error("Não foi possível identificar a vaga ou a candidatura.")
+  }
+
   const payload = {
     ...data,
-    ...(data.industria ? { industria: areaValuesToNumbers([data.industria])[0] } : {}),
-    ...(data.industriaInteresse
-      ? { industriaInteresse: areaValuesToNumbers([data.industriaInteresse])[0] }
-      : {}),
+    industriaInteresse: areaValuesToNumbers(data.industriaInteresse),
+    areaPreferencia: areaValuesToNumbers(data.areaPreferencia),
   }
 
   const response = await fetch(CANDIDATES_API_PROXY_URL, {

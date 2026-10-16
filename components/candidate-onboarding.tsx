@@ -1,40 +1,18 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useState } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { CheckCircle2, CircleAlert } from "lucide-react"
 
-import { PersonalDataStep } from "./steps/personal-data-step"
-import { ProfessionalDataStep } from "./steps/professional-data-step"
-import { ProfessionalCvStep } from "./steps/professional-cv-step"
-import { ProfessionalInterestsStep } from "./steps/professional-interests-step"
-import { ProgressIndicator } from "./progress-indicator"
+import { ProgressIndicator } from "@/components/progress-indicator"
+import { UserRegistrationCvStep } from "@/components/steps/user-registration-cv-step"
+import { UserRegistrationPersonalStep } from "@/components/steps/user-registration-personal-step"
+import { UserRegistrationPreferencesStep } from "@/components/steps/user-registration-preferences-step"
+import { UserRegistrationProfessionalStep } from "@/components/steps/user-registration-professional-step"
 import { Button } from "@/components/ui/button"
-import { submitCandidateProfile, type CandidateProfilePayload } from "@/services/candidate-service"
-
-export type CandidateData = {
-  // Personal Data
-  nome: string
-  documento: string
-  localResidencia: string
-  endereco: string
-  contatoCel: string
-  contato: string
-  lgpdAccepted: boolean
-
-  // Professional Data
-  experiencia: string
-  industria: string
-  salario: string
-  cargoInteresse: string
-
-  // Professional Interests
-  industriaInteresse: string
-  cargoInteresseDetalhado: string
-  tipoTrabalho: string
-  tipoContratacao: string
-  compartilhamentoAccepted: boolean
-}
+import { submitCandidateProfile } from "@/services/candidate-service"
+import type { UserRegistrationData } from "@/services/user-registration-service"
 
 type SubmissionFeedback = {
   type: "success" | "error"
@@ -42,86 +20,61 @@ type SubmissionFeedback = {
   message: string
 }
 
-export function CandidateOnboarding() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const jobGuid = useMemo(() => {
-    const guidFromQuery = searchParams.get("vagaGuid")
-    if (guidFromQuery && guidFromQuery.trim().length > 0) {
-      return guidFromQuery.trim()
-    }
+const CANDIDATURE_STEPS = [
+  { number: 1, label: "Dados pessoais" },
+  { number: 2, label: "Experiência profissional" },
+  { number: 3, label: "Preferências" },
+  { number: 4, label: "CV" },
+]
 
-    const legacyGuid = searchParams.get("vaga")
-    return legacyGuid && legacyGuid.trim().length > 0 ? legacyGuid.trim() : null
-  }, [searchParams])
+export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
-  const [candidateData, setCandidateData] = useState<Partial<CandidateData>>({})
+  const [visitedSteps, setVisitedSteps] = useState<number[]>([1])
+  const [candidateData, setCandidateData] = useState<Partial<UserRegistrationData>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [feedbackModal, setFeedbackModal] = useState<SubmissionFeedback | null>(null)
 
-  const updateData = (data: Partial<CandidateData>) => {
-    setCandidateData((prev) => ({ ...prev, ...data }))
+  const updateData = (data: Partial<UserRegistrationData>) => {
+    setCandidateData((previous) => ({ ...previous, ...data }))
   }
 
   const nextStep = () => {
-    if (currentStep < 4) {
-      setCurrentStep(currentStep + 1)
-    }
+    setCurrentStep((current) => {
+      const next = Math.min(current + 1, CANDIDATURE_STEPS.length)
+      setVisitedSteps((previous) => previous.includes(next) ? previous : [...previous, next])
+      return next
+    })
   }
 
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
-    }
+  const prevStep = () => setCurrentStep((current) => Math.max(current - 1, 1))
+
+  const handleStepClick = (stepNumber: number) => {
+    if (visitedSteps.includes(stepNumber)) setCurrentStep(stepNumber)
   }
 
-  const handleSubmit = async (finalStepData?: Partial<CandidateData>) => {
-    const mergedData: Partial<CandidateData> = {
-      ...candidateData,
-      ...(finalStepData ?? {}),
-    }
-
-    if (!isCandidateDataComplete(mergedData)) {
-      alert("Por favor, preencha todas as etapas antes de finalizar o cadastro.")
-      return
-    }
-
+  const handleSubmit = async () => {
     setIsSubmitting(true)
 
-    if (!jobGuid) {
-      setFeedbackModal({
-        type: "error",
-        title: "Vaga não identificada",
-        message: "Não conseguimos identificar a vaga para esta candidatura. Volte à listagem e tente novamente.",
-      })
-      setIsSubmitting(false)
-      return
-    }
-
-    const payload: CandidateProfilePayload = {
-      ...(mergedData as CandidateData),
-      guid_id: crypto.randomUUID(),
-      guid_vaga: jobGuid,
-      cd_cnpj: generateRandomCnpj(),
-    }
-
     try {
-      await submitCandidateProfile(payload)
+      await submitCandidateProfile({
+        ...candidateData,
+        guid_id: crypto.randomUUID(),
+        guid_vaga: jobGuid,
+      } as UserRegistrationData & { guid_id: string; guid_vaga: string })
       setFeedbackModal({
         type: "success",
-        title: "Cadastro enviado com sucesso!",
-        message: "Recebemos seus dados e em breve entraremos em contato.",
+        title: "Candidatura enviada com sucesso!",
+        message: "Recebemos seus dados e em breve a empresa poderá avaliar seu perfil.",
       })
     } catch (error) {
-      console.error("Failed to submit candidate profile", error)
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Não foi possível enviar seus dados. Tente novamente em instantes."
+      console.error("Failed to submit candidate application", error)
       setFeedbackModal({
         type: "error",
-        title: "Não conseguimos finalizar seu cadastro",
-        message,
+        title: "Não foi possível enviar sua candidatura",
+        message: error instanceof Error
+          ? error.message
+          : "Não foi possível enviar seus dados. Tente novamente em instantes.",
       })
     } finally {
       setIsSubmitting(false)
@@ -129,86 +82,75 @@ export function CandidateOnboarding() {
   }
 
   const closeFeedbackModal = () => {
-    const shouldRedirectHome = feedbackModal?.type === "success"
+    const wasSuccessful = feedbackModal?.type === "success"
     setFeedbackModal(null)
-    if (shouldRedirectHome) {
-      router.push("/")
-    }
+    if (wasSuccessful) router.push("/jobs/list")
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <ProgressIndicator currentStep={currentStep} totalSteps={4} />
-
-        <div className="mt-8">
-          {currentStep === 1 && <PersonalDataStep data={candidateData} onUpdate={updateData} onNext={nextStep} />}
-
-          {currentStep === 2 && (
-            <ProfessionalDataStep data={candidateData} onUpdate={updateData} onNext={nextStep} onBack={prevStep} />
-          )}
-
-          {currentStep === 3 && <ProfessionalCvStep onNext={nextStep} onBack={prevStep} />}
-
-          {currentStep === 4 && (
-            <ProfessionalInterestsStep
-              data={candidateData}
-              onUpdate={updateData}
-              onSubmit={handleSubmit}
-              onBack={prevStep}
-              isSubmitting={isSubmitting}
-            />
-          )}
+    <div className="min-h-screen bg-[linear-gradient(180deg,_#fff8f1_0%,_#ffffff_20%,_#f8fafc_100%)]">
+      <header className="border-b border-black/5 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-4">
+          <Link href="/jobs/list" className="text-sm font-medium text-slate-600 transition hover:text-[#FF6B00]">
+            Voltar às vagas
+          </Link>
+          <div className="rounded-full border border-[#FF6B00]/15 bg-[#FF6B00]/8 px-4 py-2 text-sm font-medium text-[#C44E00]">
+            Candidatura
+          </div>
         </div>
-      </div>
-      {feedbackModal && (
+      </header>
+
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10">
+        <section className="rounded-[2rem] border border-black/5 bg-slate-950 px-6 py-8 text-white shadow-[0_30px_80px_rgba(15,23,42,0.16)] md:px-8">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-orange-200">ClusterHR</p>
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight">Candidate-se à vaga</h1>
+          <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">
+            Preencha seus dados pessoais, profissionais e preferências para enviar seu perfil à empresa.
+          </p>
+        </section>
+
+        <section className="rounded-[2rem] border border-slate-200 bg-white px-5 py-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] md:px-8">
+          <ProgressIndicator
+            currentStep={currentStep}
+            totalSteps={CANDIDATURE_STEPS.length}
+            onStepClick={handleStepClick}
+            steps={CANDIDATURE_STEPS}
+            visitedSteps={visitedSteps}
+          />
+        </section>
+
+        {currentStep === 1 ? (
+          <UserRegistrationPersonalStep data={candidateData} onUpdate={updateData} onNext={nextStep} />
+        ) : null}
+        {currentStep === 2 ? (
+          <UserRegistrationProfessionalStep data={candidateData} onUpdate={updateData} onNext={nextStep} onBack={prevStep} />
+        ) : null}
+        {currentStep === 3 ? (
+          <UserRegistrationPreferencesStep data={candidateData} onUpdate={updateData} onNext={nextStep} onBack={prevStep} />
+        ) : null}
+        {currentStep === 4 ? (
+          <UserRegistrationCvStep isSubmitting={isSubmitting} onSubmit={handleSubmit} onBack={prevStep} />
+        ) : null}
+      </main>
+
+      {feedbackModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" role="alertdialog" aria-modal="true">
-          <div className="w-full max-w-md rounded-lg bg-card p-8 text-center shadow-xl">
+          <div className="w-full max-w-md rounded-[1.5rem] bg-white p-8 text-center shadow-[0_30px_80px_rgba(15,23,42,0.24)]">
             {feedbackModal.type === "success" ? (
-              <CheckCircle2 className="mx-auto mb-4 size-12 text-green-500" aria-hidden="true" />
+              <CheckCircle2 className="mx-auto mb-4 size-12 text-emerald-500" aria-hidden="true" />
             ) : (
               <CircleAlert className="mx-auto mb-4 size-12 text-destructive" aria-hidden="true" />
             )}
-            <h3 className="text-xl font-semibold text-foreground">{feedbackModal.title}</h3>
-            <p className="mt-2 text-sm text-muted-foreground">{feedbackModal.message}</p>
+            <h2 className="text-xl font-semibold text-slate-950">{feedbackModal.title}</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{feedbackModal.message}</p>
             <div className="mt-6 flex justify-center">
-              <Button onClick={closeFeedbackModal} size="lg" className="min-w-[180px]">
-                {feedbackModal.type === "success" ? "Voltar para início" : "Tentar novamente"}
+              <Button onClick={closeFeedbackModal} size="lg" className="min-w-[180px] rounded-full bg-[#FF6B00] text-white hover:bg-[#E55F00]">
+                {feedbackModal.type === "success" ? "Voltar às vagas" : "Tentar novamente"}
               </Button>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   )
-}
-
-function isCandidateDataComplete(data: Partial<CandidateData>): data is CandidateData {
-  return (
-    Boolean(data.nome) &&
-    Boolean(data.documento) &&
-    Boolean(data.localResidencia) &&
-    Boolean(data.endereco) &&
-    Boolean(data.contatoCel) &&
-    Boolean(data.contato) &&
-    data.lgpdAccepted === true &&
-    Boolean(data.experiencia) &&
-    Boolean(data.industria) &&
-    Boolean(data.salario) &&
-    Boolean(data.cargoInteresse) &&
-    Boolean(data.industriaInteresse) &&
-    Boolean(data.cargoInteresseDetalhado) &&
-    Boolean(data.tipoTrabalho) &&
-    Boolean(data.tipoContratacao) &&
-    data.compartilhamentoAccepted === true
-  )
-}
-
-// TODO: substituir o CNPJ gerado aleatoriamente quando o valor real da empresa estiver disponível.
-function generateRandomCnpj(): string {
-  let digits = ""
-  while (digits.length < 14) {
-    digits += crypto.randomUUID().replace(/\D/g, "")
-  }
-  return digits.slice(0, 14)
 }

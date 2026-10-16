@@ -15,7 +15,7 @@ type RegistrationFeedback = { type: 'success' | 'error'; message: string }
 
 export function LoginPage() {
   const params = useSearchParams()
-  const [screen, setScreen] = useState<Screen>(params.get('mode') === 'recover' ? 'recover' : params.get('mode') === 'complete' ? 'complete' : 'login')
+  const [screen, setScreen] = useState<Screen>(params.get('mode') === 'recover' ? 'recover' : params.get('mode') === 'complete' ? 'complete' : params.get('mode') === 'register' ? 'register' : 'login')
   const [type, setType] = useState<AccountType | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

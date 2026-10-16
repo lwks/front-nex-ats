@@ -79,9 +79,19 @@ describe("PublicJobsBoardView", () => {
 
     const header = html.match(/<header.*?<\/header>/)?.[0] ?? ""
     expect(header).toContain("Entrar no ATS")
-    expect(header).toContain("Criar usuario")
+    expect(header).toContain("Criar conta")
+    expect(header).toContain('href="/?mode=register"')
     expect(header).not.toContain('aria-label="Usuário conectado"')
     expect(header).not.toContain('href="/api/auth/logout"')
+  })
+
+  it("shows guidance when the application route is opened without a vacancy", () => {
+    const html = renderToStaticMarkup(
+      <PublicJobsBoardView {...createViewProps({ notice: "select-job" })} />,
+    )
+
+    expect(html).toContain('role="status"')
+    expect(html).toContain("escolha primeiro uma vaga")
   })
 
   it("renders the empty search state when no job matches the query", () => {
