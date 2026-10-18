@@ -11,6 +11,12 @@ export type UserRegistrationLanguage = {
   fluencia: string
 }
 
+export type UserRegistrationRecommendation = {
+  nome: string
+  telefone: string
+  cargo: string
+}
+
 export type UserRegistrationData = {
   nome: string
   documento: string
@@ -23,6 +29,7 @@ export type UserRegistrationData = {
   contato: string
   lgpdAccepted: boolean
   empresaAtual: string
+  indicacao?: UserRegistrationRecommendation
   senioridade: string
   beneficiosAtuais: string[]
   experiencia: string
@@ -111,6 +118,35 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
   requireNonEmptyValue(data.contatoCel, "Informe o celular.")
   requireNonEmptyValue(data.contato, "Informe o email.")
   requireNonEmptyValue(data.empresaAtual, "Informe a empresa atual.")
+  if (data.indicacao !== undefined) {
+    if (!data.indicacao || typeof data.indicacao !== "object") {
+      throw new Error("Informe os dados da pessoa indicada corretamente.")
+    }
+
+    const { nome, telefone, cargo } = data.indicacao
+    const hasAnyRecommendationValue = [nome, telefone, cargo].some(
+      (value) => typeof value === "string" && value.trim().length > 0,
+    )
+
+    if (hasAnyRecommendationValue) {
+      if (typeof nome !== "string" || nome.trim().length === 0) {
+        throw new Error("Informe o nome da pessoa indicada.")
+      }
+      if (nome.trim().split(/\s+/).length < 2) {
+        throw new Error("Informe nome e sobrenome da pessoa indicada.")
+      }
+      if (typeof telefone !== "string") {
+        throw new Error("Informe um telefone com DDD e 10 ou 11 digitos.")
+      }
+      const recommendationPhone = telefone.replace(/\D/g, "")
+      if (recommendationPhone.length < 10 || recommendationPhone.length > 11) {
+        throw new Error("Informe um telefone com DDD e 10 ou 11 digitos.")
+      }
+      if (typeof cargo !== "string" || cargo.trim().length === 0) {
+        throw new Error("Informe o cargo da pessoa indicada.")
+      }
+    }
+  }
   requireNonEmptyValue(data.senioridade, "Selecione a senioridade atual.")
 
   if (!EMAIL_PATTERN.test(data.contato.trim())) {

@@ -66,8 +66,8 @@ Importante: nao versione segredos reais em `.env.local`.
 - `/`: login e cadastro Supabase, escolha entre Candidato e Empresa e recuperacao de senha
 - `/jobs/list`: vagas publicas com filtros e links de candidatura; mostra nome ou e-mail e opcao de sair quando autenticado
 - `/candidaturas`: candidatura completa de Candidato autenticado em 4 etapas; exige `?vagaGuid=...` e retorna à listagem com orientação quando a vaga não foi informada
-- `/jobs/create`: formulario de criacao de vaga para Empresa autenticada
-- `/empresa/candidaturas`: quadro ATS de candidaturas por vaga para Empresa autenticada
+- `/jobs/create`: formulario de criacao de vaga para Empresa autenticada, com seletores de Area, Time, Senioridade, Setor, experiencia, beneficios e skills; localizacao por cidade e estado informados manualmente
+- `/empresa/candidaturas`: quadro ATS de candidaturas por vaga para Empresa autenticada, com card "Nova vaga" para abrir o formulario
 - `/empresa/relatorio`: indicadores operacionais para Empresa autenticada
 
 ## Endpoints externos esperados (backend ATS)
@@ -83,7 +83,7 @@ Com `NEXT_PUBLIC_API_BASE_URL=<base>/api`, o front espera estes recursos:
 
 Os campos de area usam o `ID` numerico da `TB_AREAS` no payload. A interface mantem os IDs como strings durante a selecao e usa o snapshot local de 13 areas apenas como fallback explicito quando a API nao estiver disponivel.
 
-Na candidatura (`/candidaturas`), `industriaInteresse` e `areaPreferencia` usam IDs de área. Os campos `timeAtual` e `time` aceitam até três valores, e `setor` aceita até cinco valores nas preferências profissionais. Os campos de time e setor são representados como arrays no contrato do formulário. A etapa de CV informa que o upload ainda não está disponível; é possível finalizar sem anexar arquivo.
+Na candidatura (`/candidaturas`), `industriaInteresse` e `areaPreferencia` usam IDs de área. Os campos `timeAtual` e `time` aceitam até três valores, e `setor` aceita até cinco valores nas preferências profissionais. Os campos de time e setor são representados como arrays no contrato do formulário. Na criação de vagas, Area aceita uma seleção, Time até três, Senioridade até três, Setor até cinco e Hard/Soft Skills até sete cada; `skills` contém Hard Skills e `soft_skills` contém Soft Skills. Cidade e Estado são informados separadamente, sem consulta de CEP. A etapa de CV informa que o upload ainda não está disponível; é possível finalizar sem anexar arquivo.
 
 ## Estrutura resumida
 

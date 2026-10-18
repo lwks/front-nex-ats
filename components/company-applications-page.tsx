@@ -2,7 +2,7 @@
 
 import type { ChangeEventHandler, ReactNode } from "react"
 import { useEffect, useMemo, useState } from "react"
-import { Briefcase, ChevronLeft, ChevronRight, MapPin, Search, Users } from "lucide-react"
+import { Briefcase, ChevronLeft, ChevronRight, MapPin, Plus, Search, Users } from "lucide-react"
 
 import {
   type Application,
@@ -349,7 +349,7 @@ export function CompanyApplicationsView({
         </header>
 
         <div className="space-y-6 p-4 sm:p-6">
-          <section className="grid gap-4 md:grid-cols-3">
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               icon={Users}
               label="Candidatos"
@@ -368,6 +368,21 @@ export function CompanyApplicationsView({
               value={currentJob ? 1 : 0}
               helper={currentJob?.title ?? "Aguardando vaga disponivel"}
             />
+            <div className="flex flex-col justify-between rounded-lg border-2 border-[#FF6B00] bg-orange-50 p-5 shadow-sm">
+              <div>
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-[#FF6B00] text-white">
+                  <Plus className="size-5" />
+                </div>
+                <p className="text-lg font-bold text-black">Nova vaga</p>
+                <p className="mt-1 text-sm text-gray-600">Abra uma nova oportunidade para sua empresa.</p>
+              </div>
+              <a
+                href="/jobs/create"
+                className="mt-4 inline-flex w-fit items-center rounded-md bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#e66000]"
+              >
+                Nova vaga
+              </a>
+            </div>
           </section>
 
           <section className="rounded-lg border-2 border-gray-200 bg-white p-4 shadow-sm">
