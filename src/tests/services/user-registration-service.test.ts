@@ -19,6 +19,7 @@ function createInput(overrides: Partial<UserRegistrationData> = {}): UserRegistr
     contato: "mariana@clusterhr.com",
     lgpdAccepted: true,
     empresaAtual: "ClusterHR",
+    indicacao: { nome: "Ana Souza", telefone: "11988887777", cargo: "Gerente de Produto" },
     senioridade: "gerente",
     beneficiosAtuais: ["vale-refeicao", "plano-saude"],
     experiencia: "pleno",
@@ -66,6 +67,27 @@ describe("user-registration-service", () => {
         }),
       ),
     ).toThrow("Digite um e-mail valido.")
+  })
+
+  it("requires a full recommendation name, valid phone and role", () => {
+    expect(() => validateUserRegistrationData(createInput({
+      indicacao: { nome: "Ana", telefone: "11988887777", cargo: "Gerente" },
+    }))).toThrow("Informe nome e sobrenome da pessoa indicada.")
+
+    expect(() => validateUserRegistrationData(createInput({
+      indicacao: { nome: "Ana Souza", telefone: "123456789", cargo: "Gerente" },
+    }))).toThrow("Informe um telefone com DDD e 10 ou 11 digitos.")
+
+    expect(() => validateUserRegistrationData(createInput({
+      indicacao: { nome: "Ana Souza", telefone: "11988887777", cargo: " " },
+    }))).toThrow("Informe o cargo da pessoa indicada.")
+  })
+
+  it("allows the recommendation to be omitted or entirely blank", () => {
+    expect(() => validateUserRegistrationData(createInput({ indicacao: undefined }))).not.toThrow()
+    expect(() => validateUserRegistrationData(createInput({
+      indicacao: { nome: " ", telefone: "", cargo: " " },
+    }))).not.toThrow()
   })
 
   it("requires fixed-list multi-select choices before completing the registration", () => {
