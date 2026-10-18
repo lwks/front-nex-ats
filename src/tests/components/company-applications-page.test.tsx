@@ -68,6 +68,8 @@ describe("CompanyApplicationsView", () => {
     expect(html).toContain("Buscar vagas")
     expect(html).toContain("Candidatos")
     expect(html).toContain("Vagas abertas")
+    expect(html).toContain("Nova vaga")
+    expect(html).toContain('href="/jobs/create"')
     expect(html).toContain("Pessoa Desenvolvedora")
     expect(html).toContain("Time:")
     expect(html).toContain("Criado por:")

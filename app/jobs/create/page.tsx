@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation"
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react"
 
-import { JOBS_API_PROXY_URL, ZIPS_API_PROXY_URL } from "@/config"
 import { AreaOptionsStatus } from "@/components/area-options-status"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -11,1087 +10,347 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { MultiSelect } from "@/components/ui/multi-select"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { JOBS_API_PROXY_URL } from "@/config"
 import {
-  defaultInterestRoleAreaMap,
-  defaultInterestRoleOptions,
-  filterAreaSelectionsByRoles,
+  defaultCurrentBenefitOptions,
+  defaultExperienceOptions,
+  defaultSeniorityOptions,
+  defaultSoftSkillOptions,
   getTeamOptionsForAreas,
+  MAX_AREA_SELECTIONS,
+  MAX_PREFERENCE_SECTOR_SELECTIONS,
+  MAX_PREFERENCE_SENIORITY_SELECTIONS,
   MAX_TEAM_SELECTIONS,
-  normalizeTeamValueForAreas,
-  resolveAreaValuesForRoles,
   topSectorOptions,
   type OnboardingOption,
 } from "@/lib/onboarding-options"
-import { areaValuesToNumbers } from "@/services/areas-service"
-import { useAreaOptions } from "@/hooks/use-area-options"
-import {
-  formatZipSummary,
-  isRecord,
-  normalizeZipResponse,
-  pickFirstStringValue,
-  type ZipLookupResponse,
-} from "@/lib/zip-utils"
 import { cn } from "@/lib/utils"
+import { useAreaOptions } from "@/hooks/use-area-options"
+import { getHardSkillOptionsForAreas } from "@/services/hard-skills-service"
+import { areaValuesToNumbers } from "@/services/areas-service"
 import {
-  fetchInterestRoleAreaMap,
-  fetchInterestRoleOptions,
+  fetchCurrentBenefitOptions,
+  fetchExperienceOptions,
+  fetchSeniorityOptions,
+  fetchSoftSkillOptions,
 } from "@/services/onboarding-options-service"
 
 export type JobFormState = {
   titulo: string
   descricao: string
-  cargo: string
-  nivel: string
-  setor: string
   area: string[]
   time: string[]
-  localizacao: string
+  senioridade: string[]
+  setor: string[]
   cidade: string
   estado: string
   modelo_trabalho: string
   formato_contratacao: string
-  skills: string
-  beneficios: string
+  experiencia: string
+  beneficios: string[]
+  hardSkills: string[]
+  softSkills: string[]
   valor_inicial: string
   valor_final: string
   exibir_salario: boolean
 }
 
-const DEFAULT_JOB_STATUS = "Aberto"
+export const MAX_JOB_SKILL_SELECTIONS = 7
+const MIN_TITLE_LENGTH = 5
+const MIN_DESCRIPTION_LENGTH = 30
 const BRL_NUMBER_FORMATTER = new Intl.NumberFormat("pt-BR")
-const JOB_LEVEL_OPTIONS = [
-  { value: "jr", label: "Jr" },
-  { value: "pl", label: "Pl" },
-  { value: "sr", label: "Sr" },
-  { value: "esp", label: "Esp" },
-]
-
 const CONTRACT_FORMAT_OPTIONS = [
   { value: "pj", label: "PJ" },
   { value: "integral", label: "Integral" },
-  { value: "temporario", label: "Temporário" },
-  { value: "meio_periodo", label: "Meio período" },
+  { value: "temporario", label: "Temporario" },
+  { value: "meio_periodo", label: "Meio periodo" },
 ]
-
-const CEP_LENGTH = 8
-const MIN_TITLE_LENGTH = 5
-const MIN_DESCRIPTION_LENGTH = 30
-const MAX_JOB_AREA_SELECTIONS = 3
+const WORK_TYPE_OPTIONS = [
+  { value: "remote", label: "Remoto" },
+  { value: "hibrido", label: "Hibrido" },
+  { value: "presencial", label: "Presencial" },
+]
 
 function createDefaultFormState(): JobFormState {
   return {
     titulo: "",
     descricao: "",
-    cargo: "",
-    nivel: "",
-    setor: "",
     area: [],
     time: [],
-    localizacao: "",
+    senioridade: [],
+    setor: [],
     cidade: "",
     estado: "",
     modelo_trabalho: "",
     formato_contratacao: "",
-    skills: "",
-    beneficios: "",
+    experiencia: "",
+    beneficios: [],
+    hardSkills: [],
+    softSkills: [],
     valor_inicial: "",
     valor_final: "",
     exibir_salario: false,
   }
 }
 
-export function parseList(rawValue: string): string[] {
-  return rawValue
-    .split(/[,\n]/)
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0)
+function parseCurrencyToNumber(value: string): number {
+  if (!value) return 0
+  const numericValue = Number(value.replace(/\./g, "").replace(",", "."))
+  return Number.isNaN(numericValue) ? 0 : numericValue
 }
 
 function formatCurrencyInput(rawValue: string): string {
   const digitsOnly = rawValue.replace(/\D/g, "")
-  if (digitsOnly.length === 0) {
-    return ""
-  }
-
-  const numericValue = Number(digitsOnly)
-  if (Number.isNaN(numericValue)) {
-    return ""
-  }
-
-  return BRL_NUMBER_FORMATTER.format(numericValue)
-}
-
-function parseCurrencyToNumber(value: string): number {
-  if (!value) {
-    return 0
-  }
-
-  const normalized = value.replace(/\./g, "").replace(",", ".")
-  const numericValue = Number(normalized)
-  return Number.isNaN(numericValue) ? 0 : numericValue
+  return digitsOnly ? BRL_NUMBER_FORMATTER.format(Number(digitsOnly)) : ""
 }
 
 function generateGuid(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID()
-  }
-
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID()
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
-export function validateJobFormState(formState: JobFormState) {
-  const title = formState.titulo.trim()
-  const descriptionPlainText = formState.descricao
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-  const initialSalaryValue = parseCurrencyToNumber(formState.valor_inicial)
-  const finalSalaryValue = parseCurrencyToNumber(formState.valor_final)
-
-  if (title.length < MIN_TITLE_LENGTH) {
-    throw new Error(`O titulo da vaga deve ter pelo menos ${MIN_TITLE_LENGTH} caracteres.`)
-  }
-
-  if (descriptionPlainText.length < MIN_DESCRIPTION_LENGTH) {
-    throw new Error(`A descricao deve ter pelo menos ${MIN_DESCRIPTION_LENGTH} caracteres.`)
-  }
-
-  if (!formState.setor.trim()) {
-    throw new Error("Informe o setor.")
-  }
-
-  if (formState.area.length === 0) {
-    throw new Error("Selecione ao menos uma area.")
-  }
-
-  if (formState.area.length > MAX_JOB_AREA_SELECTIONS) {
-    throw new Error(`Selecione no maximo ${MAX_JOB_AREA_SELECTIONS} areas.`)
-  }
-
-  if (formState.time.length === 0) {
-    throw new Error("Selecione ao menos um time.")
-  }
-
-  if (formState.time.length > MAX_TEAM_SELECTIONS) {
-    throw new Error(`Selecione no maximo ${MAX_TEAM_SELECTIONS} times.`)
-  }
-
-  if (!formState.valor_inicial.trim() || !formState.valor_final.trim()) {
-    throw new Error("Informe os valores inicial e final.")
-  }
-
-  if (initialSalaryValue < 0 || finalSalaryValue < 0) {
-    throw new Error("Os valores nao podem ser negativos.")
-  }
-
-  if (initialSalaryValue > finalSalaryValue) {
-    throw new Error("O valor inicial nao pode ser maior que o valor final.")
-  }
+export function validateJobFormState(form: JobFormState) {
+  const plainDescription = form.descricao.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim()
+  if (form.titulo.trim().length < MIN_TITLE_LENGTH) throw new Error(`O titulo da vaga deve ter pelo menos ${MIN_TITLE_LENGTH} caracteres.`)
+  if (plainDescription.length < MIN_DESCRIPTION_LENGTH) throw new Error(`A descricao deve ter pelo menos ${MIN_DESCRIPTION_LENGTH} caracteres.`)
+  if (form.area.length === 0) throw new Error("Selecione ao menos uma area.")
+  if (form.area.length > MAX_AREA_SELECTIONS) throw new Error(`Selecione no maximo ${MAX_AREA_SELECTIONS} area.`)
+  if (form.time.length === 0) throw new Error("Selecione ao menos um time.")
+  if (form.time.length > MAX_TEAM_SELECTIONS) throw new Error(`Selecione no maximo ${MAX_TEAM_SELECTIONS} times.`)
+  if (form.senioridade.length === 0) throw new Error("Selecione ao menos uma senioridade.")
+  if (form.senioridade.length > MAX_PREFERENCE_SENIORITY_SELECTIONS) throw new Error(`Selecione no maximo ${MAX_PREFERENCE_SENIORITY_SELECTIONS} senioridades.`)
+  if (form.setor.length === 0) throw new Error("Selecione ao menos um setor.")
+  if (form.setor.length > MAX_PREFERENCE_SECTOR_SELECTIONS) throw new Error(`Selecione no maximo ${MAX_PREFERENCE_SECTOR_SELECTIONS} setores.`)
+  if (!form.cidade.trim() || !form.estado.trim()) throw new Error("Informe cidade e estado.")
+  if (!form.modelo_trabalho) throw new Error("Selecione o modelo de trabalho.")
+  if (!form.formato_contratacao) throw new Error("Selecione o formato de contratacao.")
+  if (!form.experiencia) throw new Error("Selecione a experiencia profissional.")
+  if (form.beneficios.length === 0) throw new Error("Selecione ao menos um beneficio.")
+  if (form.hardSkills.length === 0) throw new Error("Selecione ao menos uma hard skill.")
+  if (form.hardSkills.length > MAX_JOB_SKILL_SELECTIONS) throw new Error(`Selecione no maximo ${MAX_JOB_SKILL_SELECTIONS} hard skills.`)
+  if (form.softSkills.length === 0) throw new Error("Selecione ao menos uma soft skill.")
+  if (form.softSkills.length > MAX_JOB_SKILL_SELECTIONS) throw new Error(`Selecione no maximo ${MAX_JOB_SKILL_SELECTIONS} soft skills.`)
+  if (!form.valor_inicial.trim() || !form.valor_final.trim()) throw new Error("Informe os valores inicial e final.")
+  const min = parseCurrencyToNumber(form.valor_inicial)
+  const max = parseCurrencyToNumber(form.valor_final)
+  if (min < 0 || max < 0) throw new Error("Os valores nao podem ser negativos.")
+  if (min > max) throw new Error("O valor inicial nao pode ser maior que o valor final.")
 }
 
-export function buildJobPayload(
-  formState: JobFormState,
-  guidId: string,
-  publishedAt: string,
-  areaOptions?: OnboardingOption[],
-) {
-  validateJobFormState(formState)
-
+export function buildJobPayload(form: JobFormState, guidId: string, publishedAt: string, areaOptions?: OnboardingOption[]) {
+  validateJobFormState(form)
   return {
-    titulo: formState.titulo.trim(),
-    descricao: formState.descricao.trim(),
-    cargo: formState.cargo,
-    nivel: formState.nivel,
-    setor: formState.setor.trim(),
-    area: areaValuesToNumbers(formState.area, areaOptions),
-    time: formState.time,
-    localizacao: formState.localizacao.trim(),
-    modelo_trabalho: formState.modelo_trabalho,
+    titulo: form.titulo.trim(),
+    descricao: form.descricao.trim(),
+    area: areaValuesToNumbers(form.area, areaOptions),
+    time: form.time,
+    senioridade: form.senioridade,
+    setor: form.setor,
+    cidade: form.cidade.trim(),
+    estado: form.estado.trim(),
+    modelo_trabalho: form.modelo_trabalho,
+    formato_contratacao: form.formato_contratacao,
+    experiencia: form.experiencia,
+    beneficios: form.beneficios,
+    skills: form.hardSkills,
+    soft_skills: form.softSkills,
     publicada_em: publishedAt,
-    formato_contratacao: formState.formato_contratacao,
-    exibir_salario: formState.exibir_salario,
+    exibir_salario: form.exibir_salario,
     guid_id: guidId,
-    status: DEFAULT_JOB_STATUS,
-    cidade: formState.cidade.trim(),
-    estado: formState.estado.trim(),
-    skills: parseList(formState.skills),
-    beneficios: parseList(formState.beneficios),
+    status: "Aberto",
     orcamento: {
-      valor_inicial: parseCurrencyToNumber(formState.valor_inicial),
-      valor_final: parseCurrencyToNumber(formState.valor_final),
+      valor_inicial: parseCurrencyToNumber(form.valor_inicial),
+      valor_final: parseCurrencyToNumber(form.valor_final),
     },
   }
 }
 
-type ToastState = {
-  type: "success" | "error"
-  message: string
-} | null
+type ToastState = { type: "success" | "error"; message: string } | null
 
 export default function CreateJobPage() {
   const router = useRouter()
-  const [formState, setFormState] = useState<JobFormState>(createDefaultFormState)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [form, setForm] = useState<JobFormState>(createDefaultFormState)
   const [toast, setToast] = useState<ToastState>(null)
-  const [isZipLookupLoading, setIsZipLookupLoading] = useState(false)
-  const [zipLookupError, setZipLookupError] = useState<string | null>(null)
-  const [zipLookupResult, setZipLookupResult] = useState<ZipLookupResponse | null>(null)
-  const [hasAttemptedZipLookup, setHasAttemptedZipLookup] = useState(false)
-  const { options: industryOptions, source: areaOptionsSource, error: areaOptionsError, isLoading: isAreaOptionsLoading, reload: reloadAreaOptions } = useAreaOptions()
-  const [interestRoleOptions, setInterestRoleOptions] = useState<OnboardingOption[]>(defaultInterestRoleOptions)
-  const [roleAreaMap, setRoleAreaMap] = useState<Record<string, string[]>>(defaultInterestRoleAreaMap)
-  const zipLookupController = useRef<AbortController | null>(null)
-  const descriptionEditorRef = useRef<HTMLDivElement | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [seniorityOptions, setSeniorityOptions] = useState(defaultSeniorityOptions)
+  const [experienceOptions, setExperienceOptions] = useState(defaultExperienceOptions)
+  const [benefitOptions, setBenefitOptions] = useState(defaultCurrentBenefitOptions)
+  const [softSkillOptions, setSoftSkillOptions] = useState(defaultSoftSkillOptions)
+  const { options: areaOptions, source, error, isLoading, reload } = useAreaOptions()
+  const descriptionRef = useRef<HTMLTextAreaElement | null>(null)
 
   useEffect(() => {
-    return () => {
-      zipLookupController.current?.abort()
-    }
+    let mounted = true
+    Promise.all([
+      fetchSeniorityOptions(),
+      fetchExperienceOptions(),
+      fetchCurrentBenefitOptions(),
+      fetchSoftSkillOptions(),
+    ]).then(([seniorities, experiences, benefits, softSkills]) => {
+      if (!mounted) return
+      setSeniorityOptions(seniorities)
+      setExperienceOptions(experiences)
+      setBenefitOptions(benefits)
+      setSoftSkillOptions(softSkills)
+    }).catch((loadError) => console.error("Failed to load job create options", loadError))
+    return () => { mounted = false }
   }, [])
 
-  useEffect(() => {
-    if (!descriptionEditorRef.current) {
-      return
-    }
-
-    if (descriptionEditorRef.current.innerHTML !== formState.descricao) {
-      descriptionEditorRef.current.innerHTML = formState.descricao
-    }
-  }, [formState.descricao])
+  const teamOptions = useMemo(() => getTeamOptionsForAreas(form.area, areaOptions), [form.area, areaOptions])
+  const hardSkillOptions = useMemo(() => getHardSkillOptionsForAreas(form.area, areaOptions), [form.area, areaOptions])
 
   useEffect(() => {
-    let isMounted = true
-
-    const loadOptions = async () => {
-      const [interestRoles, mappedAreas] = await Promise.all([
-        fetchInterestRoleOptions(),
-        fetchInterestRoleAreaMap(),
-      ])
-
-      if (isMounted) {
-        setInterestRoleOptions(interestRoles)
-        setRoleAreaMap(mappedAreas)
-      }
+    if (areaOptions.length === 0 && !source && !error) return
+    const teams = form.time.filter((team) => teamOptions.some((option) => option.value === team))
+    const hardSkills = form.hardSkills.filter((skill) => hardSkillOptions.some((option) => option.value === skill))
+    if (teams.length !== form.time.length || hardSkills.length !== form.hardSkills.length) {
+      setForm((current) => ({ ...current, time: teams, hardSkills }))
     }
+  }, [areaOptions.length, error, form.area, form.hardSkills, form.time, hardSkillOptions, source, teamOptions])
 
-    loadOptions().catch((error) => console.error("Failed to load job create options", error))
-
-    return () => {
-      isMounted = false
-    }
-  }, [])
-
-  useEffect(() => {
-    setFormState((previous) => {
-      const nextAreas = filterAreaSelectionsByRoles(
-        previous.cargo ? [previous.cargo] : [],
-        previous.area,
-        roleAreaMap,
-      )
-
-      if (nextAreas.length === previous.area.length) {
-        return previous
-      }
-
-      return {
-        ...previous,
-        area: nextAreas,
-      }
-    })
-  }, [roleAreaMap, formState.cargo])
-
-  const teamOptions = useMemo(
-    () => getTeamOptionsForAreas(formState.area, industryOptions),
-    [formState.area, industryOptions],
-  )
-
-  useEffect(() => {
-    setFormState((previous) => {
-      if (previous.area.length > 0 && industryOptions.length === 0 && !areaOptionsSource && !areaOptionsError) {
-        return previous
-      }
-      const nextTime = normalizeTeamValueForAreas(previous.time, previous.area, industryOptions)
-      return nextTime.length === previous.time.length && nextTime.every((team, index) => team === previous.time[index])
-        ? previous
-        : { ...previous, time: nextTime }
-    })
-  }, [areaOptionsError, areaOptionsSource, formState.area, industryOptions])
-
-  const zipSummary = zipLookupResult ? formatZipSummary(zipLookupResult) : null
-  const isNivelDisabled = formState.cargo === "estagiario"
-  const availableAreaOptions = industryOptions.filter((option) =>
-    new Set(resolveAreaValuesForRoles(formState.cargo ? [formState.cargo] : [], roleAreaMap)).has(option.value),
-  )
-  const isSectorMissing = formState.setor.trim().length === 0
-  const isAreaMissing = formState.area.length === 0
-  const isAreaInvalid = formState.area.length > MAX_JOB_AREA_SELECTIONS
-  const isTeamMissing = formState.time.length === 0
-  const isTeamInvalid = formState.time.length > MAX_TEAM_SELECTIONS
-  const isCepMissing = formState.localizacao.trim().length === 0
-  const isCepIncomplete =
-    formState.localizacao.length > 0 && formState.localizacao.length < CEP_LENGTH
-  const hasZipCityState = Boolean(formState.cidade.trim() && formState.estado.trim())
-  const shouldValidateZip =
-    isCepMissing || hasAttemptedZipLookup || formState.localizacao.length === CEP_LENGTH
-  const isZipValidationBlocked =
-    shouldValidateZip &&
-    (isCepMissing ||
-      isCepIncomplete ||
-      isZipLookupLoading ||
-      Boolean(zipLookupError) ||
-      !hasZipCityState)
-  const isTitleTooShort = formState.titulo.trim().length < MIN_TITLE_LENGTH
-  const descriptionPlainText = formState.descricao
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-  const isDescriptionTooShort = descriptionPlainText.length < MIN_DESCRIPTION_LENGTH
-  const initialSalaryValue = parseCurrencyToNumber(formState.valor_inicial)
-  const finalSalaryValue = parseCurrencyToNumber(formState.valor_final)
-  const isSalaryMissing =
-    formState.valor_inicial.trim().length === 0 || formState.valor_final.trim().length === 0
-  const isSalaryNegative = initialSalaryValue < 0 || finalSalaryValue < 0
-  const isSalaryRangeInvalid = initialSalaryValue > finalSalaryValue
-  const isSalaryInvalid = isSalaryMissing || isSalaryNegative || isSalaryRangeInvalid
-  const sectorValidationMessage = isSectorMissing ? "Informe o setor." : null
-  const areaValidationMessage = isAreaMissing
-    ? "Selecione ao menos uma area."
-    : isAreaInvalid
-      ? `Selecione no maximo ${MAX_JOB_AREA_SELECTIONS} areas.`
-      : null
-  const teamValidationMessage = isTeamMissing
-    ? "Selecione ao menos um time."
-    : isTeamInvalid
-      ? `Selecione no maximo ${MAX_TEAM_SELECTIONS} times.`
-      : null
-  const zipValidationMessage = isZipLookupLoading
-    ? "Consultando CEP..."
-    : zipLookupError
-      ? zipLookupError
-      : isCepMissing
-        ? "Informe o CEP."
-        : shouldValidateZip && !hasZipCityState
-        ? "Informe um CEP válido para preencher cidade e estado."
-        : isCepIncomplete
-          ? `Informe os ${CEP_LENGTH} dígitos do CEP.`
-          : zipSummary
-            ? "Localizado com sucesso."
-            : null
-  const salaryValidationMessage = isSalaryMissing
-    ? "Informe os valores inicial e final."
-    : isSalaryNegative
-      ? "Os valores não podem ser negativos."
-      : isSalaryRangeInvalid
-        ? "O valor inicial não pode ser maior que o valor final."
-        : null
-  const cityStateDisplay =
-    formState.cidade && formState.estado
-      ? `${formState.cidade}, ${formState.estado}`
-      : formState.cidade || formState.estado || ""
-  const blockingMessage = isZipLookupLoading
-    ? "Consultando CEP..."
-    : isSubmitting
-      ? "Criando vaga..."
-      : null
-
-  const updateCityStateFromZip = (data: ZipLookupResponse | null) => {
-    const city = data ? pickFirstStringValue(data, ["localidade", "cidade", "city"]) : undefined
-    const state = data ? pickFirstStringValue(data, ["uf", "estado", "state"]) : undefined
-
-    setFormState((previous) => ({
-      ...previous,
-      cidade: city ?? "",
-      estado: state ?? "",
-    }))
-  }
-
-  const lookupZip = async (cep: string) => {
-    if (zipLookupController.current) {
-      zipLookupController.current.abort()
-    }
-
-    const controller = new AbortController()
-    zipLookupController.current = controller
-
-    setIsZipLookupLoading(true)
-    setZipLookupError(null)
-    setZipLookupResult(null)
-    setHasAttemptedZipLookup(true)
-    updateCityStateFromZip(null)
-
-    try {
-      const response = await fetch(`${ZIPS_API_PROXY_URL}/${cep}`, {
-        signal: controller.signal,
-      })
-      console.log("Resposta bruta da consulta de CEP:", response)
-      let responseData: unknown = null
-
-      try {
-        responseData = await response.json()
-      } catch (error) {
-        console.error("Erro ao ler o corpo da resposta do CEP:", error)
-      }
-
-      console.log("Resposta da consulta de CEP:", responseData)
-      if (!response.ok) {
-        let errorMessage = "Não foi possível consultar o CEP informado."
-
-        if (isRecord(responseData)) {
-          const possibleMessage = responseData.message
-          if (typeof possibleMessage === "string" && possibleMessage.trim().length > 0) {
-            errorMessage = possibleMessage.trim()
-          }
-        }
-
-        throw new Error(errorMessage)
-      }
-
-      const parsedBody = isRecord(responseData) ? (responseData as ZipLookupResponse) : null
-
-      const normalizedResult = normalizeZipResponse(parsedBody, cep)
-      setZipLookupResult(normalizedResult)
-      updateCityStateFromZip(normalizedResult)
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        return
-      }
-
-      console.error("Erro ao consultar CEP:", error)
-      const normalizedMessage = error instanceof Error ? error.message.trim() : ""
-      setZipLookupError(
-        normalizedMessage.length > 0 ? normalizedMessage : "Não foi possível consultar o CEP informado.",
-      )
-      setZipLookupResult(null)
-      updateCityStateFromZip(null)
-    } finally {
-      if (zipLookupController.current === controller) {
-        zipLookupController.current = null
-        setIsZipLookupLoading(false)
-      }
-    }
-  }
-
-  const handleZipChange: React.ChangeEventHandler<HTMLInputElement> = (event) => {
-    const digitsOnly = event.target.value.replace(/\D/g, "").slice(0, CEP_LENGTH)
-
-    setFormState((previous) => ({
-      ...previous,
-      localizacao: digitsOnly,
-      ...(digitsOnly.length < CEP_LENGTH
-        ? {
-          cidade: "",
-          estado: "",
-        }
-        : {}),
-    }))
-
-    setHasAttemptedZipLookup(digitsOnly.length === CEP_LENGTH)
-
-    if (digitsOnly.length === CEP_LENGTH) {
-      void lookupZip(digitsOnly)
-    } else {
-      if (zipLookupController.current) {
-        zipLookupController.current.abort()
-        zipLookupController.current = null
-      }
-      setZipLookupResult(null)
-      setZipLookupError(null)
-      setHasAttemptedZipLookup(false)
-      setIsZipLookupLoading(false)
-      updateCityStateFromZip(null)
-    }
-  }
-
-  const handleChange = (
-    field: keyof JobFormState,
-  ): React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> => {
-    return (event) => {
-      const { value } = event.target
-      setFormState((previous) => ({
-        ...previous,
-        [field]: value,
-      }))
-    }
-  }
-
-  const handleDescriptionInput: React.FormEventHandler<HTMLDivElement> = (event) => {
-    const htmlValue = event.currentTarget.innerHTML
-    setFormState((previous) => ({
-      ...previous,
-      descricao: htmlValue,
-    }))
-  }
-
-  const applyDescriptionFormat = (command: "bold" | "italic" | "underline") => {
-    if (!descriptionEditorRef.current) {
-      return
-    }
-
-    descriptionEditorRef.current.focus()
-    document.execCommand(command)
-    const htmlValue = descriptionEditorRef.current.innerHTML
-    setFormState((previous) => ({
-      ...previous,
-      descricao: htmlValue,
-    }))
-  }
-
-  const handleCurrencyChange = (
-    field: "valor_inicial" | "valor_final",
-  ): React.ChangeEventHandler<HTMLInputElement> => {
-    return (event) => {
-      const formattedValue = formatCurrencyInput(event.target.value)
-      setFormState((previous) => ({
-        ...previous,
-        [field]: formattedValue,
-      }))
-    }
+  const update = <K extends keyof JobFormState>(field: K, value: JobFormState[K]) => {
+    setForm((current) => ({ ...current, [field]: value }))
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setToast(null)
-
-    if (isZipValidationBlocked) {
-      setToast({
-        type: "error",
-        message: "Consulte um CEP válido para preencher cidade e estado antes de salvar.",
-      })
+    let payload: ReturnType<typeof buildJobPayload>
+    try {
+      payload = buildJobPayload(form, generateGuid(), new Date().toISOString().split("T")[0], areaOptions)
+    } catch (validationError) {
+      setToast({ type: "error", message: validationError instanceof Error ? validationError.message : "Revise os campos obrigatorios." })
       return
     }
-
-    if (isTitleTooShort) {
-      setToast({
-        type: "error",
-        message: `O título da vaga deve ter pelo menos ${MIN_TITLE_LENGTH} caracteres.`,
-      })
-      return
-    }
-
-    if (isDescriptionTooShort) {
-      setToast({
-        type: "error",
-        message: `A descrição deve ter pelo menos ${MIN_DESCRIPTION_LENGTH} caracteres.`,
-      })
-      return
-    }
-
-    if (isSalaryInvalid) {
-      setToast({
-        type: "error",
-        message: salaryValidationMessage ?? "Informe uma faixa salarial válida.",
-      })
-      return
-    }
-
-    const businessFieldsValidationMessage =
-      sectorValidationMessage ?? areaValidationMessage ?? teamValidationMessage
-
-    if (businessFieldsValidationMessage) {
-      setToast({
-        type: "error",
-        message: businessFieldsValidationMessage,
-      })
-      return
-    }
-
     setIsSubmitting(true)
-
-    const payload = buildJobPayload(
-      formState,
-      generateGuid(),
-      new Date().toISOString().split("T")[0],
-      industryOptions,
-    )
-
     try {
       const response = await fetch(JOBS_API_PROXY_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload)
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       })
-
       if (!response.ok) {
-        let errorMessage = "Não foi possível criar a vaga. Tente novamente."
-
+        let message = "Nao foi possivel criar a vaga. Tente novamente."
         try {
-          const data = await response.json()
-          if (data && typeof data === "object") {
-            const record = data as Record<string, unknown>
-            const possibleMessage = record.message ?? record.error ?? record.detail
-            if (typeof possibleMessage === "string" && possibleMessage.trim().length > 0) {
-              errorMessage = possibleMessage
-            }
-          }
-        } catch (error) {
-          console.error("Erro ao interpretar a resposta da API:", error)
-        }
-
-        throw new Error(errorMessage)
+          const result = await response.json() as Record<string, unknown>
+          const apiMessage = result.message ?? result.error ?? result.detail
+          if (typeof apiMessage === "string" && apiMessage.trim()) message = apiMessage.trim()
+        } catch { /* The default message covers empty and non-JSON responses. */ }
+        throw new Error(message)
       }
-
-      setFormState(createDefaultFormState())
-      setToast({
-        type: "success",
-        message: "Vaga criado com sucesso",
-      })
-      setTimeout(() => {
-        router.push("/")
-      }, 1500)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro inesperado ao criar a vaga."
-      setToast({
-        type: "error",
-        message,
-      })
+      setForm(createDefaultFormState())
+      setToast({ type: "success", message: "Vaga criada com sucesso." })
+      setTimeout(() => router.push("/empresa/candidaturas"), 1200)
+    } catch (submitError) {
+      setToast({ type: "error", message: submitError instanceof Error ? submitError.message : "Erro inesperado ao criar a vaga." })
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  const areaChange = (areas: string[]) => {
+    const allowedSkills = new Set(getHardSkillOptionsForAreas(areas, areaOptions).map((option) => option.value))
+    setForm((current) => ({
+      ...current,
+      area: areas,
+      time: current.time.filter((team) => getTeamOptionsForAreas(areas, areaOptions).some((option) => option.value === team)),
+      hardSkills: current.hardSkills.filter((skill) => allowedSkills.has(skill)),
+    }))
+  }
+
+  const fieldClass = "w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+
   return (
-    <div className="min-h-screen bg-background">
-      {blockingMessage ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card px-6 py-5 shadow-xl">
-            <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p className="text-sm font-medium text-muted-foreground">{blockingMessage}</p>
-          </div>
-        </div>
-      ) : null}
-
-      {toast ? (
-        <div
-          className={cn(
-            "fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-full px-6 py-3 text-sm font-semibold shadow-lg transition",
-            toast.type === "success"
-              ? "bg-emerald-500 text-white"
-              : "bg-destructive text-destructive-foreground",
-          )}
-        >
-          {toast.message}
-        </div>
-      ) : null}
-
-      <main className="container mx-auto max-w-3xl px-4 py-12">
-        <div className="rounded-3xl border border-border bg-card px-6 py-8 shadow-sm md:px-10">
-          <div className="mb-8">
-            <p className="text-sm font-medium uppercase tracking-widest text-primary">Cadastro de vaga</p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground">Abertura de nova vaga</h1>
-            <p className="mt-4 text-base text-muted-foreground">
-              Preencha os campos abaixo para cadastrar uma nova oportunidade diretamente na ClusterHR.
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-8">
-            <section className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="titulo">Título da vaga</Label>
-                <Input
-                  id="titulo"
-                  name="titulo"
-                  placeholder="Ex: Desenvolvedor(a) Front-end"
-                  value={formState.titulo}
-                  onChange={handleChange("titulo")}
-                  required
-                  minLength={MIN_TITLE_LENGTH}
-                />
-                {isTitleTooShort ? (
-                  <p className="text-xs text-destructive">
-                    Informe pelo menos {MIN_TITLE_LENGTH} caracteres.
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="descricao">Descrição</Label>
-                <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Formatação
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => applyDescriptionFormat("bold")}
-                    className="h-8 px-3 text-xs font-semibold"
-                  >
-                    Negrito
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => applyDescriptionFormat("italic")}
-                    className="h-8 px-3 text-xs font-semibold italic"
-                  >
-                    Itálico
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => applyDescriptionFormat("underline")}
-                    className="h-8 px-3 text-xs font-semibold underline"
-                  >
-                    Sublinhado
-                  </Button>
-                </div>
-                <div
-                  id="descricao"
-                  ref={descriptionEditorRef}
-                  role="textbox"
-                  aria-label="Descrição da vaga"
-                  contentEditable
-                  data-placeholder="Descreva as responsabilidades e requisitos da vaga"
-                  onInput={handleDescriptionInput}
-                  className={cn(
-                    "min-h-[160px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors md:text-sm",
-                    "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:bg-muted/40 dark:focus-visible:bg-muted/20",
-                    "relative whitespace-pre-wrap outline-none before:pointer-events-none before:absolute before:left-3 before:top-2 before:text-muted-foreground",
-                    "empty:before:content-[attr(data-placeholder)]",
-                  )}
-                />
-                {isDescriptionTooShort ? (
-                  <p className="text-xs text-destructive">
-                    Informe pelo menos {MIN_DESCRIPTION_LENGTH} caracteres.
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cargo">Cargo</Label>
-                <Select
-                  value={formState.cargo}
-                  onValueChange={(value) =>
-                    setFormState((previous) => ({
-                      ...previous,
-                      cargo: value,
-                      area: filterAreaSelectionsByRoles([value], previous.area, roleAreaMap),
-                      ...(value === "estagiario" ? { nivel: "" } : {}),
-                    }))
-                  }
-                  required
-                >
-                  <SelectTrigger id="cargo" className="w-full">
-                    <SelectValue placeholder="Selecione o cargo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {interestRoleOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="nivel">Nível</Label>
-                <Select
-                  disabled={isNivelDisabled}
-                  value={formState.nivel}
-                  onValueChange={(value) =>
-                    setFormState((previous) => ({
-                      ...previous,
-                      nivel: value,
-                    }))
-                  }
-                  required={!isNivelDisabled}
-                >
-                  <SelectTrigger id="nivel" className="w-full">
-                    <SelectValue placeholder="Selecione o nível" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {JOB_LEVEL_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="setor">Setor</Label>
-                <Select
-                  value={formState.setor}
-                  onValueChange={(value) =>
-                    setFormState((previous) => ({
-                      ...previous,
-                      setor: value,
-                    }))
-                  }
-                  required
-                >
-                  <SelectTrigger
-                    id="setor"
-                    aria-invalid={sectorValidationMessage ? "true" : "false"}
-                    className={cn(sectorValidationMessage && "border-destructive focus-visible:ring-destructive/40")}
-                  >
-                    <SelectValue placeholder="Selecione o setor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {topSectorOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {sectorValidationMessage ? <p className="text-xs text-destructive">{sectorValidationMessage}</p> : null}
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="area">Area</Label>
-                <MultiSelect
-                  id="area"
-                  disabled={formState.cargo.length === 0}
-                  maxSelections={MAX_JOB_AREA_SELECTIONS}
-                  options={availableAreaOptions}
-                  placeholder={
-                    formState.cargo.length === 0
-                      ? "Selecione um cargo para liberar as areas"
-                      : `Selecione ate ${MAX_JOB_AREA_SELECTIONS} areas`
-                  }
-                  value={formState.area}
-                  onChange={(value) =>
-                    setFormState((previous) => ({
-                      ...previous,
-                      area: value,
-                      time: normalizeTeamValueForAreas(previous.time, value, industryOptions),
-                    }))
-                  }
-                />
-                <AreaOptionsStatus
-                  error={areaOptionsError}
-                  isLoading={isAreaOptionsLoading}
-                  onReload={() => void reloadAreaOptions()}
-                  options={industryOptions}
-                  source={areaOptionsSource}
-                />
-                {areaValidationMessage ? <p className="text-xs text-destructive">{areaValidationMessage}</p> : null}
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="time">Time</Label>
-                <MultiSelect
-                  id="time"
-                  maxSelections={MAX_TEAM_SELECTIONS}
-                  options={teamOptions}
-                  value={formState.time}
-                  disabled={teamOptions.length === 0}
-                  placeholder={
-                    formState.area.length === 0
-                      ? "Selecione uma área primeiro"
-                      : teamOptions.length === 0
-                        ? "Nenhum time disponível"
-                        : `Selecione ate ${MAX_TEAM_SELECTIONS} times`
-                  }
-                  onChange={(value) => setFormState((previous) => ({ ...previous, time: value }))}
-                />
-                {teamValidationMessage ? <p className="text-xs text-destructive">{teamValidationMessage}</p> : null}
-              </div>
-
-              <div className="md:col-span-2 grid gap-4 md:grid-cols-4">
-                <div className="space-y-2 md:col-span-1">
-                  <Label htmlFor="localizacao">CEP:</Label>
-                  <Input
-                    id="localizacao"
-                    name="localizacao"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={CEP_LENGTH}
-                    placeholder="Somente números"
-                    value={formState.localizacao}
-                    onChange={handleZipChange}
-                    required
-                  />
-                  {zipValidationMessage ? (
-                    <p
-                      className={cn(
-                        "text-xs",
-                        isZipValidationBlocked && !isZipLookupLoading
-                          ? "text-destructive"
-                          : "text-muted-foreground",
-                      )}
-                    >
-                      {zipValidationMessage}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="space-y-2 md:col-span-3">
-                  <Label htmlFor="cidade_estado">Cidade / Estado</Label>
-                  <Input
-                    id="cidade_estado"
-                    name="cidade_estado"
-                    value={cityStateDisplay}
-                    placeholder="Informe o CEP para preencher automaticamente"
-                    readOnly
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="modelo_trabalho">Modelo de trabalho atual</Label>
-                <Select
-                  value={formState.modelo_trabalho}
-                  onValueChange={(value) =>
-                    setFormState((previous) => ({
-                      ...previous,
-                      modelo_trabalho: value,
-                    }))
-                  }
-                  required
-                >
-                  <SelectTrigger id="modelo_trabalho" className="w-full">
-                    <SelectValue placeholder="Selecione o modelo de trabalho" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="remote">Remoto</SelectItem>
-                    <SelectItem value="hibrido">Hibrido</SelectItem>
-                    <SelectItem value="presencial">Presencial</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="formato_contratacao">Formato de contratação</Label>
-                <Select
-                  value={formState.formato_contratacao}
-                  onValueChange={(value) =>
-                    setFormState((previous) => ({
-                      ...previous,
-                      formato_contratacao: value,
-                    }))
-                  }
-                  required
-                >
-                  <SelectTrigger id="formato_contratacao" className="w-full">
-                    <SelectValue placeholder="Selecione o formato" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CONTRACT_FORMAT_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="skills">Skills (separadas por vírgula ou quebra de linha)</Label>
-                <textarea
-                  id="skills"
-                  name="skills"
-                  placeholder="Ex: React, TypeScript, Tailwind"
-                  value={formState.skills}
-                  onChange={handleChange("skills")}
-                  className={cn(
-                    "min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors md:text-sm",
-                    "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:bg-muted/40 dark:focus-visible:bg-muted/20",
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="beneficios">Beneficios (separados por virgula ou quebra de linha)</Label>
-                <textarea
-                  id="beneficios"
-                  name="beneficios"
-                  placeholder="Ex: VR, VA, PLR"
-                  value={formState.beneficios}
-                  onChange={handleChange("beneficios")}
-                  className={cn(
-                    "min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors md:text-sm",
-                    "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:bg-muted/40 dark:focus-visible:bg-muted/20",
-                  )}
-                />
-              </div>
-            </section>
-
-            <section className="grid gap-6 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="valor_inicial">Valor inicial (R$)</Label>
-                <Input
-                  id="valor_inicial"
-                  name="valor_inicial"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  value={formState.valor_inicial}
-                  onChange={handleCurrencyChange("valor_inicial")}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="valor_final">Valor final (R$)</Label>
-                <Input
-                  id="valor_final"
-                  name="valor_final"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  value={formState.valor_final}
-                  onChange={handleCurrencyChange("valor_final")}
-                  required
-                />
-                {salaryValidationMessage ? (
-                  <p className="text-xs text-destructive">{salaryValidationMessage}</p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="exibir_salario" className="text-sm font-medium text-muted-foreground">
-                  Exibir Salário?
-                </Label>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="exibir_salario"
-                    checked={formState.exibir_salario}
-                    onCheckedChange={(checked) =>
-                      setFormState((previous) => ({
-                        ...previous,
-                        exibir_salario: Boolean(checked),
-                      }))
-                    }
-                    className="bg-card border-muted-foreground/60"
-                  />
-                  <span className="text-sm font-semibold text-foreground">Sim</span>
-                </div>
-              </div>
-            </section>
-
-            <div className="flex items-center justify-end gap-4">
-              <Button
-                type="submit"
-                disabled={
-                  isSubmitting ||
-                  isZipValidationBlocked ||
-                  isSalaryInvalid ||
-                  isTitleTooShort ||
-                  isDescriptionTooShort ||
-                  isSectorMissing ||
-                  isAreaMissing ||
-                  isAreaInvalid ||
-                  isTeamMissing
-                }
-                className="min-w-[160px]"
-              >
-                {isSubmitting ? "Salvando..." : "Criar vaga"}
-              </Button>
+    <div className="min-h-screen bg-background px-4 py-12">
+      {isSubmitting ? <div className="fixed inset-0 z-40 flex items-center justify-center bg-background/80 backdrop-blur-sm"><p className="rounded-lg border bg-card px-6 py-5 shadow-xl">Criando vaga...</p></div> : null}
+      {toast ? <div role="alert" className={cn("fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-full px-6 py-3 text-sm font-semibold shadow-lg", toast.type === "success" ? "bg-emerald-500 text-white" : "bg-destructive text-destructive-foreground")}>{toast.message}</div> : null}
+      <main className="mx-auto max-w-4xl rounded-3xl border border-border bg-card px-6 py-8 shadow-sm md:px-10">
+        <header className="mb-8">
+          <p className="text-sm font-medium uppercase tracking-widest text-primary">Cadastro de vaga</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight">Abertura de nova vaga</h1>
+          <p className="mt-4 text-base text-muted-foreground">Preencha os campos abaixo para cadastrar uma nova oportunidade.</p>
+        </header>
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <section className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="titulo">Titulo da vaga</Label>
+              <Input id="titulo" value={form.titulo} minLength={MIN_TITLE_LENGTH} onChange={(event) => update("titulo", event.target.value)} required />
             </div>
-          </form>
-        </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="descricao">Descricao</Label>
+              <textarea ref={descriptionRef} id="descricao" value={form.descricao} onChange={(event) => update("descricao", event.target.value)} minLength={MIN_DESCRIPTION_LENGTH} required className={cn(fieldClass, "min-h-36 resize-y")} placeholder="Descreva as responsabilidades e requisitos da vaga" />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="area">Area</Label>
+              <MultiSelect id="area" maxSelections={MAX_AREA_SELECTIONS} options={areaOptions} placeholder="Selecione uma area" value={form.area} onChange={areaChange} />
+              <AreaOptionsStatus error={error} isLoading={isLoading} onReload={() => void reload()} options={areaOptions} source={source} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="time">Time</Label>
+              <MultiSelect id="time" maxSelections={MAX_TEAM_SELECTIONS} options={teamOptions} disabled={teamOptions.length === 0} placeholder={form.area.length ? `Selecione ate ${MAX_TEAM_SELECTIONS} times` : "Selecione uma area primeiro"} value={form.time} onChange={(value) => update("time", value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="senioridade">Senioridade</Label>
+              <MultiSelect id="senioridade" maxSelections={MAX_PREFERENCE_SENIORITY_SELECTIONS} options={seniorityOptions} placeholder={`Selecione ate ${MAX_PREFERENCE_SENIORITY_SELECTIONS} senioridades`} value={form.senioridade} onChange={(value) => update("senioridade", value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="setor">Setor</Label>
+              <MultiSelect id="setor" maxSelections={MAX_PREFERENCE_SECTOR_SELECTIONS} options={topSectorOptions} placeholder={`Selecione ate ${MAX_PREFERENCE_SECTOR_SELECTIONS} setores`} value={form.setor} onChange={(value) => update("setor", value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cidade">Cidade</Label>
+              <Input id="cidade" value={form.cidade} onChange={(event) => update("cidade", event.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="estado">Estado</Label>
+              <Input id="estado" value={form.estado} maxLength={2} onChange={(event) => update("estado", event.target.value.toUpperCase())} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="modelo_trabalho">Modelo de trabalho</Label>
+              <Select value={form.modelo_trabalho} onValueChange={(value) => update("modelo_trabalho", value)} required>
+                <SelectTrigger id="modelo_trabalho" className="w-full"><SelectValue placeholder="Selecione o modelo de trabalho" /></SelectTrigger>
+                <SelectContent>{WORK_TYPE_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="formato_contratacao">Formato de contratacao</Label>
+              <Select value={form.formato_contratacao} onValueChange={(value) => update("formato_contratacao", value)} required>
+                <SelectTrigger id="formato_contratacao" className="w-full"><SelectValue placeholder="Selecione o formato" /></SelectTrigger>
+                <SelectContent>{CONTRACT_FORMAT_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="experiencia">Experiencia profissional</Label>
+              <Select value={form.experiencia} onValueChange={(value) => update("experiencia", value)} required>
+                <SelectTrigger id="experiencia" className="w-full"><SelectValue placeholder="Selecione a experiencia" /></SelectTrigger>
+                <SelectContent>{experienceOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="beneficios">Beneficios</Label>
+              <MultiSelect id="beneficios" options={benefitOptions} placeholder="Selecione os beneficios" value={form.beneficios} onChange={(value) => update("beneficios", value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="hardSkills">Hard Skills</Label>
+              <MultiSelect id="hardSkills" maxSelections={MAX_JOB_SKILL_SELECTIONS} options={hardSkillOptions} disabled={hardSkillOptions.length === 0} placeholder={form.area.length ? `Selecione ate ${MAX_JOB_SKILL_SELECTIONS} hard skills` : "Selecione uma area primeiro"} value={form.hardSkills} onChange={(value) => update("hardSkills", value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="softSkills">Soft Skills</Label>
+              <MultiSelect id="softSkills" maxSelections={MAX_JOB_SKILL_SELECTIONS} options={softSkillOptions} placeholder={`Selecione ate ${MAX_JOB_SKILL_SELECTIONS} soft skills`} value={form.softSkills} onChange={(value) => update("softSkills", value)} />
+            </div>
+          </section>
+
+          <section className="grid gap-6 md:grid-cols-3">
+            <div className="space-y-2"><Label htmlFor="valor_inicial">Valor inicial (R$)</Label><Input id="valor_inicial" inputMode="numeric" value={form.valor_inicial} onChange={(event) => update("valor_inicial", formatCurrencyInput(event.target.value))} required /></div>
+            <div className="space-y-2"><Label htmlFor="valor_final">Valor final (R$)</Label><Input id="valor_final" inputMode="numeric" value={form.valor_final} onChange={(event) => update("valor_final", formatCurrencyInput(event.target.value))} required /></div>
+            <label htmlFor="exibir_salario" className="flex items-center gap-3 self-end rounded-md border p-3 text-sm font-medium"><Checkbox id="exibir_salario" checked={form.exibir_salario} onCheckedChange={(checked) => update("exibir_salario", checked === true)} />Exibir faixa salarial</label>
+          </section>
+          <div className="flex justify-end"><Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Criando vaga..." : "Criar vaga"}</Button></div>
+        </form>
       </main>
     </div>
   )
 }
-

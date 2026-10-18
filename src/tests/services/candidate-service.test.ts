@@ -16,6 +16,7 @@ function createPayload(overrides: Partial<CandidateProfilePayload> = {}): Candid
     contato: 'mariana@clusterhr.com',
     lgpdAccepted: true,
     empresaAtual: 'ClusterHR',
+    indicacao: { nome: 'Ana Souza', telefone: '11988887777', cargo: 'Gerente de Produto' },
     senioridade: 'senior',
     beneficiosAtuais: ['vale-refeicao'],
     experiencia: '3-5-anos',
