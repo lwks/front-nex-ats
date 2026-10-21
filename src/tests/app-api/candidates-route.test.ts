@@ -1,9 +1,15 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { OPTIONS, POST } from '@/app/api/candidates/route'
-vi.mock('@/lib/auth/require-api-account-type', () => ({ accountTypeError: vi.fn().mockResolvedValue(null) }))
+const apiAuthorization = vi.hoisted(() => ({
+  authorize: vi.fn().mockResolvedValue({ ok: true, accessToken: 'test-access-token' }),
+}))
+vi.mock('@/lib/auth/require-api-account-type', () => ({ authorizeApiAccountType: apiAuthorization.authorize }))
 
 describe('/api/candidates route', () => {
+  beforeEach(() => {
+    apiAuthorization.authorize.mockResolvedValue({ ok: true, accessToken: 'test-access-token' })
+  })
 
   it('proxies POST body and status', async () => {
     vi.stubGlobal(
@@ -24,6 +30,13 @@ describe('/api/candidates route', () => {
 
     expect(response.status).toBe(201)
     expect(await response.text()).toBe('{"id":"1"}')
+    expect(fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-access-token',
+      } }),
+    )
   })
 
   it('returns 500 on unexpected errors', async () => {

@@ -1,9 +1,16 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET, OPTIONS, POST } from '@/app/api/jobs/route'
-vi.mock('@/lib/auth/require-api-account-type', () => ({ accountTypeError: vi.fn().mockResolvedValue(null) }))
+const apiAuthorization = vi.hoisted(() => ({
+  authorize: vi.fn().mockResolvedValue({ ok: true, accessToken: 'test-access-token' }),
+}))
+vi.mock('@/lib/auth/require-api-account-type', () => ({ authorizeApiAccountType: apiAuthorization.authorize }))
 
 describe('/api/jobs route', () => {
+  beforeEach(() => {
+    apiAuthorization.authorize.mockResolvedValue({ ok: true, accessToken: 'test-access-token' })
+  })
+
   it('proxies GET response with limit and lastKey', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       status: 200,
@@ -55,6 +62,13 @@ describe('/api/jobs route', () => {
 
     expect(response.status).toBe(201)
     expect(await response.text()).toBe('{"job":"created"}')
+    expect(fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-access-token',
+      } }),
+    )
   })
 
   it('returns 500 when upstream fails', async () => {

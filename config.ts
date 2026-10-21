@@ -3,7 +3,6 @@ const JOBS_PATH = "/jobs"
 const USERS_PATH = "/users"
 const CANDIDATES_PATH = "/candidates"
 const CANDIDATES_BY_JOB_GUIDS_PATH = "/candidates/by-job-guids"
-const APPLICATIONS_PATH = "/applications"
 const ZIPS_PATH = "/zips"
 const DEFAULT_JOBS_LIST_QUERY = "?limit=20"
 
@@ -27,7 +26,6 @@ export const USERS_API_URL = `${USERS_API_BASE_URL}${USERS_PATH}`
 export const USERS_API_LIST_URL = `${USERS_API_URL}/`
 export const CANDIDATES_API_URL = `${CANDIDATES_API_BASE_URL}${CANDIDATES_PATH}`
 export const CANDIDATES_BY_JOB_GUIDS_API_URL = `${CANDIDATES_API_BASE_URL}${CANDIDATES_BY_JOB_GUIDS_PATH}`
-export const COMPANY_APPLICATIONS_API_URL = `${API_BASE_URL}${APPLICATIONS_PATH}/company`
 export const JOBS_API_URL = `${JOBS_API_BASE_URL}${JOBS_PATH}`
 export const ZIPS_API_URL = `${API_BASE_URL}${ZIPS_PATH}`
 

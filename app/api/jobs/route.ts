@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import { JOBS_API_CREATE_URL, JOBS_API_URL } from "@/config"
 
 import { CORS_HEADERS, corsOptionsResponse } from "../cors"
-import { accountTypeError } from '@/lib/auth/require-api-account-type'
+import { authorizeApiAccountType } from '@/lib/auth/require-api-account-type'
 
 export const dynamic = "force-dynamic"
 
@@ -56,8 +56,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const denied = await accountTypeError('COMPANY')
-  if (denied) return denied
+  const authorization = await authorizeApiAccountType('COMPANY')
+  if (!authorization.ok) return authorization.response
   try {
     const payload = await request.json()
 
@@ -65,6 +65,7 @@ export async function POST(request: Request) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${authorization.accessToken}`,
       },
       body: JSON.stringify(payload),
     })
