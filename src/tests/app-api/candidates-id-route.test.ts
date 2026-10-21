@@ -1,9 +1,16 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { OPTIONS, PUT } from "@/app/api/candidates/[id]/route"
-vi.mock('@/lib/auth/require-api-account-type', () => ({ accountTypeError: vi.fn().mockResolvedValue(null) }))
+const apiAuthorization = vi.hoisted(() => ({
+  authorize: vi.fn().mockResolvedValue({ ok: true, accessToken: 'test-access-token' }),
+}))
+vi.mock('@/lib/auth/require-api-account-type', () => ({ authorizeApiAccountType: apiAuthorization.authorize }))
 
 describe("/api/candidates/[id] route", () => {
+  beforeEach(() => {
+    apiAuthorization.authorize.mockResolvedValue({ ok: true, accessToken: 'test-access-token' })
+  })
+
   it("proxies candidate note updates with upstream status", async () => {
     vi.stubGlobal(
       "fetch",
@@ -23,6 +30,13 @@ describe("/api/candidates/[id] route", () => {
 
     expect(response.status).toBe(200)
     expect(await response.text()).toBe('{"id":"candidate-1","anotacoes":"Perfil aprovado"}')
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/candidates/candidate-1'),
+      expect.objectContaining({ headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-access-token',
+      } }),
+    )
   })
 
   it("returns 500 when the proxy update throws", async () => {

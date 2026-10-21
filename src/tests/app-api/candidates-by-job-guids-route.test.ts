@@ -1,12 +1,18 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET, OPTIONS } from '@/app/api/candidates/by-job-guids/route'
 import { CANDIDATES_BY_JOB_GUIDS_API_URL } from '@/config'
-vi.mock('@/lib/auth/require-api-account-type', () => ({ accountTypeError: vi.fn().mockResolvedValue(null) }))
+const apiAuthorization = vi.hoisted(() => ({
+  authorize: vi.fn().mockResolvedValue({ ok: true, accessToken: 'test-access-token' }),
+}))
+vi.mock('@/lib/auth/require-api-account-type', () => ({ authorizeApiAccountType: apiAuthorization.authorize }))
 
 describe('/api/candidates/by-job-guids route', () => {
+  beforeEach(() => {
+    apiAuthorization.authorize.mockResolvedValue({ ok: true, accessToken: 'test-access-token' })
+  })
+
   afterEach(() => {
-    vi.restoreAllMocks()
     vi.unstubAllGlobals()
   })
 
@@ -44,6 +50,7 @@ describe('/api/candidates/by-job-guids route', () => {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: 'Bearer test-access-token',
         },
         cache: 'no-store',
       },
