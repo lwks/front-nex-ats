@@ -158,7 +158,7 @@ export const defaultExperienceOptions: OnboardingOption[] = [
   { value: "estagio", label: "Estagio" },
   { value: "junior", label: "1-3 anos" },
   { value: "pleno", label: "3-5 anos" },
-  { value: "senior", label: "5+ anos" },
+  { value: "senior", label: "5-10 anos" },
   { value: "especialista", label: "10-15 anos" },
   { value: "diretoria", label: "15+" },
 ]
