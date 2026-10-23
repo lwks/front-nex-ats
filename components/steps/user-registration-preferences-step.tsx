@@ -5,7 +5,6 @@ import type React from "react"
 import { useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import { AreaOptionsStatus } from "@/components/area-options-status"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -102,7 +101,7 @@ export function UserRegistrationPreferencesStep({
   })
   const [workTypeOptions, setWorkTypeOptions] = useState<OnboardingOption[]>(defaultWorkTypeOptions)
   const [contractTypeOptions, setContractTypeOptions] = useState<OnboardingOption[]>(defaultContractTypeOptions)
-  const { options: industryOptions, source: areaOptionsSource, error: areaOptionsError, isLoading: isAreaOptionsLoading, reload: reloadAreaOptions } = useAreaOptions()
+  const industryOptions = useAreaOptions()
   const [seniorityOptions, setSeniorityOptions] = useState<OnboardingOption[]>(defaultSeniorityOptions)
   const [softSkillOptions, setSoftSkillOptions] = useState<OnboardingOption[]>(defaultSoftSkillOptions)
   const [travelOptions, setTravelOptions] = useState<TravelAvailabilityOption[]>(defaultTravelAvailabilityOptions)
@@ -117,15 +116,12 @@ export function UserRegistrationPreferencesStep({
 
   useEffect(() => {
     setFormData((previous) => {
-      if (previous.areaPreferencia.length > 0 && industryOptions.length === 0 && !areaOptionsSource && !areaOptionsError) {
-        return previous
-      }
       const nextTime = normalizeTeamValueForAreas(previous.time, previous.areaPreferencia, industryOptions)
       return nextTime.length === previous.time.length && nextTime.every((team, index) => team === previous.time[index])
         ? previous
         : { ...previous, time: nextTime }
     })
-  }, [areaOptionsError, areaOptionsSource, formData.areaPreferencia, industryOptions])
+  }, [formData.areaPreferencia, industryOptions])
 
   const isFormComplete =
     formData.setor.length > 0 &&
@@ -295,13 +291,6 @@ export function UserRegistrationPreferencesStep({
                   setTouched((previous) => ({ ...previous, areaPreferencia: true }))
                 }
               }}
-            />
-            <AreaOptionsStatus
-              error={areaOptionsError}
-              isLoading={isAreaOptionsLoading}
-              onReload={() => void reloadAreaOptions()}
-              options={industryOptions}
-              source={areaOptionsSource}
             />
             {preferenceAreaError ? <p className="text-xs text-destructive">{preferenceAreaError}</p> : null}
           </div>

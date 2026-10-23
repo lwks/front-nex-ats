@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation"
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react"
 
-import { AreaOptionsStatus } from "@/components/area-options-status"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -176,7 +175,7 @@ export default function CreateJobPage() {
   const [experienceOptions, setExperienceOptions] = useState(defaultExperienceOptions)
   const [benefitOptions, setBenefitOptions] = useState(defaultCurrentBenefitOptions)
   const [softSkillOptions, setSoftSkillOptions] = useState(defaultSoftSkillOptions)
-  const { options: areaOptions, source, error, isLoading, reload } = useAreaOptions()
+  const areaOptions = useAreaOptions()
   const descriptionRef = useRef<HTMLTextAreaElement | null>(null)
 
   useEffect(() => {
@@ -200,13 +199,12 @@ export default function CreateJobPage() {
   const hardSkillOptions = useMemo(() => getHardSkillOptionsForAreas(form.area, areaOptions), [form.area, areaOptions])
 
   useEffect(() => {
-    if (areaOptions.length === 0 && !source && !error) return
     const teams = form.time.filter((team) => teamOptions.some((option) => option.value === team))
     const hardSkills = form.hardSkills.filter((skill) => hardSkillOptions.some((option) => option.value === skill))
     if (teams.length !== form.time.length || hardSkills.length !== form.hardSkills.length) {
       setForm((current) => ({ ...current, time: teams, hardSkills }))
     }
-  }, [areaOptions.length, error, form.area, form.hardSkills, form.time, hardSkillOptions, source, teamOptions])
+  }, [form.area, form.hardSkills, form.time, hardSkillOptions, teamOptions])
 
   const update = <K extends keyof JobFormState>(field: K, value: JobFormState[K]) => {
     setForm((current) => ({ ...current, [field]: value }))
@@ -284,7 +282,6 @@ export default function CreateJobPage() {
             <div className="space-y-2">
               <Label htmlFor="area">Area</Label>
               <MultiSelect id="area" maxSelections={MAX_AREA_SELECTIONS} options={areaOptions} placeholder="Selecione uma area" value={form.area} onChange={areaChange} />
-              <AreaOptionsStatus error={error} isLoading={isLoading} onReload={() => void reload()} options={areaOptions} source={source} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="time">Time</Label>

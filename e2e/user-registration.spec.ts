@@ -23,30 +23,25 @@ async function selectMultipleOptions(page: Page, id: string, labels: string[]) {
 
 test("opens the candidate registration flow", async ({ page }) => {
   await signIn(page, 'candidate')
-  await page.goto("/users/create")
+  await page.goto("/candidaturas?vagaGuid=e2e-job")
 
-  await expect(page.getByRole("heading", { name: "Crie seu cadastro oficial na plataforma." })).toBeVisible()
   await expect(page.getByRole("heading", { name: "Dados pessoais" })).toBeVisible()
   await expect(page.getByRole("button", { name: "Continuar" })).toBeDisabled()
 })
 
 test("limits vacancy team selection to three teams from the selected area", async ({ page }) => {
   await signIn(page, 'company')
-  await page.route("**/api/areas", async (route) => {
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        data: [{ ID: 3, DS_AREA: "Tecnologia da Informação", competencias: [] }],
-      }),
-    })
-  })
-
   await page.goto("/jobs/create")
-  await page.getByLabel("Cargo").click()
-  await page.getByRole("option", { name: "Tech Lead" }).click()
+  const areaRequests: string[] = []
+  page.on("request", (request) => {
+    if (request.url().includes("/areas")) areaRequests.push(request.url())
+  })
+  await page.reload()
 
   await page.locator("#area").click()
+  await expect(page.locator("#area").locator("xpath=..").getByRole("checkbox")).toHaveCount(13)
   await page.getByText("Tecnologia da Informação", { exact: true }).click()
+  await expect(page.locator("#area")).toContainText("Tecnologia da Informação")
 
   await page.locator("#time").click()
   await page.getByText("Desenvolvimento Front-end", { exact: true }).click()
@@ -57,20 +52,17 @@ test("limits vacancy team selection to three teams from the selected area", asyn
   await expect(page.locator("#time")).toContainText("Desenvolvimento Back-end")
   await expect(page.locator("#time")).toContainText("+1")
   await expect(page.getByText("UX Design", { exact: true }).locator("..").getByRole("checkbox")).toBeDisabled()
+
+  await page.keyboard.press("Escape")
+  await page.locator("#hardSkills").click()
+  await expect(page.locator("#hardSkills").locator("xpath=..").getByRole("checkbox").first()).toBeVisible()
+  expect(areaRequests).toEqual([])
 })
 
 test("allows five sectors and three preferred seniorities in candidate preferences", async ({ page }) => {
   test.setTimeout(60_000)
   await signIn(page, 'candidate')
 
-  await page.route("**/api/areas", async (route) => {
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        data: [{ ID: 3, DS_AREA: "Tecnologia da Informação", competencias: [] }],
-      }),
-    })
-  })
   await page.route("**/api/zips/01001000", async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -83,7 +75,7 @@ test("allows five sectors and three preferred seniorities in candidate preferenc
     })
   })
 
-  await page.goto("/users/create")
+  await page.goto("/candidaturas?vagaGuid=e2e-job")
   await page.locator("#nome").fill("Mariana Costa")
   await page.locator("#dataNascimento").fill("1992-04-15")
   await page.locator("#documento").fill("12345678909")

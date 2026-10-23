@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react"
 import { Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { AreaOptionsStatus } from "@/components/area-options-status"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { MultiSelect } from "@/components/ui/multi-select"
@@ -116,7 +115,7 @@ export function UserRegistrationProfessionalStep({
     idiomas: false,
   })
   const [experienceOptions, setExperienceOptions] = useState<OnboardingOption[]>(defaultExperienceOptions)
-  const { options: industryOptions, source: areaOptionsSource, error: areaOptionsError, isLoading: isAreaOptionsLoading, reload: reloadAreaOptions } = useAreaOptions()
+  const industryOptions = useAreaOptions()
   const [seniorityOptions, setSeniorityOptions] = useState<OnboardingOption[]>(defaultSeniorityOptions)
   const [benefitOptions, setBenefitOptions] = useState<OnboardingOption[]>(defaultCurrentBenefitOptions)
   const [softSkillOptions, setSoftSkillOptions] = useState<OnboardingOption[]>(defaultSoftSkillOptions)
@@ -145,16 +144,13 @@ export function UserRegistrationProfessionalStep({
 
   useEffect(() => {
     setFormData((previous) => {
-      if (previous.industriaInteresse.length > 0 && industryOptions.length === 0 && !areaOptionsSource && !areaOptionsError) {
-        return previous
-      }
       const nextTime = normalizeTeamValueForAreas(previous.timeAtual, previous.industriaInteresse, industryOptions)
       return nextTime.length === previous.timeAtual.length &&
         nextTime.every((team, index) => team === previous.timeAtual[index])
         ? previous
         : { ...previous, timeAtual: nextTime }
     })
-  }, [areaOptionsError, areaOptionsSource, formData.industriaInteresse, industryOptions])
+  }, [formData.industriaInteresse, industryOptions])
 
   const isFormComplete =
     Boolean(formData.experiencia) &&
@@ -532,13 +528,6 @@ export function UserRegistrationProfessionalStep({
                   setTouched((previous) => ({ ...previous, industriaInteresse: true }))
                 }
               }}
-            />
-            <AreaOptionsStatus
-              error={areaOptionsError}
-              isLoading={isAreaOptionsLoading}
-              onReload={() => void reloadAreaOptions()}
-              options={industryOptions}
-              source={areaOptionsSource}
             />
             {areaError ? <p className="text-xs text-destructive">{areaError}</p> : null}
           </div>

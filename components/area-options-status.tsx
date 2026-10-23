@@ -1,14 +1,10 @@
-import type { AreaOption } from "@/services/areas-service"
-
 type AreaOptionsStatusProps = {
   error?: string
   isLoading: boolean
   onReload: () => void
-  options: AreaOption[]
-  source: "api" | null
 }
 
-export function AreaOptionsStatus({ error, isLoading, onReload, options, source }: AreaOptionsStatusProps) {
+export function AreaOptionsStatus({ error, isLoading, onReload }: AreaOptionsStatusProps) {
   if (!isLoading && !error) {
     return null
   }

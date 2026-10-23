@@ -2,53 +2,36 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   areaValuesToNumbers,
-  fallbackAreaOptions,
+  hardcodedAreaOptions,
   fetchAreaOptions,
-  getCompetencyOptionsForAreas,
-  loadAreaOptions,
-  normalizeAreaResponse,
 } from "@/services/areas-service"
 
 describe("areas-service", () => {
-  it("normalizes the API envelope and preserves the returned label", () => {
-    expect(normalizeAreaResponse({ data: [{ ID: 1, DS_AREA: "Finanças" }] })).toEqual([
-      { value: "1", label: "Finanças" },
-    ])
+  it("provides all fixed areas with stable numeric IDs", () => {
+    expect(hardcodedAreaOptions).toEqual([
+      "Finanças",
+      "Recursos Humanos",
+      "Tecnologia da Informação",
+      "Dados",
+      "Comercial e Vendas",
+      "Marketing",
+      "Operações",
+      "Supply Chain",
+      "Jurídico e Compliance",
+      "Riscos e Auditoria",
+      "Customer Success",
+      "Produtos",
+      "Administração e Facilities",
+    ].map((label, index) => ({ value: String(index + 1), label })))
   })
 
-  it.each([
-    { ID: 0, DS_AREA: "Tecnologia" },
-    { ID: 1.5, DS_AREA: "Tecnologia" },
-    { ID: 1, DS_AREA: "" },
-  ])("rejects an invalid area record", (record) => {
-    expect(() => normalizeAreaResponse({ data: [record] })).toThrow("Registro de área inválido")
-  })
+  it("loads the local catalog without calling the API", async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
 
-  it("rejects an invalid response envelope", () => {
-    expect(() => normalizeAreaResponse({ data: "invalid" })).toThrow("Resposta inválida para /api/areas")
-  })
-
-  it("loads API options successfully", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: [{ ID: 2, DS_AREA: "Recursos Humanos" }] }) }),
-    )
-
-    await expect(fetchAreaOptions()).resolves.toEqual([{ value: "2", label: "Recursos Humanos" }])
-    await expect(loadAreaOptions()).resolves.toEqual({
-      options: [{ value: "2", label: "Recursos Humanos" }],
-      source: "api",
-    })
-  })
-
-  it("returns no options after an API failure", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503, text: async () => "unavailable" }))
-
-    const result = await loadAreaOptions()
-
-    expect(result.source).toBe(null)
-    expect(result.options).toEqual([])
-    expect(result.error).toContain("503")
+    await expect(fetchAreaOptions()).resolves.toEqual(hardcodedAreaOptions)
+    expect(fetchMock).not.toHaveBeenCalled()
+    vi.unstubAllGlobals()
   })
 
   it("converts selected string IDs and rejects values outside the loaded catalog", () => {
@@ -59,43 +42,9 @@ describe("areas-service", () => {
     expect(() => areaValuesToNumbers(["2"], options)).toThrow("Selecione apenas áreas válidas.")
   })
 
-  it("returns unique competencies for the selected areas", () => {
-    expect(
-      getCompetencyOptionsForAreas(["1", "2"], [
-        {
-          value: "1",
-          label: "Finanças",
-          competencias: [
-            { DS_COMPETENCIA: "Planejamento", DS_TIPO_COMPETENCIA: "Hardskill" },
-            { DS_COMPETENCIA: "Gestão", DS_TIPO_COMPETENCIA: "Softskill" },
-          ],
-        },
-        {
-          value: "2",
-          label: "Dados",
-          competencias: [
-            { DS_COMPETENCIA: "Gestão", DS_TIPO_COMPETENCIA: "Softskill" },
-            { DS_COMPETENCIA: "SQL", DS_TIPO_COMPETENCIA: "Hardskill" },
-          ],
-        },
-      ]),
-    ).toEqual([
-      { value: "Planejamento", label: "Planejamento" },
-      { value: "Gestão", label: "Gestão" },
-      { value: "SQL", label: "SQL" },
-    ])
+  it("uses the fixed catalog to validate candidate area IDs", () => {
+    expect(areaValuesToNumbers(["1", "13"])).toEqual([1, 13])
+    expect(() => areaValuesToNumbers(["14"])).toThrow("Selecione apenas áreas válidas.")
   })
 
-  it("returns no team options when the area is unknown or has malformed competencies", () => {
-    expect(
-      getCompetencyOptionsForAreas(["999"], [
-        { value: "1", label: "Finanças", competencias: [{ DS_COMPETENCIA: "Planejamento", DS_TIPO_COMPETENCIA: "Hardskill" }] },
-      ]),
-    ).toEqual([])
-    expect(
-      getCompetencyOptionsForAreas(["1"], [
-        { value: "1", label: "Finanças", competencias: [{ DS_COMPETENCIA: " ", DS_TIPO_COMPETENCIA: "Hardskill" }] },
-      ]),
-    ).toEqual([])
-  })
 })

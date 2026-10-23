@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import {
   fetchContractTypeOptions,
@@ -19,7 +19,6 @@ import {
   defaultCurrentBenefitOptions,
   defaultExperienceOptions,
   defaultHardSkillOptions,
-  defaultIndustryOptions,
   defaultInterestRoleAreaMap,
   defaultLanguageOptions,
   defaultSeniorityOptions,
@@ -28,19 +27,15 @@ import {
   defaultTravelAvailabilityOptions,
   defaultWorkTypeOptions,
 } from "@/lib/onboarding-options"
+import { hardcodedAreaOptions } from "@/services/areas-service"
 
 describe("onboarding-options-service", () => {
   it("returns default experience options", async () => {
     await expect(fetchExperienceOptions()).resolves.toEqual(defaultExperienceOptions)
   })
 
-  it("returns API area options", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: [{ ID: 1, DS_AREA: "Finanças" }] }),
-    }))
-
-    await expect(fetchIndustryOptions()).resolves.toEqual([{ value: "1", label: "Finanças" }])
+  it("returns the local area catalog", async () => {
+    await expect(fetchIndustryOptions()).resolves.toEqual(hardcodedAreaOptions)
   })
 
   it("returns default work type options", async () => {

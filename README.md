@@ -78,10 +78,9 @@ Com `NEXT_PUBLIC_API_BASE_URL=<base>/api`, o front espera estes recursos:
 - `POST /jobs` (criacao de vaga)
 - `POST /candidates` (envio de candidatura)
 - `GET /candidates/by-job-guids` (filtro por `guid_vaga`)
-- `GET /areas` (catalogo publico de areas da `TB_AREAS`; retorna `{ data: [{ ID, DS_AREA }] }`)
 - `GET /zips/:zip` (consulta de localizacao por CEP)
 
-Os campos de area usam o `ID` numerico da `TB_AREAS` no payload. A interface mantem os IDs como strings durante a selecao e usa o snapshot local de 13 areas apenas como fallback explicito quando a API nao estiver disponivel.
+Os campos de area usam um catalogo local fixo de 13 areas, com IDs de 1 a 13 na ordem definida pelo produto. O front nao consulta `GET /areas`; os IDs continuam sendo enviados como numeros nos payloads de vaga e candidatura.
 
 Na candidatura (`/candidaturas`), `industriaInteresse` e `areaPreferencia` usam IDs de área. Os campos `timeAtual` e `time` aceitam até três valores, e `setor` aceita até cinco valores nas preferências profissionais. Os campos de time e setor são representados como arrays no contrato do formulário. Na criação de vagas, Area aceita uma seleção, Time até três, Senioridade até três, Setor até cinco e Hard/Soft Skills até sete cada; `skills` contém Hard Skills e `soft_skills` contém Soft Skills. Cidade e Estado são informados separadamente, sem consulta de CEP. A etapa de CV informa que o upload ainda não está disponível; é possível finalizar sem anexar arquivo.
 
