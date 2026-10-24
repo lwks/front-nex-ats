@@ -2,7 +2,7 @@ import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
-import { ApplicationBoard, type Application } from "@/components/application-board"
+import { ApplicationBoard, normalizeCandidate, type Application } from "@/components/application-board"
 
 const applications: Application[] = [
   {
@@ -23,6 +23,43 @@ const applications: Application[] = [
 ]
 
 describe("ApplicationBoard", () => {
+  it("normalizes the candidate fields sent by the current application form", () => {
+    const candidate = normalizeCandidate({
+      id: "candidate-2",
+      guid_id: "candidate-2",
+      nome: "Candidato Teste",
+      contato: "candidate@example.com",
+      contatoCel: "11999999999",
+      modeloTrabalho: ["Remoto", "Hibrido"],
+      hardSkills: ["TypeScript", "Playwright"],
+      softSkills: ["Comunicacao"],
+      status: "entrevista-rh",
+    }, 0)
+
+    expect(candidate).toMatchObject({
+      email: "candidate@example.com",
+      telefone: "11999999999",
+      modeloTrabalho: "Remoto, Hibrido",
+      skills: ["TypeScript", "Playwright", "Comunicacao"],
+      status: "entrevista-rh",
+    })
+  })
+
+  it("normalizes scalar preference and skill values returned by the API", () => {
+    const candidate = normalizeCandidate({
+      guid_id: "candidate-3",
+      nome: "Candidato Teste",
+      modeloTrabalho: "presencial",
+      hardSkills: "logica-de-programacao",
+      softSkills: "adaptabilidade",
+    }, 0)
+
+    expect(candidate).toMatchObject({
+      modeloTrabalho: "presencial",
+      skills: ["logica-de-programacao", "adaptabilidade"],
+    })
+  })
+
   it("renders candidate cards with recruiter note preview", () => {
     const html = renderToStaticMarkup(
       createElement(ApplicationBoard, {

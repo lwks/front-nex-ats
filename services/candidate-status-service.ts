@@ -15,6 +15,8 @@ type UpdateCandidateStatusResponse = {
   updated_at?: string
 }
 
+type UpdateCandidateStatusEnvelope = UpdateCandidateStatusResponse | { data?: UpdateCandidateStatusResponse }
+
 export async function updateCandidateStatus(
   candidateId: string,
   status: ApplicationStatus,
@@ -32,7 +34,10 @@ export async function updateCandidateStatus(
     throw new Error(`API request failed (${response.status}): ${errorText}`)
   }
 
-  const payload = (await response.json()) as UpdateCandidateStatusResponse
+  const responsePayload = (await response.json()) as UpdateCandidateStatusEnvelope
+  const payload = ("data" in responsePayload && responsePayload.data
+    ? responsePayload.data
+    : responsePayload) as UpdateCandidateStatusResponse
 
   return {
     id: payload.id,

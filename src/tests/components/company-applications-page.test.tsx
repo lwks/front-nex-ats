@@ -6,6 +6,7 @@ import {
   COMPANY_APPLICATIONS_PAGE_SIZE,
   CompanyApplicationsView,
   deriveCompanyApplicationsState,
+  normalizeCompanyJob,
   type CompanyApplicationsJob,
 } from "@/components/company-applications-page"
 
@@ -33,6 +34,22 @@ function createJob(id: string, title = `Vaga ${id}`): CompanyApplicationsJob {
 }
 
 describe("CompanyApplicationsView", () => {
+  it("normalizes the current job payload, including teams and internal salary", () => {
+    const job = normalizeCompanyJob({
+      guid_id: "job-current",
+      titulo: "Analista QA",
+      area: [3],
+      time: ["Quality Assurance (QA)", "DevOps"],
+      exibir_salario: false,
+      orcamento: { valor_inicial: 8000, valor_final: 12000 },
+    }, 0)
+
+    expect(job?.team).toBe("Quality Assurance (QA), DevOps")
+    expect(job?.salaryRange).toContain("R$")
+    expect(job?.salaryRange).toContain("8.000")
+    expect(job?.salaryRange).toContain("12.000")
+  })
+
   it("renders the ATS shell with search and metrics", () => {
     const jobs = [createJob("job-1", "Pessoa Desenvolvedora"), createJob("job-2", "Analista de Dados")]
 

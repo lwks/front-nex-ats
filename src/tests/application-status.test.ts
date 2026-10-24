@@ -13,4 +13,16 @@ describe("application status contract", () => {
     expect(mapApiStatusToBoardStatus("reprovado")).toBe("rejeitado")
     expect(mapApiStatusToBoardStatus("valor-desconhecido")).toBe("novos")
   })
+
+  it.each([
+    ["novos", "novo"],
+    ["entrevista-rh", "entrevista-rh"],
+    ["entrevista-tecnica", "entrevista-tecnica"],
+    ["proposta", "proposta"],
+    ["contratado", "contratado"],
+    ["rejeitado", "rejeitado"],
+  ] as const)("round trips %s through the API as %s", (column, apiStatus) => {
+    expect(mapBoardStatusToApiStatus(column)).toBe(apiStatus)
+    expect(mapApiStatusToBoardStatus(apiStatus)).toBe(column)
+  })
 })

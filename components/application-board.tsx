@@ -139,7 +139,7 @@ function extractCandidateItems(payload: unknown): unknown[] {
   return []
 }
 
-function normalizeCandidate(item: unknown, index: number): Application | null {
+export function normalizeCandidate(item: unknown, index: number): Application | null {
   if (!isRecord(item)) {
     return null
   }
@@ -158,9 +158,12 @@ function normalizeCandidate(item: unknown, index: number): Application | null {
     recordId,
     nome,
     cargo: pickString(item.cargo, item.role, item.vaga, item.titulo_vaga),
-    email: pickString(item.email, item.cd_email),
-    telefone: pickString(item.telefone, item.phone, item.cd_telefone),
-    modeloTrabalho: pickString(item.modelo_trabalho, item.workModel, item.modalidade),
+    email: pickString(item.contato, item.email, item.cd_email),
+    telefone: pickString(item.contatoCel, item.telefone, item.phone, item.cd_telefone),
+    modeloTrabalho: [
+      pickString(item.modelo_trabalho, item.workModel, item.modalidade),
+      ...(pickStringArray(item.modeloTrabalho, item.modelo_trabalho_preferencia) ?? []),
+    ].filter(Boolean).join(", ") || undefined,
     senioridade: pickString(item.senioridade, item.seniority, item.nivel),
     experiencia: pickString(item.experiencia, item.experience),
     linkedinUrl: pickString(item.linkedin, item.linkedinUrl, item.linkedin_url),
@@ -174,7 +177,11 @@ function normalizeCandidate(item: unknown, index: number): Application | null {
       item.comments,
       item.comment,
     ),
-    skills: pickStringArray(item.skills, item.habilidades),
+    skills: [...new Set([
+      ...(pickStringArray(item.skills, item.habilidades) ?? []),
+      ...(pickStringArray(item.hardSkills, item.hard_skills) ?? []),
+      ...(pickStringArray(item.softSkills, item.soft_skills) ?? []),
+    ])],
     status: mapApiStatusToBoardStatus(rawStatus),
     atualizadoEm: pickString(item.updatedAt, item.updated_at, item.atualizadoEm),
   }
