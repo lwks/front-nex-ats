@@ -52,7 +52,12 @@ export function mapApiStatusToBoardStatus(statusValue?: string): ApplicationStat
     return "entrevista-tecnica"
   }
 
-  if (normalized === "rh" || normalized?.includes("recrutador") || normalized?.includes("people")) {
+  if (
+    normalized === "entrevista-rh" ||
+    normalized === "rh" ||
+    normalized?.includes("recrutador") ||
+    normalized?.includes("people")
+  ) {
     return "entrevista-rh"
   }
 

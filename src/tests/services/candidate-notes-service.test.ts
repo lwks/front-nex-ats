@@ -28,6 +28,21 @@ describe("updateCandidateNotes", () => {
     })
   })
 
+  it("reads the saved note from the backend data envelope", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: { id: "candidate-2", anotacoes: "Nota persistida", updatedAt: "2026-10-23T12:00:00.000Z" },
+      }),
+    }))
+
+    await expect(updateCandidateNotes("candidate-2", "Nota persistida")).resolves.toEqual({
+      id: "candidate-2",
+      notes: "Nota persistida",
+      updatedAt: "2026-10-23T12:00:00.000Z",
+    })
+  })
+
   it("throws when the upstream update fails", async () => {
     vi.stubGlobal(
       "fetch",

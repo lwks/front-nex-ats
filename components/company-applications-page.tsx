@@ -92,6 +92,32 @@ function pickString(...values: Array<unknown>) {
   return undefined
 }
 
+function pickNumber(...values: Array<unknown>) {
+  for (const value of values) {
+    if (typeof value === "number" && Number.isFinite(value)) return value
+    if (typeof value === "string" && value.trim()) {
+      const parsed = Number(value.replace(/\./g, "").replace(",", "."))
+      if (Number.isFinite(parsed)) return parsed
+    }
+  }
+  return undefined
+}
+
+function formatCompanySalary(item: ApiJob) {
+  const explicitSalary = pickString(item.salaryRange, item.faixa_salarial, item.salario, item.salary)
+  if (explicitSalary) return explicitSalary
+
+  const budget = isRecord(item.orcamento) ? item.orcamento : null
+  const initial = pickNumber(budget?.valor_inicial)
+  const final = pickNumber(budget?.valor_final)
+  const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
+
+  if (initial !== undefined && final !== undefined) return `${currency.format(initial)} - ${currency.format(final)}`
+  if (initial !== undefined) return `A partir de ${currency.format(initial)}`
+  if (final !== undefined) return `Até ${currency.format(final)}`
+  return "Nao informado"
+}
+
 function pickStringArray(...values: Array<unknown>) {
   for (const value of values) {
     if (Array.isArray(value)) {
@@ -160,7 +186,7 @@ function extractJobItems(payload: unknown): ApiJob[] {
   return []
 }
 
-function normalizeCompanyJob(item: ApiJob, index: number): CompanyApplicationsJob | null {
+export function normalizeCompanyJob(item: ApiJob, index: number): CompanyApplicationsJob | null {
   const idSource =
     pickString(item.id, item.slug, item.codigo, item.uuid, item.guid_id, item.pk) ?? `vaga-${index}`
   const jobGuid = pickString(item.guid_id, item.guid_vaga, item.uuid, item.id, item.codigo)
@@ -221,10 +247,10 @@ function normalizeCompanyJob(item: ApiJob, index: number): CompanyApplicationsJo
       companyWebsite: pickString(item.site_empresa, item.siteEmpresa, item.companyWebsite),
       contactEmail: pickString(item.email, item.contactEmail, item.email_contato, item.contato_email),
     },
-    team: pickString(item.area, item.team, item.departamento) ?? "Nao informado",
+    team: pickStringArray(item.time, item.team).join(", ") || pickString(item.area, item.departamento) || "Nao informado",
     createdBy: pickString(item.createdBy, item.criado_por, item.company, item.empresa) ?? "Nao informado",
     createdAt: pickString(item.createdAt, item.created_at, item.data_criacao) ?? "Nao informado",
-    salaryRange: pickString(item.salaryRange, item.faixa_salarial) ?? "Nao informado",
+    salaryRange: formatCompanySalary(item),
     reportUrl: pickString(item.reportUrl, item.report_url, item.relatorio_url) ?? "Nao informado",
   }
 }

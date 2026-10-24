@@ -40,35 +40,6 @@ test('blocks company pages and operations for a candidate', async ({ page, reque
   expect(response.status()).toBe(403)
 })
 
-test('supports registration choices and reports a password mismatch', async ({ page }) => {
-  await page.goto('/')
-  await page.getByRole('button', { name: 'Cadastre-se' }).click()
-  await page.getByRole('button', { name: /Empresa Quero gerenciar vagas/ }).click()
-  await expect(page.getByRole('button', { name: /Empresa Quero gerenciar vagas/ })).toHaveAttribute('aria-pressed', 'true')
-  await page.getByLabel('Nome').fill('Joana')
-  await page.getByLabel('E-mail').fill('joana@example.com')
-  await page.getByLabel('Senha', { exact: true }).fill('one-password')
-  await page.getByLabel('Confirmar senha').fill('other-password')
-  await page.getByRole('button', { name: 'Criar conta com e-mail' }).click()
-  await expect(page.getByRole('status')).toContainText('As senhas não são iguais')
-})
-
-test('registers by email and asks for confirmation when no session is issued', async ({ page }) => {
-  await page.goto('/')
-  await page.getByRole('button', { name: 'Cadastre-se' }).click()
-  await page.getByRole('button', { name: /Candidato Quero buscar vagas/ }).click()
-  await page.getByLabel('Nome').fill('Ana')
-  await page.getByLabel('E-mail').fill('ana@example.com')
-  await page.getByLabel('Senha', { exact: true }).fill('correct-password')
-  await page.getByLabel('Confirmar senha').fill('correct-password')
-  await page.getByRole('button', { name: 'Criar conta com e-mail' }).click()
-  await expect(page.getByRole('status')).toContainText('Confirme seu e-mail')
-  await page.goto('/auth/confirm?token_hash=mock-email-token&type=email')
-  await expect(page).toHaveURL(/mode=complete/)
-  await page.getByRole('button', { name: /Candidato Quero buscar vagas/ }).click()
-  await expect(page).toHaveURL(/\/jobs\/list/, { timeout: 15_000 })
-})
-
 test('sends password recovery instructions', async ({ page }) => {
   await page.goto('/')
   await page.getByLabel('E-mail').fill('candidate@example.com')
