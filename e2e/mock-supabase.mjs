@@ -2,7 +2,7 @@ import { createHmac } from 'node:crypto'
 import { createServer } from 'node:http'
 
 const roles = new Map()
-const port = 54329
+const port = Number(process.env.E2E_SUPABASE_PORT || 54329)
 
 function tokenFor(id) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')

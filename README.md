@@ -121,7 +121,7 @@ projeto Supabase real e nao alteram candidatos reais.
 
 A suite de producao e separada dos E2E locais, usa um unico worker e nao sobe
 servidores locais. Por padrao, ela valida
-`https://dainty-sprinkles-4f0492.netlify.app/`:
+`https://clusterjobs.com.br/`:
 
     npm run test:e2e:production
 
@@ -131,7 +131,9 @@ Variaveis aceitas apenas no ambiente local que executa o Playwright:
 - `PRODUCTION_E2E_ATS_API_BASE_URL`: base da API ATS usada pelo deploy.
 - `PRODUCTION_E2E_SUPABASE_URL`: URL do projeto Supabase de producao.
 - `PRODUCTION_E2E_SUPABASE_SERVICE_ROLE_KEY`: chave administrativa usada
-  somente pelo processo Node para criar e remover usuarios temporarios.
+  somente pelo processo Node para criar contas sinteticas e consultar seus IDs.
+- `PRODUCTION_E2E_SEND_EMAIL=true`: habilita uma tentativa real e controlada de
+  cadastro com confirmacao por e-mail. Sem esta opcao, o cenario fica bloqueado.
 
 Sem as credenciais administrativas, os testes publicos continuam e os cenarios
 que exigem contas descartaveis ficam marcados como bloqueados. A chave, senhas
@@ -139,11 +141,16 @@ e tokens nunca sao gravados nos relatorios. A execucao gera:
 
 - HTML em `playwright-report-production/`;
 - traces e screenshots de falhas em `test-results/production/`;
-- Markdown por execucao em `production-e2e-reports/<E2E-data-run>.md`.
+- Markdown por execucao em `../production-e2e-reports/<E2E-data-run>.md`.
 
-Vagas, candidaturas e anotacoes criadas recebem o identificador `E2E-...` e
-ficam relacionadas no Markdown, pois a interface atual nao oferece exclusao.
-Usuarios temporarios sao removidos pela Admin API inclusive depois de falhas.
+Contas, vagas, candidaturas e anotacoes recebem o prefixo `E2E-PROD-...`.
+Nesta primeira revalidacao, a suite nao executa hooks de exclusao: todos os
+registros criados ficam em producao para inspecao, com IDs e vinculos no Markdown.
+Planeje a remocao em uma tarefa posterior.
+
+No deploy Hostinger, Vercel Analytics fica desativado por padrao. Configure
+`NEXT_PUBLIC_VERCEL_ANALYTICS_ENABLED=true` no build apenas em um deploy
+compativel com o endpoint `/_vercel/insights/script.js`.
 
 ## Observacoes atuais
 

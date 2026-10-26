@@ -5,7 +5,7 @@ import { createRunIdentifier } from "@/e2e-production/support/runtime"
 
 describe("production E2E report helpers", () => {
   it("creates a stable run identifier from a known date and suffix", () => {
-    expect(createRunIdentifier(new Date("2026-10-06T12:34:56.000Z"), "abc123")).toBe("E2E-20261006T123456Z-abc123")
+    expect(createRunIdentifier(new Date("2026-10-06T12:34:56.000Z"), "abc123")).toBe("E2E-PROD-20261006T123456Z-abc123")
   })
 
   it("renders passed, blocked and gap evidence without exposing unspecified secrets", () => {
@@ -28,13 +28,13 @@ describe("production E2E report helpers", () => {
         recommendation: "Configurar o build e publicar novamente",
         evidence: "/api/auth/session",
       }],
-      temporaryUsers: [{ email: "candidate@example.com", purpose: "candidate", removed: true }],
-      externalRecords: [{ type: "job", identifier: "E2E-test" }],
+      temporaryUsers: [{ id: "user-1", email: "candidate@example.com", purpose: "candidate", removed: false }],
+      externalRecords: [{ type: "job", id: "job-1", identifier: "E2E-test" }],
     })
 
     expect(report).toContain("| Preflight | abre a home | passou | HTTP 200 |")
     expect(report).toContain("[CRITICO] Supabase desabilitado")
-    expect(report).toContain("candidate@example.com (candidate): removido")
-    expect(report).toContain("job: `E2E-test`")
+    expect(report).toContain("candidate@example.com (candidate) — ID `user-1`: mantido em produção")
+    expect(report).toContain("job: `E2E-test` (ID `job-1`) — mantido em produção")
   })
 })

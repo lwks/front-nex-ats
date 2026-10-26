@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test"
 
+const supabasePort = process.env.E2E_SUPABASE_PORT || '54329'
+
 export default defineConfig({
   testDir: "./e2e",
   // The local Supabase mock keeps shared auth state, so these scenarios must not
@@ -20,7 +22,7 @@ export default defineConfig({
   webServer: [
     {
       command: 'node e2e/mock-supabase.mjs',
-      url: 'http://localhost:54329/health',
+      url: `http://localhost:${supabasePort}/health`,
       reuseExistingServer: !process.env.CI,
     },
     {
@@ -29,7 +31,7 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
       env: {
-        NEXT_PUBLIC_SUPABASE_URL: 'http://localhost:54329',
+        NEXT_PUBLIC_SUPABASE_URL: `http://localhost:${supabasePort}`,
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'e2e-public-key',
         SUPABASE_SERVICE_ROLE_KEY: 'e2e-server-key',
       },

@@ -36,7 +36,8 @@ function evidenceFor(result: TestResult) {
     .map((attachment) => relative(process.cwd(), attachment.path as string))
     .filter((path, index, paths) => paths.indexOf(path) === index)
   const error = result.error?.message ? redact(result.error.message.split("\n")[0]) : ""
-  return [error, artifactPaths.length ? `artefatos: ${artifactPaths.join(", ")}` : ""].filter(Boolean).join("; ") || "Execução concluída sem erro."
+  const limitations = result.annotations.filter((annotation) => annotation.type === "limitation").map((annotation) => annotation.description)
+  return [error, ...limitations, artifactPaths.length ? `artefatos: ${artifactPaths.join(", ")}` : ""].filter(Boolean).join("; ") || "Execução concluída sem erro."
 }
 
 function parseGap(description: string | undefined): Gap | null {

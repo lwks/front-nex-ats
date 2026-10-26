@@ -17,8 +17,8 @@ describe('Supabase callback', () => {
     auth.exchange.mockResolvedValue({ error: null })
     auth.claims.mockResolvedValue({ data: { claims: { app_metadata: { account_type: 'COMPANY' } } } })
     const { GET } = await import('@/app/auth/callback/route')
-    const response = await GET(new NextRequest('http://localhost/auth/callback?code=valid'))
-    expect(response.headers.get('location')).toContain('/empresa/candidaturas')
+    const response = await GET(new NextRequest('http://0.0.0.0:3000/auth/callback?code=valid', { headers: { 'x-forwarded-host': 'clusterjobs.com.br' } }))
+    expect(response.headers.get('location')).toBe('https://clusterjobs.com.br/empresa/candidaturas')
   })
 
   it('sends an OAuth newcomer to type selection', async () => {
