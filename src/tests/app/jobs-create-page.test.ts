@@ -5,7 +5,7 @@ import {
   MAX_JOB_SKILL_SELECTIONS,
   validateJobFormState,
   type JobFormState,
-} from "@/app/jobs/create/page"
+} from "@/lib/job-form"
 import {
   defaultTeamOptions,
   MAX_AREA_SELECTIONS,

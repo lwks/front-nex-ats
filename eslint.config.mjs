@@ -25,4 +25,13 @@ export default defineConfig([
     ],
     rules: { 'react-hooks/set-state-in-effect': 'off', 'react-hooks/immutability': 'off' },
   },
+  {
+    // These existing state sync effects predate the stricter rule in Next 16.4.
+    files: [
+      'app/jobs/create/page.tsx',
+      'components/application-board.tsx',
+      'components/company-applications-page.tsx',
+    ],
+    rules: { 'react-hooks/set-state-in-effect': 'off' },
+  },
 ])
