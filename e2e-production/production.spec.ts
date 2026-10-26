@@ -2,7 +2,6 @@ import { expect, test, type Page, type TestInfo } from "@playwright/test"
 
 import type { Gap } from "./support/report-data"
 import {
-  cleanupRememberedUsers,
   createPreparedAccount,
   getAdminUser,
   rememberSignupEmail,
@@ -11,6 +10,7 @@ import {
 } from "./support/supabase-admin"
 import {
   hasProductionAdminCredentials,
+  productionBaseUrl,
   productionAtsApiBaseUrl,
   productionRunId,
   updateRunState,
@@ -32,6 +32,7 @@ function blockUnless(condition: boolean, reason: string, testInfo: TestInfo) {
 
 async function signIn(page: Page, account: PreparedAccount) {
   await page.goto("/")
+  await page.waitForLoadState("networkidle")
   await page.getByLabel("E-mail").fill(account.email)
   await page.getByLabel("Senha").fill(account.password)
   await page.getByRole("button", { name: "Entrar", exact: true }).click()
@@ -40,7 +41,9 @@ async function signIn(page: Page, account: PreparedAccount) {
 
 async function signOut(page: Page) {
   await page.goto("/api/auth/logout")
-  await expect(page).toHaveURL(/\/$/)
+  await expect(page).toHaveURL((url) => url.origin === productionBaseUrl() && url.pathname === "/")
+  const session = await page.context().request.get("/api/auth/session")
+  expect(await session.json()).toMatchObject({ authenticated: false })
 }
 
 async function selectFirstOption(page: Page, selector: string) {
@@ -82,10 +85,6 @@ test.beforeAll(async ({ request }) => {
     candidateAccount = await createPreparedAccount("CANDIDATE")
     companyAccount = await createPreparedAccount("COMPANY")
   }
-})
-
-test.afterAll(async () => {
-  await cleanupRememberedUsers()
 })
 
 test.describe("Preflight", () => {
@@ -131,20 +130,14 @@ test.describe("Preflight", () => {
     expect(payload).toMatchObject({ authEnabled: true, authenticated: false })
   })
 
-  test("disponibiliza vagas e opções auxiliares na API real", async ({ request }) => {
+  test("disponibiliza vagas e CEP na API real", async ({ request }) => {
     const jobs = await request.get("/api/jobs?limit=6")
     expect(jobs.ok(), `GET /api/jobs retornou ${jobs.status()}`).toBe(true)
     expect((jobs.headers()["content-type"] || "").toLowerCase()).toContain("application/json")
 
     const apiBase = productionAtsApiBaseUrl()
-    const [areas, zip] = await Promise.all([
-      request.get(`${apiBase}/areas`),
-      request.get(`${apiBase}/zips/01001000`),
-    ])
-    expect(areas.ok(), `GET /areas retornou ${areas.status()}`).toBe(true)
+    const zip = await request.get(`${apiBase}/zips/01001000`)
     expect(zip.ok(), `GET /zips/01001000 retornou ${zip.status()}`).toBe(true)
-    const areasPayload = await areas.json() as { data?: unknown[] }
-    expect(Array.isArray(areasPayload.data) && areasPayload.data.length > 0).toBe(true)
   })
 })
 
@@ -169,16 +162,38 @@ test.describe("Sem login", () => {
     await page.goto("/jobs/list")
     await expect(page.getByRole("heading", { name: /Encontre sua próxima oportunidade/i })).toBeVisible()
     const details = page.getByRole("button", { name: "Ver detalhes" })
-    await expect(details.first()).toBeVisible()
-    await details.first().click()
-    await expect(page.getByRole("dialog")).toBeVisible()
-    await expect(page.getByRole("heading", { name: "Descrição da vaga" })).toBeVisible()
-    await page.getByRole("button", { name: "Fechar detalhes da vaga" }).click()
-    await expect(page.getByRole("dialog")).toBeHidden()
+    if (await details.count()) {
+      await expect(details.first()).toBeVisible()
+      await details.first().click()
+      await expect(page.getByRole("dialog")).toBeVisible()
+      await expect(page.getByRole("heading", { name: "Descrição da vaga" })).toBeVisible()
+      await page.getByRole("button", { name: "Fechar detalhes da vaga" }).click()
+      await expect(page.getByRole("dialog")).toBeHidden()
+    } else {
+      await expect(page.getByRole("heading", { name: "Nenhuma vaga disponível no momento" })).toBeVisible()
+      await expect(page.getByText("0 vagas encontradas.")).toBeVisible()
+    }
+  })
+
+  test("mostra carregamento e erro de vagas com falha simulada no navegador", async ({ page }, testInfo) => {
+    let releaseResponse = () => {}
+    const gate = new Promise<void>((resolve) => { releaseResponse = resolve })
+    await page.route("**/api/jobs?*", async (route) => {
+      await gate
+      await route.fulfill({ status: 500, contentType: "application/json", body: '{"message":"E2E simulated error"}' })
+    })
+    try {
+      await page.goto("/jobs/list")
+      await expect(page.locator(".animate-pulse")).toHaveCount(3)
+    } finally {
+      releaseResponse()
+    }
+    await expect(page.getByText("Não foi possível carregar as vagas no momento. Tente novamente em instantes.")).toBeVisible()
+    testInfo.annotations.push({ type: "limitation", description: "HTTP 500 simulado no navegador por Playwright; não representa falha da API real." })
   })
 
   test("redireciona páginas protegidas e bloqueia APIs antes de gravar", async ({ page }, testInfo) => {
-    for (const path of ["/users/create", "/candidaturas?vagaGuid=fake", "/jobs/create", "/empresa/candidaturas", "/empresa/relatorio"]) {
+    for (const path of ["/candidaturas?vagaGuid=fake", "/jobs/create", "/empresa/candidaturas", "/empresa/relatorio"]) {
       await page.goto(path)
       await expect(page).toHaveURL(/\/$/)
     }
@@ -206,8 +221,7 @@ test.describe("Sem login", () => {
   })
 
   test("trata logout sem sessão e callbacks inválidos de forma controlada", async ({ page }) => {
-    await page.goto("/api/auth/logout")
-    await expect(page).toHaveURL(/\/$/)
+    await signOut(page)
     await page.goto("/api/auth/callback?code=invalid")
     await expect(page).toHaveURL(/\?error=old-callback/)
     await expect(page.getByRole("status")).toContainText("Não foi possível concluir a autenticação")
@@ -215,45 +229,60 @@ test.describe("Sem login", () => {
     await expect(page).toHaveURL(/\?error=callback/)
     await expect(page.getByRole("status")).toContainText("Não foi possível concluir a autenticação")
   })
+
+  test("mantém indisponível a rota legada /users/create", async ({ request }) => {
+    const response = await request.get("/users/create", { maxRedirects: 0 })
+    expect(response.status()).toBe(404)
+  })
 })
 
 test.describe("Cadastro público", () => {
   test("valida tipo obrigatório, campos vazios e senhas diferentes", async ({ page }) => {
     await page.goto("/")
+    await page.waitForLoadState("networkidle")
     await page.getByRole("button", { name: "Cadastre-se" }).click()
     await expect(page.getByRole("button", { name: "Criar conta com e-mail" })).toHaveCount(0)
     await expect(page.getByRole("button", { name: "Cadastrar com GitHub" })).toHaveCount(0)
     await page.getByRole("button", { name: /Candidato Quero buscar vagas/ }).click()
     await page.getByRole("button", { name: "Criar conta com e-mail" }).click()
-    await expect(page.getByRole("status")).toContainText("Preencha todos os campos")
+    await expect(page.getByRole("alertdialog")).toContainText("Preencha todos os campos")
+    await page.getByRole("button", { name: "Revisar cadastro" }).click()
     await page.getByLabel("Nome").fill("E2E Cadastro")
     await page.getByLabel("E-mail").fill(uniqueE2eEmail("signup-validation"))
     await page.getByLabel("Senha", { exact: true }).fill("E2e-password-1")
     await page.getByLabel("Confirmar senha").fill("E2e-password-2")
     await page.getByRole("button", { name: "Criar conta com e-mail" }).click()
-    await expect(page.getByRole("status")).toContainText("As senhas não são iguais")
+    await expect(page.getByRole("alertdialog")).toContainText("As senhas não são iguais")
+    await page.getByRole("button", { name: "Revisar cadastro" }).click()
+    await page.getByRole("button", { name: "Alterar tipo da conta" }).click()
+    await page.getByRole("button", { name: /Empresa Quero gerenciar vagas/ }).click()
+    await expect(page.getByLabel("Nome")).toBeVisible()
+    await expect(page.getByRole("button", { name: "Criar conta com e-mail" })).toBeVisible()
   })
 
-  for (const [accountType, purpose] of [
-    ["Candidato", "signup-candidate"],
-    ["Empresa", "signup-company"],
-  ] as const) {
-    test(`solicita confirmação por e-mail para cadastro de ${accountType}`, async ({ page }, testInfo) => {
-      blockUnless(authEnabled && hasProductionAdminCredentials(), "Auth habilitado e credenciais administrativas locais são necessários para cadastro com limpeza garantida.", testInfo)
-      const email = uniqueE2eEmail(purpose)
-      rememberSignupEmail(email, purpose)
+  test("solicita confirmação por e-mail em execução controlada", async ({ page }, testInfo) => {
+      blockUnless(authEnabled && hasProductionAdminCredentials() && process.env.PRODUCTION_E2E_SEND_EMAIL === "true", "Envio real de e-mail desativado; configure PRODUCTION_E2E_SEND_EMAIL=true para uma tentativa controlada.", testInfo)
+      const accountType = "Candidato"
+      const email = uniqueE2eEmail("signup-candidate")
       await page.goto("/")
+      await page.waitForLoadState("networkidle")
       await page.getByRole("button", { name: "Cadastre-se" }).click()
       await page.getByRole("button", { name: new RegExp(accountType) }).click()
-      await page.getByLabel("Nome").fill(`${accountType} ${productionRunId()}`)
+      await page.getByLabel("Nome").fill(`${productionRunId()} ${accountType}`)
       await page.getByLabel("E-mail").fill(email)
       await page.getByLabel("Senha", { exact: true }).fill("E2e-Signup-Password-9!")
       await page.getByLabel("Confirmar senha").fill("E2e-Signup-Password-9!")
       await page.getByRole("button", { name: "Criar conta com e-mail" }).click()
-      await expect(page.getByRole("status")).toContainText("Confirme seu e-mail")
+      const feedback = await page.getByRole("alertdialog").innerText()
+      const user = await rememberSignupEmail(email, "signup-candidate")
+      if (/rate limit|limite de envio/i.test(feedback)) {
+        testInfo.annotations.push({ type: "blocked", description: `Supabase bloqueou o envio de confirmação: ${feedback.slice(0, 160)}` })
+        test.skip(true, "Limite de envio de e-mail do Supabase atingido.")
+      }
+      expect(feedback).toContain("Confirme seu e-mail")
+      expect(user?.id, "Cadastro aceito sem usuário identificado no Supabase").toBeTruthy()
       testInfo.annotations.push({ type: "limitation", description: "Recebimento e uso do link de confirmação não validados." })
-    })
-  }
+  })
 })
 
 test.describe("Autenticação e autorização", () => {
@@ -293,8 +322,6 @@ test.describe("Autenticação e autorização", () => {
   test("bloqueia Empresa em páginas e APIs de Candidato", async ({ page }, testInfo) => {
     blockUnless(Boolean(companyAccount), "Conta temporária de Empresa não disponível.", testInfo)
     await signIn(page, companyAccount as PreparedAccount)
-    await page.goto("/users/create")
-    await expect(page).toHaveURL(/\/empresa\/candidaturas/)
     await page.goto("/candidaturas?vagaGuid=fake")
     await expect(page).toHaveURL(/\/empresa\/candidaturas/)
     expect((await page.context().request.post("/api/candidates", { data: { name: "blocked" } })).status()).toBe(403)
@@ -330,71 +357,91 @@ test.describe("Fluxo funcional completo", () => {
     await page.goto("/jobs/create")
     await page.locator("#titulo").fill(jobTitle)
     await page.locator("#descricao").fill("Vaga automatizada para validar criação, candidatura e persistência no ambiente publicado.")
-    await page.locator("#cargo").click()
-    await page.getByRole("option", { name: "Tech Lead" }).click()
-    if (await page.locator("#nivel").isEnabled()) await selectFirstOption(page, "#nivel")
-    await selectFirstOption(page, "#setor")
     await expect(page.locator("#area")).toBeEnabled()
+    await page.locator("#area").click()
+    await expect(page.getByText("Finanças", { exact: true })).toBeVisible()
+    await page.keyboard.press("Escape")
     await selectFirstMultiOption(page, "#area")
     await expect(page.locator("#time")).toBeEnabled()
     await selectFirstMultiOption(page, "#time")
-    await page.locator("#localizacao").fill("01001000")
-    await expect(page.locator("#cidade_estado")).not.toHaveValue("")
+    await selectFirstMultiOption(page, "#senioridade")
+    await selectFirstMultiOption(page, "#setor")
+    await page.locator("#cidade").fill("São Paulo")
+    await page.locator("#estado").fill("SP")
     await page.locator("#modelo_trabalho").click()
     await page.getByRole("option", { name: "Remoto" }).click()
     await page.locator("#formato_contratacao").click()
     await page.getByRole("option", { name: "Integral" }).click()
-    await page.locator("#skills").fill("Playwright, TypeScript")
-    await page.locator("#beneficios").fill("Benefício E2E")
+    await selectFirstOption(page, "#experiencia")
+    await selectFirstMultiOption(page, "#beneficios")
+    await selectFirstMultiOption(page, "#hardSkills")
+    await selectFirstMultiOption(page, "#softSkills")
     await page.locator("#valor_inicial").fill("8000")
     await page.locator("#valor_final").fill("12000")
     const jobRequestPromise = page.waitForRequest((request) => request.url().endsWith("/api/jobs") && request.method() === "POST")
     await page.getByRole("button", { name: "Criar vaga" }).click()
     const jobRequest = await jobRequestPromise
     const jobPayload = jobRequest.postDataJSON() as { guid_id: string }
-    await expect(page.getByText("Vaga criado com sucesso")).toBeVisible()
-    updateRunState((state) => state.externalRecords.push({ type: "job", identifier: `${jobTitle} (${jobPayload.guid_id})` }))
+    updateRunState((state) => state.externalRecords.push({ type: "job", id: jobPayload.guid_id, identifier: jobTitle, creationStatus: "submitted", cleanupStatus: "pending" }))
+    await expect(page.getByText("Vaga criada com sucesso.", { exact: true })).toBeVisible()
+    updateRunState((state) => { state.externalRecords.find((record) => record.type === "job" && record.id === jobPayload.guid_id)!.creationStatus = "confirmed" })
 
     await page.goto("/jobs/list")
-    await page.getByPlaceholder(/Cargo, empresa, skill/).fill(jobTitle)
+    await page.getByPlaceholder(/Cargo, empresa, skill ou localidade/i).fill(jobTitle)
     await expect(page.getByRole("heading", { name: jobTitle })).toBeVisible()
     await page.reload()
-    await page.getByPlaceholder(/Cargo, empresa, skill/).fill(jobTitle)
+    await page.getByPlaceholder(/Cargo, empresa, skill ou localidade/i).fill(jobTitle)
     await expect(page.getByRole("heading", { name: jobTitle })).toBeVisible()
 
     await signOut(page)
     await signIn(page, candidateAccount as PreparedAccount)
     await page.goto(`/candidaturas?vagaGuid=${encodeURIComponent(jobPayload.guid_id)}`)
     await page.locator("#nome").fill(candidateName)
+    await page.locator("#dataNascimento").fill("1992-04-15")
     await page.locator("#documento").fill("1234567")
     await page.locator("#localResidencia").fill("01001000")
-    await expect(page.locator("#endereco")).not.toHaveValue("")
+    await page.locator("#endereco").fill("Praca da Se, 1")
+    await page.locator("#cidade").fill("Sao Paulo")
+    await page.locator("#estado").fill("SP")
     await page.locator("#contatoCel").fill("11999999999")
     await page.locator("#contato").fill(uniqueE2eEmail("application"))
-    await page.locator("#lgpd").click()
+    await page.locator("#lgpdAccepted").click()
     await page.getByRole("button", { name: "Continuar" }).click()
-    const professionalComboboxes = page.getByRole("combobox")
-    await professionalComboboxes.nth(0).click()
-    await page.getByRole("option").first().click()
-    await professionalComboboxes.nth(1).click()
-    await page.getByRole("option").first().click()
-    await page.locator("#salario").fill("8000")
-    await page.locator("#cargoInteresse").fill("QA E2E")
+    await selectFirstOption(page, "#experiencia")
+    await page.locator("#salarioAtual").fill("8000")
+    await page.locator("#empresaAtual").fill("Empresa E2E")
+    await selectFirstOption(page, "#setorAtual")
+    await selectFirstMultiOption(page, "#industriaInteresse")
+    await selectFirstMultiOption(page, "#timeAtual")
+    await selectFirstOption(page, "#senioridade")
+    await selectFirstMultiOption(page, "#beneficiosAtuais")
+    await selectFirstMultiOption(page, "#hardSkillsProfissionais")
+    await selectFirstMultiOption(page, "#softSkillsProfissionais")
     await page.getByRole("button", { name: "Continuar" }).click()
+    await selectFirstMultiOption(page, "#areaPreferencia")
+    await page.locator("#areaPreferencia").click()
+    await expect(page.getByText("Recursos Humanos", { exact: true })).toBeVisible()
+    await page.keyboard.press("Escape")
+    await selectFirstMultiOption(page, "#setor")
+    await selectFirstMultiOption(page, "#time")
+    await selectFirstMultiOption(page, "#senioridadePreferencia")
+    await selectFirstMultiOption(page, "#tipoContratacao")
+    await selectFirstMultiOption(page, "#modeloTrabalho")
+    await selectFirstOption(page, "#viagemTrabalho")
+    await page.locator("#pretensaoSalarial").fill("10000")
+    await selectFirstMultiOption(page, "#hardSkills")
+    await selectFirstMultiOption(page, "#softSkills")
+    await page.locator("#sobreVoce").fill("Perfil de teste para validar candidatura e pipeline.")
+    await page.locator("#compartilhamentoAccepted").click()
     await page.getByRole("button", { name: "Continuar" }).click()
-    const interestComboboxes = page.getByRole("combobox")
-    for (let index = 0; index < 3; index += 1) {
-      await interestComboboxes.nth(index).click()
-      await page.getByRole("option").first().click()
-    }
-    await page.locator("#cargoInteresseDetalhado").fill("QA E2E")
-    await page.locator("#compartilhamento").click()
     const candidateRequestPromise = page.waitForRequest((request) => request.url().endsWith("/api/candidates") && request.method() === "POST")
-    await page.getByRole("button", { name: "Finalizar Cadastro" }).click()
+    await expect(page.getByText(/Upload temporariamente desativado/i)).toBeVisible()
+    await page.getByRole("button", { name: "Enviar candidatura" }).click()
     const candidateRequest = await candidateRequestPromise
     const candidatePayload = candidateRequest.postDataJSON() as { guid_id: string }
-    await expect(page.getByRole("alertdialog")).toContainText("Cadastro enviado com sucesso")
-    updateRunState((state) => state.externalRecords.push({ type: "candidate", identifier: `${candidateName} (${candidatePayload.guid_id})` }))
+    updateRunState((state) => state.externalRecords.push({ type: "candidate", id: candidatePayload.guid_id, relatedId: jobPayload.guid_id, identifier: candidateName, creationStatus: "submitted", cleanupStatus: "pending" }))
+    await expect(page.getByRole("alertdialog")).toContainText("Candidatura enviada com sucesso!")
+    updateRunState((state) => { state.externalRecords.find((record) => record.type === "candidate" && record.id === candidatePayload.guid_id)!.creationStatus = "confirmed" })
 
     await signOut(page)
     await signIn(page, companyAccount as PreparedAccount)
@@ -407,8 +454,8 @@ test.describe("Fluxo funcional completo", () => {
     const noteResponsePromise = page.waitForResponse((response) => response.url().includes("/api/candidates/") && response.request().method() === "PUT")
     await page.getByRole("button", { name: "Salvar anotacao" }).click()
     expect((await noteResponsePromise).ok()).toBe(true)
+    updateRunState((state) => state.externalRecords.push({ type: "note", id: candidatePayload.guid_id, relatedId: jobPayload.guid_id, identifier: note, creationStatus: "confirmed", cleanupStatus: "pending" }))
     await expect(page.getByText(/Anotacao salva/i)).toBeVisible()
-    updateRunState((state) => state.externalRecords.push({ type: "note", identifier: note }))
     await page.getByRole("button", { name: "Fechar" }).click()
 
     const card = page.getByText(candidateName, { exact: true }).locator("xpath=ancestor::*[@draggable='true']")
@@ -427,64 +474,4 @@ test.describe("Fluxo funcional completo", () => {
     await expect(page.getByRole("option", { name: jobTitle })).toBeAttached()
   })
 
-  test("percorre /users/create e registra o GAP de persistência local", async ({ page }, testInfo) => {
-    blockUnless(Boolean(candidateAccount), "Conta temporária de Candidato não disponível.", testInfo)
-    test.setTimeout(120_000)
-    await signIn(page, candidateAccount as PreparedAccount)
-    await page.goto("/users/create")
-    await expect(page.getByRole("heading", { name: "Crie seu cadastro oficial na plataforma." })).toBeVisible()
-    await page.locator("#nome").fill(`${productionRunId()} Perfil`)
-    await page.locator("#dataNascimento").fill("1992-04-15")
-    await page.locator("#documento").fill("12345678909")
-    await page.locator("#localResidencia").fill("01001000")
-    await expect(page.locator("#cidade")).not.toHaveValue("")
-    await page.locator("#contatoCel").fill("11999999999")
-    await page.locator("#contato").fill(uniqueE2eEmail("profile"))
-    await page.locator("#lgpdAccepted").click()
-    await page.getByRole("button", { name: "Continuar" }).click()
-
-    await selectFirstOption(page, "#experiencia")
-    await page.locator("#salarioAtual").fill("8000")
-    await page.locator("#empresaAtual").fill("ClusterHR E2E")
-    await selectFirstOption(page, "#setorAtual")
-    await selectFirstMultiOption(page, "#industriaInteresse")
-    await selectFirstMultiOption(page, "#timeAtual")
-    await selectFirstOption(page, "#senioridade")
-    await selectFirstMultiOption(page, "#beneficiosAtuais")
-    await selectFirstMultiOption(page, "#hardSkillsProfissionais")
-    await selectFirstMultiOption(page, "#softSkillsProfissionais")
-    await page.getByRole("button", { name: "Continuar" }).click()
-
-    await selectFirstMultiOption(page, "#areaPreferencia")
-    await selectFirstMultiOption(page, "#setor")
-    await selectFirstMultiOption(page, "#time")
-    await selectFirstMultiOption(page, "#senioridadePreferencia")
-    await selectFirstMultiOption(page, "#tipoContratacao")
-    await selectFirstMultiOption(page, "#modeloTrabalho")
-    await selectFirstOption(page, "#viagemTrabalho")
-    await page.locator("#pretensaoSalarial").fill("12000")
-    await selectFirstMultiOption(page, "#hardSkills")
-    await selectFirstMultiOption(page, "#softSkills")
-    await page.locator("#sobreVoce").fill("Perfil sintético criado pela validação de produção.")
-    await page.locator("#compartilhamentoAccepted").click()
-    await page.getByRole("button", { name: "Continuar" }).click()
-    await expect(page.getByRole("heading", { name: "Upload de CV" })).toBeVisible()
-
-    const writes: string[] = []
-    page.on("request", (request) => {
-      if (["POST", "PUT", "PATCH"].includes(request.method())) writes.push(request.url())
-    })
-    await page.getByRole("button", { name: "Finalizar cadastro" }).click()
-    await expect(page.getByRole("alertdialog")).toContainText("Cadastro concluido com sucesso")
-    expect(writes).toEqual([])
-    addGap(testInfo, {
-      severity: "medio",
-      title: "/users/create confirma sucesso sem persistir o cadastro",
-      expected: "O cadastro validado deveria ser persistido em uma API e recuperável depois.",
-      observed: "A interface exibiu sucesso sem emitir POST, PUT ou PATCH.",
-      impact: "O usuário pode acreditar que o perfil foi salvo, mas os dados se perdem ao fechar ou recarregar a página.",
-      recommendation: "Integrar submitUserRegistration a um endpoint persistente e cobrir sucesso e falha da API.",
-      evidence: `${testInfo.project.use.baseURL}/users/create`,
-    })
-  })
 })

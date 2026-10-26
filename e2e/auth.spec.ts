@@ -1,4 +1,9 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
+
+async function openReady(page: Page, path: string) {
+  await page.goto(path)
+  await page.waitForLoadState('networkidle')
+}
 
 test('reports Supabase auth as enabled when public Supabase variables are present', async ({ request }) => {
   const response = await request.get('/api/auth/session')
@@ -7,7 +12,7 @@ test('reports Supabase auth as enabled when public Supabase variables are presen
 })
 
 test('shows the new login on the initial route and rejects incomplete credentials', async ({ page }) => {
-  await page.goto('/')
+  await openReady(page, '/')
   await expect(page.getByRole('heading', { name: 'Cluster' })).toBeVisible()
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
   await expect(page.getByRole('status')).toContainText('Preencha e-mail e senha')
@@ -18,7 +23,7 @@ test('signs in each account type and sends it to the correct page', async ({ pag
     ['candidate@example.com', '/jobs/list'],
     ['company@example.com', '/empresa/candidaturas'],
   ] as const) {
-    await page.goto('/api/auth/logout')
+    await openReady(page, '/api/auth/logout')
     await page.getByLabel('E-mail').fill(email)
     await page.getByLabel('Senha').fill('correct-password')
     await page.getByRole('button', { name: 'Entrar', exact: true }).click()
@@ -27,7 +32,7 @@ test('signs in each account type and sends it to the correct page', async ({ pag
 })
 
 test('blocks company pages and operations for a candidate', async ({ page, request }) => {
-  await page.goto('/')
+  await openReady(page, '/')
   await page.getByLabel('E-mail').fill('candidate@example.com')
   await page.getByLabel('Senha').fill('correct-password')
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
@@ -41,14 +46,14 @@ test('blocks company pages and operations for a candidate', async ({ page, reque
 })
 
 test('sends password recovery instructions', async ({ page }) => {
-  await page.goto('/')
+  await openReady(page, '/')
   await page.getByLabel('E-mail').fill('candidate@example.com')
   await page.getByRole('button', { name: 'Esqueci minha senha' }).click()
   await expect(page.getByRole('status')).toContainText('Enviamos as instruções')
 })
 
 test('completes a first OAuth login with an account type', async ({ page }) => {
-  await page.goto('/')
+  await openReady(page, '/')
   await page.getByRole('button', { name: 'Continuar com GitHub' }).click()
   await expect(page).toHaveURL(/mode=complete/)
   await expect(page.getByText('Login autenticado. Escolha seu tipo')).toBeVisible()
@@ -57,11 +62,11 @@ test('completes a first OAuth login with an account type', async ({ page }) => {
 })
 
 test('returns to the password update form after a recovery callback', async ({ page }) => {
-  await page.goto('/')
+  await openReady(page, '/')
   await page.getByLabel('E-mail').fill('candidate@example.com')
   await page.getByRole('button', { name: 'Esqueci minha senha' }).click()
   await expect(page.getByRole('status')).toContainText('Enviamos as instruções')
-  await page.goto('/auth/confirm?token_hash=mock-recovery-token&type=recovery')
+  await openReady(page, '/auth/confirm?token_hash=mock-recovery-token&type=recovery')
   await expect(page).toHaveURL(/mode=recover/)
   await expect(page.getByRole('heading', { name: 'Criar nova senha' })).toBeVisible()
   await page.getByLabel('Nova senha', { exact: true }).fill('new-password')
@@ -71,7 +76,7 @@ test('returns to the password update form after a recovery callback', async ({ p
 })
 
 test('rejects invalid credentials without opening an internal page', async ({ page }) => {
-  await page.goto('/')
+  await openReady(page, '/')
   await page.getByLabel('E-mail').fill('candidate@example.com')
   await page.getByLabel('Senha').fill('wrong-password')
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()

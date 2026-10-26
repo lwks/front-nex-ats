@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test"
 
 async function signIn(page: Page, type: 'candidate' | 'company') {
   await page.goto('/')
+  await page.waitForLoadState('networkidle')
   await page.getByLabel('E-mail').fill(`${type}@example.com`)
   await page.getByLabel('Senha').fill('correct-password')
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
@@ -24,6 +25,7 @@ async function selectMultipleOptions(page: Page, id: string, labels: string[]) {
 test("opens the candidate registration flow", async ({ page }) => {
   await signIn(page, 'candidate')
   await page.goto("/candidaturas?vagaGuid=e2e-job")
+  await page.waitForLoadState('networkidle')
 
   await expect(page.getByRole("heading", { name: "Dados pessoais" })).toBeVisible()
   await expect(page.getByRole("button", { name: "Continuar" })).toBeDisabled()
@@ -32,11 +34,13 @@ test("opens the candidate registration flow", async ({ page }) => {
 test("limits vacancy team selection to three teams from the selected area", async ({ page }) => {
   await signIn(page, 'company')
   await page.goto("/jobs/create")
+  await page.waitForLoadState('networkidle')
   const areaRequests: string[] = []
   page.on("request", (request) => {
     if (request.url().includes("/areas")) areaRequests.push(request.url())
   })
   await page.reload()
+  await page.waitForLoadState('networkidle')
 
   await page.locator("#area").click()
   await expect(page.locator("#area").locator("xpath=..").getByRole("checkbox")).toHaveCount(13)
@@ -76,6 +80,7 @@ test("allows five sectors and three preferred seniorities in candidate preferenc
   })
 
   await page.goto("/candidaturas?vagaGuid=e2e-job")
+  await page.waitForLoadState('networkidle')
   await page.locator("#nome").fill("Mariana Costa")
   await page.locator("#dataNascimento").fill("1992-04-15")
   await page.locator("#documento").fill("12345678909")
