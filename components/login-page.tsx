@@ -214,8 +214,8 @@ export function LoginPage() {
         <p className="mb-5 mt-1 text-center text-slate-600">Primeiro, escolha o tipo da sua conta</p>
         <div className="grid grid-cols-2 gap-2.5">
           {([['CANDIDATE', 'Candidato', 'Quero buscar vagas'], ['COMPANY', 'Empresa', 'Quero gerenciar vagas']] as const).map(([value, label, description]) =>
-            <button key={value} type="button" aria-pressed={type === value} disabled={busy} onClick={() => { setType(value); if (screen === 'complete') { setBusy(true); void finalizeAccount(value).finally(() => setBusy(false)) } }} className={`rounded-xl border-2 p-3 text-center hover:border-[#FF6B00] ${type === value ? 'border-[#FF6B00] bg-[#FFF1E8] text-[#C44E00]' : 'border-slate-200'}`}>
-              <strong className="block">{label}</strong><small>{description}</small>
+            <button key={value} type="button" aria-pressed={type === value} disabled={busy || value === 'COMPANY'} onClick={() => { setType(value); if (screen === 'complete') { setBusy(true); void finalizeAccount(value).finally(() => setBusy(false)) } }} className={`rounded-xl border-2 p-3 text-center hover:border-[#FF6B00] disabled:cursor-not-allowed disabled:opacity-50 ${type === value ? 'border-[#FF6B00] bg-[#FFF1E8] text-[#C44E00]' : 'border-slate-200'}`}>
+              <strong className="block">{label}</strong><small>{value === 'COMPANY' ? 'Cadastro indisponível no momento' : description}</small>
             </button>)}
         </div>
         {screen === 'register' && type && <>
