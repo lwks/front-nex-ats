@@ -1,7 +1,7 @@
 "use client"
 
 import type { ChangeEventHandler, ReactNode } from "react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Briefcase, ChevronLeft, ChevronRight, MapPin, Plus, Search, Users } from "lucide-react"
 
 import {
@@ -23,6 +23,7 @@ import {
 import { updateCandidateNotes } from "@/services/candidate-notes-service"
 import { updateCandidateStatus } from "@/services/candidate-status-service"
 import { mapApiStatusToBoardStatus } from "@/lib/application-status"
+import { shouldClearCandidateNoteFeedback } from "@/lib/candidate-note-feedback"
 import { fetchCandidatesByJobGuids } from "@/services/candidates-by-job-guids-service"
 
 type ApiJob = Record<string, unknown>
@@ -568,6 +569,7 @@ export function CompanyApplicationsPage() {
     type: "success" | "error"
     message: string
   } | null>(null)
+  const previousSelectedCandidateId = useRef<string | null>(null)
   const [candidateCounts, setCandidateCounts] = useState<CandidateCountState>({
     totalCandidates: 0,
     byJobId: {},
@@ -706,8 +708,12 @@ export function CompanyApplicationsPage() {
   }, [candidateOverrides, selectedCandidate])
 
   useEffect(() => {
+    const currentCandidateId = hydratedSelectedCandidate?.id ?? null
     setCandidateNotesDraft(hydratedSelectedCandidate?.notes ?? "")
-    setCandidateNoteFeedback(null)
+    if (shouldClearCandidateNoteFeedback(previousSelectedCandidateId.current, currentCandidateId)) {
+      setCandidateNoteFeedback(null)
+    }
+    previousSelectedCandidateId.current = currentCandidateId
   }, [hydratedSelectedCandidate?.id, hydratedSelectedCandidate?.notes])
 
   const handleSaveCandidateNote = async () => {
