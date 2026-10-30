@@ -37,6 +37,7 @@ describe("CompanyApplicationsView", () => {
   it("normalizes the current job payload, including teams and internal salary", () => {
     const job = normalizeCompanyJob({
       guid_id: "job-current",
+      owner_sub: "company-1",
       titulo: "Analista QA",
       area: [3],
       time: ["Quality Assurance (QA)", "DevOps"],
@@ -45,6 +46,7 @@ describe("CompanyApplicationsView", () => {
     }, 0)
 
     expect(job?.team).toBe("Quality Assurance (QA), DevOps")
+    expect(job?.ownerSub).toBe("company-1")
     expect(job?.salaryRange).toContain("R$")
     expect(job?.salaryRange).toContain("8.000")
     expect(job?.salaryRange).toContain("12.000")

@@ -138,4 +138,16 @@ test("allows five sectors and three preferred seniorities in candidate preferenc
   await expect(page.getByRole("button", { name: "Continuar" })).toBeEnabled()
   await page.getByRole("button", { name: "Continuar" }).click()
   await expect(page.getByRole("heading", { name: "Upload de CV" })).toBeVisible()
+  await expect(page.getByText("Formatos aceitos: PDF, DOCX ou DOC. Tamanho máximo: 5 MB.")).toBeVisible()
+  await page.locator('input[type="file"]').setInputFiles({ name: 'cv-e2e.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 e2e') })
+  await expect(page.getByText('cv-e2e.pdf')).toBeVisible()
+  let uploaded = false
+  let candidatePayload: Record<string, unknown> | null = null
+  await page.route('**/api/candidates/cv-upload', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ uploadUrl: 'http://localhost:3000/e2e-s3-upload', key: 'cvs/candidate/e2e.pdf' }) }))
+  await page.route('**/e2e-s3-upload', async route => { uploaded = route.request().method() === 'PUT'; await route.fulfill({ status: 200, body: '' }) })
+  await page.route('**/api/candidates', async route => { candidatePayload = route.request().postDataJSON() as Record<string, unknown>; await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ data: { id: 'e2e-candidate' } }) }) })
+  await page.getByRole('button', { name: 'Enviar candidatura' }).click()
+  await expect(page.getByRole('heading', { name: 'Candidatura enviada com sucesso!' })).toBeVisible()
+  expect(uploaded).toBe(true)
+  expect((candidatePayload as Record<string, unknown> | null)?.cv).toMatchObject({ filename: 'cv-e2e.pdf', key: 'cvs/candidate/e2e.pdf', size: 12 })
 })

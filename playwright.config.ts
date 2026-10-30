@@ -26,7 +26,7 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
     },
     {
-      command: "npm.cmd run dev -- --hostname 127.0.0.1",
+      command: "node node_modules/next/dist/bin/next dev --hostname 127.0.0.1",
       url: "http://localhost:3000",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

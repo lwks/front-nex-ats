@@ -34,6 +34,8 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
   const [candidateData, setCandidateData] = useState<Partial<UserRegistrationData>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [feedbackModal, setFeedbackModal] = useState<SubmissionFeedback | null>(null)
+  const [cvFile, setCvFile] = useState<File | null>(null)
+  const [cvError, setCvError] = useState<string | null>(null)
 
   const updateData = (data: Partial<UserRegistrationData>) => {
     setCandidateData((previous) => ({ ...previous, ...data }))
@@ -54,6 +56,10 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
   }
 
   const handleSubmit = async () => {
+    if (cvFile && cvFile.size > 5 * 1024 * 1024) {
+      setCvError("O arquivo excede o limite de 5 MB.")
+      return
+    }
     setIsSubmitting(true)
 
     try {
@@ -61,7 +67,7 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
         ...candidateData,
         guid_id: crypto.randomUUID(),
         guid_vaga: jobGuid,
-      } as UserRegistrationData & { guid_id: string; guid_vaga: string })
+      } as UserRegistrationData & { guid_id: string; guid_vaga: string }, cvFile ?? undefined)
       setFeedbackModal({
         type: "success",
         title: "Candidatura enviada com sucesso!",
@@ -129,7 +135,7 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
           <UserRegistrationPreferencesStep data={candidateData} onUpdate={updateData} onNext={nextStep} onBack={prevStep} />
         ) : null}
         {currentStep === 4 ? (
-          <UserRegistrationCvStep isSubmitting={isSubmitting} onSubmit={handleSubmit} onBack={prevStep} />
+          <UserRegistrationCvStep isSubmitting={isSubmitting} onSubmit={handleSubmit} onBack={prevStep} file={cvFile} onFileChange={(file) => { setCvError(null); if (file && file.size > 5 * 1024 * 1024) { setCvFile(null); setCvError("O arquivo excede o limite de 5 MB."); return } if (file && !/\.(pdf|docx?)$/i.test(file.name)) { setCvFile(null); setCvError("Formato inválido. Envie PDF, DOCX ou DOC."); return } setCvFile(file) }} error={cvError} />
         ) : null}
       </main>
 
