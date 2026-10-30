@@ -35,6 +35,7 @@ type CandidateCountState = {
 }
 
 export type CompanyApplicationsJob = JobCard & {
+  ownerSub?: string
   team: string
   createdBy: string
   createdAt: string
@@ -208,6 +209,7 @@ export function normalizeCompanyJob(item: ApiJob, index: number): CompanyApplica
 
   return {
     id: idSource,
+    ownerSub: pickString(item.owner_sub),
     jobGuid,
     title,
     company:
@@ -554,7 +556,7 @@ export function CompanyApplicationsView({
   )
 }
 
-export function CompanyApplicationsPage() {
+export function CompanyApplicationsPage({ companyUserId }: { companyUserId: string }) {
   const [selectedCandidate, setSelectedCandidate] = useState<Application | null>(null)
   const [selectedJobGuid, setSelectedJobGuid] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
@@ -569,6 +571,8 @@ export function CompanyApplicationsPage() {
     type: "success" | "error"
     message: string
   } | null>(null)
+  const [cvDownloadError, setCvDownloadError] = useState<string | null>(null)
+  const [isDownloadingCv, setIsDownloadingCv] = useState(false)
   const previousSelectedCandidateId = useRef<string | null>(null)
   const [candidateCounts, setCandidateCounts] = useState<CandidateCountState>({
     totalCandidates: 0,
@@ -772,6 +776,21 @@ export function CompanyApplicationsPage() {
     }
   }
 
+  const handleDownloadCv = async () => {
+    if (!hydratedSelectedCandidate || !companyUserId || currentJob?.ownerSub !== companyUserId) return
+    setIsDownloadingCv(true)
+    setCvDownloadError(null)
+    try {
+      const response = await fetch(`/api/candidates/${encodeURIComponent(hydratedSelectedCandidate.recordId ?? hydratedSelectedCandidate.id)}/cv-download`, { cache: 'no-store' })
+      if (!response.ok) throw new Error('Não foi possível preparar o download do currículo.')
+      const result = await response.json() as { downloadUrl?: string }
+      if (!result.downloadUrl) throw new Error('A API não retornou o link de download.')
+      window.location.assign(result.downloadUrl)
+    } catch (error) {
+      setCvDownloadError(error instanceof Error ? error.message : 'Não foi possível baixar o currículo.')
+    } finally { setIsDownloadingCv(false) }
+  }
+
   const handleCandidateStatusChange = async (application: Application, status: ApplicationStatus) => {
     if (!application.recordId) {
       throw new Error("Nao foi possivel identificar o candidato para atualizar a etapa.")
@@ -853,6 +872,7 @@ export function CompanyApplicationsPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
+              {hydratedSelectedCandidate.hasCv && currentJob?.ownerSub === companyUserId ? <div className="sm:col-span-2"><button type="button" onClick={handleDownloadCv} disabled={isDownloadingCv} className="rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{isDownloadingCv ? 'Preparando download...' : 'Baixar CV'}</button>{cvDownloadError ? <p role="alert" className="mt-2 text-sm text-red-700">{cvDownloadError}</p> : null}</div> : null}
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Email</p>
                 <p className="text-sm font-medium text-gray-700">{fallback(hydratedSelectedCandidate.email)}</p>

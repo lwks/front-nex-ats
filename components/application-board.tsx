@@ -25,6 +25,7 @@ export type Application = {
   notes?: string
   status: ApplicationStatus | string
   atualizadoEm?: string
+  hasCv?: boolean
 }
 
 export type ApplicationColumn = {
@@ -184,6 +185,7 @@ export function normalizeCandidate(item: unknown, index: number): Application | 
     ])],
     status: mapApiStatusToBoardStatus(rawStatus),
     atualizadoEm: pickString(item.updatedAt, item.updated_at, item.atualizadoEm),
+    hasCv: Boolean(item.cv && typeof item.cv === 'object' && (item.cv as Record<string, unknown>).filename),
   }
 }
 
