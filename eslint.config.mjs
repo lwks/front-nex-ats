@@ -11,9 +11,11 @@ export default defineConfig([
     'build/**',
     'next-env.d.ts',
     'playwright-report/**',
+    'playwright-harness-report/**',
     'playwright-report-production/**',
     'production-e2e-reports/**',
     'test-results/**',
+    'test-results-harness/**',
   ]),
   {
     files: [

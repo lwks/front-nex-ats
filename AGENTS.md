@@ -13,3 +13,11 @@
 
 ## Integrações
 - API que é utiliza no fluxo da aplicação (https://github.com/lwks/lambda-api-next/tree/develop), em caso de duvidas consulte o README.md;
+
+## Harness local integrado
+
+- Leia `docs/LOCAL_HARNESS.md` e o guia compartilhado em `docs/AGENTS.parent.md`.
+- Com o backend na pasta irmã `../lambda-api-next`, `npm run dev:local` sobe front, API e auth simulada; `npm run local:doctor` verifica os serviços. Pare com Ctrl+C.
+- Alterne empresa/candidato na barra amarela. Preserve as validações de sessão, perfil e propriedade.
+- Teste a integração com `npm run test:e2e:local`; pare outros processos Next antes de executar.
+- No Linux/macOS, os comandos `npm.cmd` acima correspondem a `npm`.

@@ -52,13 +52,14 @@ test('sends password recovery instructions', async ({ page }) => {
   await expect(page.getByRole('status')).toContainText('Enviamos as instruções')
 })
 
-test('completes a first OAuth login with an account type', async ({ page }) => {
+test('completes a first OAuth login as candidate while company registration is unavailable', async ({ page }) => {
   await openReady(page, '/')
   await page.getByRole('button', { name: 'Continuar com GitHub' }).click()
   await expect(page).toHaveURL(/mode=complete/)
   await expect(page.getByText('Login autenticado. Escolha seu tipo')).toBeVisible()
-  await page.getByRole('button', { name: /Empresa Quero gerenciar vagas/ }).click()
-  await expect(page).toHaveURL(/\/empresa\/candidaturas/, { timeout: 15_000 })
+  await expect(page.getByRole('button').filter({ hasText: 'Cadastro indisponível no momento' })).toBeDisabled()
+  await page.getByRole('button').filter({ hasText: 'Quero buscar vagas' }).click()
+  await expect(page).toHaveURL(/\/jobs\/list/, { timeout: 15_000 })
 })
 
 test('returns to the password update form after a recovery callback', async ({ page }) => {
