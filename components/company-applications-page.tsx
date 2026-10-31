@@ -851,7 +851,7 @@ export function CompanyApplicationsPage({ companyUserId }: { companyUserId: stri
 
       {hydratedSelectedCandidate ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-xl">
+          <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-xl sm:p-8">
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-widest text-[#FF6B00]">ATS</p>
@@ -873,7 +873,11 @@ export function CompanyApplicationsPage({ companyUserId }: { companyUserId: stri
               {hydratedSelectedCandidate.hasCv && currentJob?.ownerSub === companyUserId ? <div className="sm:col-span-2"><button type="button" onClick={handleDownloadCv} disabled={isDownloadingCv} className="rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{isDownloadingCv ? 'Preparando download...' : 'Baixar CV'}</button>{cvDownloadError ? <p role="alert" className="mt-2 text-sm text-red-700">{cvDownloadError}</p> : null}</div> : null}
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Email</p>
-                <p className="text-sm font-medium text-gray-700">{fallback(hydratedSelectedCandidate.email)}</p>
+                {hydratedSelectedCandidate.email ? (
+                  <a href={`mailto:${hydratedSelectedCandidate.email}`} className="break-all text-sm font-medium text-blue-700 underline decoration-blue-300 underline-offset-2 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                    {hydratedSelectedCandidate.email}
+                  </a>
+                ) : <p className="text-sm font-medium text-gray-700">Nao informado</p>}
               </div>
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Telefone</p>
@@ -893,9 +897,36 @@ export function CompanyApplicationsPage({ companyUserId }: { companyUserId: stri
               </div>
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">LinkedIn</p>
-                <p className="text-sm font-medium text-gray-700">{fallback(hydratedSelectedCandidate.linkedinUrl)}</p>
+                {hydratedSelectedCandidate.linkedinUrl ? (
+                  <a href={hydratedSelectedCandidate.linkedinUrl} target="_blank" rel="noreferrer" className="break-all text-sm font-medium text-blue-700 underline decoration-blue-300 underline-offset-2 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                    {hydratedSelectedCandidate.linkedinUrl}
+                  </a>
+                ) : <p className="text-sm font-medium text-gray-700">Nao informado</p>}
+              </div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Localizacao</p>
+                <p className="text-sm font-medium text-gray-700">{fallback([hydratedSelectedCandidate.cidade, hydratedSelectedCandidate.estado].filter(Boolean).join("/"))}</p>
               </div>
             </div>
+
+            <section className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4 sm:p-5">
+              <h3 className="text-sm font-semibold text-gray-900">Experiencia profissional</h3>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {[
+                  ["Empresa atual", hydratedSelectedCandidate.empresaAtual],
+                  ["Setor atual", hydratedSelectedCandidate.setorAtual],
+                  ["Time atual", hydratedSelectedCandidate.timeAtual],
+                  ["Salario atual", hydratedSelectedCandidate.salarioAtual],
+                  ["Beneficios", hydratedSelectedCandidate.beneficiosAtuais?.join(", ")],
+                  ["Industrias de interesse", hydratedSelectedCandidate.industriaInteresse?.join(", ")],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-700">{fallback(value)}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
 
             <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Skills</p>
@@ -913,6 +944,38 @@ export function CompanyApplicationsPage({ companyUserId }: { companyUserId: stri
                 ))}
               </div>
             </div>
+
+            <section className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4 sm:p-5">
+              <h3 className="text-sm font-semibold text-gray-900">Preferencias profissionais</h3>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {[
+                  ["Pretensao salarial", hydratedSelectedCandidate.pretensaoSalarial],
+                  ["Tipos de contratacao", hydratedSelectedCandidate.tipoContratacao?.join(", ")],
+                  ["Areas", hydratedSelectedCandidate.areaPreferencia?.join(", ")],
+                  ["Setores", hydratedSelectedCandidate.setoresPreferencia?.join(", ")],
+                  ["Times", hydratedSelectedCandidate.timesPreferencia?.join(", ")],
+                  ["Senioridades", hydratedSelectedCandidate.senioridadePreferencia?.join(", ")],
+                  ["Disponibilidade para viagens", hydratedSelectedCandidate.viagemTrabalho],
+                  ["Idiomas", hydratedSelectedCandidate.idiomas?.join(", ")],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-700">{fallback(value)}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="mt-6 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 sm:p-5">
+                <h3 className="text-sm font-semibold text-gray-900">Sobre o candidato</h3>
+                <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-gray-700">{fallback(hydratedSelectedCandidate.sobreVoce)}</p>
+              </div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 sm:p-5">
+                <h3 className="text-sm font-semibold text-gray-900">Mensagem para a empresa</h3>
+                <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-gray-700">{fallback(hydratedSelectedCandidate.mensagemEmpresa)}</p>
+              </div>
+            </section>
 
             <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">

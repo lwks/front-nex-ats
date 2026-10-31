@@ -22,11 +22,22 @@ import { Button } from "./ui/button"
 
 const INITIAL_PAGE_LIMIT = 6
 const EMPTY_INITIAL_JOBS: JobBoardJob[] = []
-const STATS = [
-  { number: "500+", label: "Vagas abertas" },
-  { number: "200+", label: "Empresas parceiras" },
-  { number: "10k+", label: "Profissionais conectados" },
-  { number: "50+", label: "Cidades atendidas" },
+const HOW_IT_WORKS = [
+  {
+    number: "01",
+    title: "Encontre uma vaga",
+    description: "Pesquise oportunidades por cargo, empresa, habilidade ou localidade.",
+  },
+  {
+    number: "02",
+    title: "Confira os detalhes",
+    description: "Abra uma vaga para conhecer as informações publicadas antes de se candidatar.",
+  },
+  {
+    number: "03",
+    title: "Envie sua candidatura",
+    description: "Preencha seus dados e envie a candidatura. Anexar o currículo é opcional.",
+  },
 ] as const
 
 export type PublicJobsBoardViewProps = {
@@ -271,13 +282,20 @@ export function PublicJobsBoardView({
       </section>
 
       <section className="bg-slate-950 py-10 text-white" id="como-funciona">
-        <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-6 px-4 md:grid-cols-4">
-          {STATS.map((stat) => (
-            <div key={stat.label} className="text-center">
-              <p className="text-3xl font-semibold text-[#FF6B00]">{stat.number}</p>
-              <p className="mt-2 text-sm text-slate-300">{stat.label}</p>
-            </div>
-          ))}
+        <div className="mx-auto w-full max-w-6xl px-4">
+          <div className="mb-8 text-center">
+            <h2 id="como-funciona-title" className="text-2xl font-semibold">Como funciona</h2>
+            <p className="mt-2 text-sm text-slate-300">Três passos para se candidatar a uma oportunidade.</p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            {HOW_IT_WORKS.map((step) => (
+              <div key={step.number} className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                <p className="text-sm font-semibold text-[#FF6B00]">Passo {step.number}</p>
+                <h3 className="mt-3 text-lg font-semibold">{step.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-300">{step.description}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -448,8 +466,8 @@ export function PublicJobsBoardView({
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-orange-200">Contato</p>
             <div className="mt-4 space-y-3 text-sm text-slate-400">
-              <p>talentos@clusterhr.com.br</p>
-              <p>+55 11 99999-0000</p>
+              <a href="mailto:admin@clusterjobs.com.br" className="block transition hover:text-white">admin@clusterjobs.com.br</a>
+              <a href="tel:+5511973559089" className="block transition hover:text-white">11 97355-9089</a>
               <p>São Paulo, Brasil</p>
             </div>
           </div>
