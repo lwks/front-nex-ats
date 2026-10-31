@@ -25,6 +25,7 @@ import { updateCandidateStatus } from "@/services/candidate-status-service"
 import { mapApiStatusToBoardStatus } from "@/lib/application-status"
 import { shouldClearCandidateNoteFeedback } from "@/lib/candidate-note-feedback"
 import { fetchCandidatesByJobGuids } from "@/services/candidates-by-job-guids-service"
+import { getCandidateCvDownloadUrl } from "@/services/cv-download-service"
 
 type ApiJob = Record<string, unknown>
 
@@ -781,11 +782,8 @@ export function CompanyApplicationsPage({ companyUserId }: { companyUserId: stri
     setIsDownloadingCv(true)
     setCvDownloadError(null)
     try {
-      const response = await fetch(`/api/candidates/${encodeURIComponent(hydratedSelectedCandidate.recordId ?? hydratedSelectedCandidate.id)}/cv-download`, { cache: 'no-store' })
-      if (!response.ok) throw new Error('Não foi possível preparar o download do currículo.')
-      const result = await response.json() as { downloadUrl?: string }
-      if (!result.downloadUrl) throw new Error('A API não retornou o link de download.')
-      window.location.assign(result.downloadUrl)
+      const downloadUrl = await getCandidateCvDownloadUrl(hydratedSelectedCandidate.recordId ?? hydratedSelectedCandidate.id)
+      window.location.assign(downloadUrl)
     } catch (error) {
       setCvDownloadError(error instanceof Error ? error.message : 'Não foi possível baixar o currículo.')
     } finally { setIsDownloadingCv(false) }

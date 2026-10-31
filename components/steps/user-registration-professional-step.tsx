@@ -70,6 +70,10 @@ function createEmptyLanguage(): UserRegistrationLanguage {
   }
 }
 
+function createEmptyRecommendation() {
+  return { nome: "", telefone: "", cargo: "" }
+}
+
 function hasCompleteLanguages(languages: UserRegistrationLanguage[]) {
   return languages.every((language) => language.idioma.trim().length > 0 && language.fluencia.trim().length > 0)
 }
@@ -84,11 +88,11 @@ export function UserRegistrationProfessionalStep({
     experiencia: data.experiencia || "",
     salarioAtual: data.salarioAtual || "",
     empresaAtual: data.empresaAtual || "",
-    indicacao: {
-      nome: data.indicacao?.nome || "",
-      telefone: (data.indicacao?.telefone || "").replace(/\D/g, "").slice(0, 11),
-      cargo: data.indicacao?.cargo || "",
-    },
+    indicacoes: (data.indicacoes ?? (data.indicacao ? [data.indicacao] : [])).map((recommendation) => ({
+      nome: recommendation.nome || "",
+      telefone: (recommendation.telefone || "").replace(/\D/g, "").slice(0, 11),
+      cargo: recommendation.cargo || "",
+    })),
     senioridade: data.senioridade || "",
     setorAtual: data.setorAtual || "",
     timeAtual: normalizeTeamValues(data.timeAtual),
@@ -102,9 +106,7 @@ export function UserRegistrationProfessionalStep({
     experiencia: false,
     salarioAtual: false,
     empresaAtual: false,
-    indicacaoNome: false,
-    indicacaoTelefone: false,
-    indicacaoCargo: false,
+    indicacoes: [] as number[],
     senioridade: false,
     setorAtual: false,
     timeAtual: false,
@@ -131,16 +133,27 @@ export function UserRegistrationProfessionalStep({
     () => getTeamOptionsForAreas(formData.industriaInteresse, industryOptions),
     [formData.industriaInteresse, industryOptions],
   )
-  const hasRecommendationData = Object.values(formData.indicacao).some((value) => value.trim().length > 0)
-  const hasTouchedRecommendationField =
-    touched.indicacaoNome || touched.indicacaoTelefone || touched.indicacaoCargo
-  const isRecommendationValid =
-    !hasRecommendationData || (
-      formData.indicacao.nome.trim().split(/\s+/).length >= 2 &&
-      formData.indicacao.telefone.length >= 10 &&
-      formData.indicacao.telefone.length <= 11 &&
-      Boolean(formData.indicacao.cargo.trim())
-    )
+  const hasRecommendationData = (recommendation: typeof formData.indicacoes[number]) =>
+    Object.values(recommendation).some((value) => value.trim().length > 0)
+  const isRecommendationValid = formData.indicacoes.every((recommendation) => {
+    if (!hasRecommendationData(recommendation)) return true
+    return recommendation.nome.trim().split(/\s+/).length >= 2 &&
+      recommendation.telefone.length >= 10 &&
+      recommendation.telefone.length <= 11 &&
+      Boolean(recommendation.cargo.trim())
+  })
+  const recommendationErrors = formData.indicacoes.map((recommendation, index) => {
+    const showErrors = touched.indicacoes.includes(index) && hasRecommendationData(recommendation)
+    return {
+      name: showErrors && recommendation.nome.trim().split(/\s+/).length < 2
+        ? recommendation.nome.trim() ? "Informe nome e sobrenome da pessoa indicada." : "Informe o nome da pessoa indicada."
+        : "",
+      phone: showErrors && (recommendation.telefone.length < 10 || recommendation.telefone.length > 11)
+        ? "Informe um telefone com DDD e 10 ou 11 digitos."
+        : "",
+      role: showErrors && !recommendation.cargo.trim() ? "Informe o cargo da pessoa indicada." : "",
+    }
+  })
 
   useEffect(() => {
     setFormData((previous) => {
@@ -176,20 +189,6 @@ export function UserRegistrationProfessionalStep({
     touched.salarioAtual && !formData.salarioAtual.trim() ? "Informe o salario atual." : ""
   const companyError =
     touched.empresaAtual && !formData.empresaAtual.trim() ? "Informe a empresa atual." : ""
-  const recommendationNameError = hasRecommendationData && hasTouchedRecommendationField
-    ? formData.indicacao.nome.trim().split(/\s+/).length >= 2
-      ? ""
-      : "Informe nome e sobrenome da pessoa indicada."
-    : ""
-  const recommendationPhoneError = hasRecommendationData && hasTouchedRecommendationField
-    ? formData.indicacao.telefone.length >= 10 && formData.indicacao.telefone.length <= 11
-      ? ""
-      : "Informe um telefone com DDD e 10 ou 11 digitos."
-    : ""
-  const recommendationRoleError =
-    hasRecommendationData && hasTouchedRecommendationField && !formData.indicacao.cargo.trim()
-      ? "Informe o cargo da pessoa indicada."
-      : ""
   const seniorityError =
     touched.senioridade && !formData.senioridade ? "Selecione a senioridade atual." : ""
   const currentSectorError =
@@ -305,6 +304,36 @@ export function UserRegistrationProfessionalStep({
     setTouched((previous) => ({ ...previous, idiomas: true }))
   }
 
+  const addRecommendation = () => {
+    setFormData((previous) => ({
+      ...previous,
+      indicacoes: [...previous.indicacoes, createEmptyRecommendation()],
+    }))
+  }
+
+  const removeRecommendation = (index: number) => {
+    setFormData((previous) => ({
+      ...previous,
+      indicacoes: previous.indicacoes.filter((_, currentIndex) => currentIndex !== index),
+    }))
+    setTouched((previous) => ({ ...previous, indicacoes: [] }))
+  }
+
+  const updateRecommendation = (
+    index: number,
+    field: "nome" | "telefone" | "cargo",
+    value: string,
+  ) => {
+    setFormData((previous) => ({
+      ...previous,
+      indicacoes: previous.indicacoes.map((recommendation, currentIndex) =>
+        currentIndex === index
+          ? { ...recommendation, [field]: field === "telefone" ? value.replace(/\D/g, "").slice(0, 11) : value }
+          : recommendation,
+      ),
+    }))
+  }
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
     if (!isFormComplete) {
@@ -312,9 +341,7 @@ export function UserRegistrationProfessionalStep({
         experiencia: true,
         salarioAtual: true,
         empresaAtual: true,
-        indicacaoNome: true,
-        indicacaoTelefone: true,
-        indicacaoCargo: true,
+        indicacoes: formData.indicacoes.map((_, index) => index),
         senioridade: true,
         setorAtual: true,
         timeAtual: true,
@@ -328,13 +355,14 @@ export function UserRegistrationProfessionalStep({
     }
     onUpdate({
       ...formData,
-      indicacao: hasRecommendationData
-        ? {
-            nome: formData.indicacao.nome.trim(),
-            telefone: formData.indicacao.telefone,
-            cargo: formData.indicacao.cargo.trim(),
-          }
-        : undefined,
+      indicacao: undefined,
+      indicacoes: formData.indicacoes
+        .filter(hasRecommendationData)
+        .map((recommendation) => ({
+          nome: recommendation.nome.trim(),
+          telefone: recommendation.telefone,
+          cargo: recommendation.cargo.trim(),
+        })),
     })
     onNext()
   }
@@ -343,7 +371,7 @@ export function UserRegistrationProfessionalStep({
     <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_rgba(15,23,42,0.08)] md:p-8">
       <div className="mb-8 text-center">
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#C44E00]">Cadastro oficial</p>
-        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Experiencia profissional</h2>
+        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Experiência Profissional</h2>
         <p className="mt-3 text-sm leading-6 text-slate-600">
           Conte sua experiencia, contexto profissional atual, area de atuacao e idiomas, se desejar informar.
         </p>
@@ -398,66 +426,6 @@ export function UserRegistrationProfessionalStep({
             {salaryError ? <p className="text-xs text-destructive">{salaryError}</p> : null}
           </div>
         </div>
-
-        <section className="space-y-4 rounded-[1.5rem] border border-slate-200 p-5" aria-labelledby="indicacao-title">
-          <div>
-            <h3 id="indicacao-title" className="text-base font-semibold text-slate-950">Indicação/recomendação</h3>
-            <p className="mt-1 text-sm text-slate-500">Informe os dados de uma pessoa que possa recomendar seu perfil.</p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="indicacaoNome">Nome</Label>
-              <Input
-                id="indicacaoNome"
-                value={formData.indicacao.nome}
-                onChange={(event) => setFormData((previous) => ({
-                  ...previous,
-                  indicacao: { ...previous.indicacao, nome: event.target.value },
-                }))}
-                onBlur={() => setTouched((previous) => ({ ...previous, indicacaoNome: true }))}
-                className={cn(recommendationNameError && "border-destructive focus-visible:ring-destructive/40")}
-                aria-invalid={recommendationNameError ? "true" : "false"}
-                aria-describedby={recommendationNameError ? "indicacaoNome-error" : undefined}
-                autoComplete="name"
-              />
-              {recommendationNameError ? <p id="indicacaoNome-error" className="text-xs text-destructive">{recommendationNameError}</p> : null}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="indicacaoTelefone">Telefone</Label>
-              <Input
-                id="indicacaoTelefone"
-                inputMode="numeric"
-                value={formData.indicacao.telefone}
-                onChange={(event) => setFormData((previous) => ({
-                  ...previous,
-                  indicacao: { ...previous.indicacao, telefone: event.target.value.replace(/\D/g, "").slice(0, 11) },
-                }))}
-                onBlur={() => setTouched((previous) => ({ ...previous, indicacaoTelefone: true }))}
-                className={cn(recommendationPhoneError && "border-destructive focus-visible:ring-destructive/40")}
-                aria-invalid={recommendationPhoneError ? "true" : "false"}
-                aria-describedby={recommendationPhoneError ? "indicacaoTelefone-error" : undefined}
-                autoComplete="tel"
-              />
-              {recommendationPhoneError ? <p id="indicacaoTelefone-error" className="text-xs text-destructive">{recommendationPhoneError}</p> : null}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="indicacaoCargo">Cargo</Label>
-              <Input
-                id="indicacaoCargo"
-                value={formData.indicacao.cargo}
-                onChange={(event) => setFormData((previous) => ({
-                  ...previous,
-                  indicacao: { ...previous.indicacao, cargo: event.target.value },
-                }))}
-                onBlur={() => setTouched((previous) => ({ ...previous, indicacaoCargo: true }))}
-                className={cn(recommendationRoleError && "border-destructive focus-visible:ring-destructive/40")}
-                aria-invalid={recommendationRoleError ? "true" : "false"}
-                aria-describedby={recommendationRoleError ? "indicacaoCargo-error" : undefined}
-              />
-              {recommendationRoleError ? <p id="indicacaoCargo-error" className="text-xs text-destructive">{recommendationRoleError}</p> : null}
-            </div>
-          </div>
-        </section>
 
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
@@ -721,6 +689,94 @@ export function UserRegistrationProfessionalStep({
 
           {languageError ? <p className="text-xs text-destructive">{languageError}</p> : null}
         </div>
+
+        <section className="space-y-4 rounded-[1.5rem] border border-slate-200 p-5" aria-labelledby="indicacoes-title">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 id="indicacoes-title" className="text-base font-semibold text-slate-950">Indicações e recomendações (opcional)</h3>
+              <p className="mt-1 text-sm text-slate-500">Adicione pessoas que possam recomendar seu perfil. Você pode deixar este campo em branco.</p>
+            </div>
+            <Button type="button" variant="outline" onClick={addRecommendation} className="shrink-0 rounded-full bg-transparent">
+              <Plus className="mr-2 size-4" />
+              Adicionar indicação
+            </Button>
+          </div>
+
+          {formData.indicacoes.map((recommendation, index) => {
+            const errors = recommendationErrors[index]
+            const idPrefix = `indicacao-${index}`
+            return (
+              <div key={index} className="space-y-4 rounded-2xl bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-sm font-medium text-slate-700">Indicação {index + 1}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => removeRecommendation(index)}
+                    className="rounded-full bg-transparent"
+                    aria-label={`Remover indicação ${index + 1}`}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    <span className="sr-only">Remover indicação</span>
+                  </Button>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor={`${idPrefix}-nome`}>Nome</Label>
+                    <Input
+                      id={`${idPrefix}-nome`}
+                      value={recommendation.nome}
+                      onChange={(event) => updateRecommendation(index, "nome", event.target.value)}
+                      onBlur={() => setTouched((previous) => ({
+                        ...previous,
+                        indicacoes: previous.indicacoes.includes(index) ? previous.indicacoes : [...previous.indicacoes, index],
+                      }))}
+                      className={cn(errors.name && "border-destructive focus-visible:ring-destructive/40")}
+                      aria-invalid={errors.name ? "true" : "false"}
+                      aria-describedby={errors.name ? `${idPrefix}-nome-error` : undefined}
+                      autoComplete="name"
+                    />
+                    {errors.name ? <p id={`${idPrefix}-nome-error`} className="text-xs text-destructive">{errors.name}</p> : null}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`${idPrefix}-telefone`}>Telefone</Label>
+                    <Input
+                      id={`${idPrefix}-telefone`}
+                      inputMode="numeric"
+                      value={recommendation.telefone}
+                      onChange={(event) => updateRecommendation(index, "telefone", event.target.value)}
+                      onBlur={() => setTouched((previous) => ({
+                        ...previous,
+                        indicacoes: previous.indicacoes.includes(index) ? previous.indicacoes : [...previous.indicacoes, index],
+                      }))}
+                      className={cn(errors.phone && "border-destructive focus-visible:ring-destructive/40")}
+                      aria-invalid={errors.phone ? "true" : "false"}
+                      aria-describedby={errors.phone ? `${idPrefix}-telefone-error` : undefined}
+                      autoComplete="tel"
+                    />
+                    {errors.phone ? <p id={`${idPrefix}-telefone-error`} className="text-xs text-destructive">{errors.phone}</p> : null}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`${idPrefix}-cargo`}>Cargo</Label>
+                    <Input
+                      id={`${idPrefix}-cargo`}
+                      value={recommendation.cargo}
+                      onChange={(event) => updateRecommendation(index, "cargo", event.target.value)}
+                      onBlur={() => setTouched((previous) => ({
+                        ...previous,
+                        indicacoes: previous.indicacoes.includes(index) ? previous.indicacoes : [...previous.indicacoes, index],
+                      }))}
+                      className={cn(errors.role && "border-destructive focus-visible:ring-destructive/40")}
+                      aria-invalid={errors.role ? "true" : "false"}
+                      aria-describedby={errors.role ? `${idPrefix}-cargo-error` : undefined}
+                    />
+                    {errors.role ? <p id={`${idPrefix}-cargo-error`} className="text-xs text-destructive">{errors.role}</p> : null}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </section>
 
         <div className="flex gap-4 pt-2">
           <Button type="button" variant="outline" onClick={onBack} className="flex-1 rounded-full bg-transparent" size="lg">

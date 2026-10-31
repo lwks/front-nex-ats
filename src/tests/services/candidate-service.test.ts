@@ -51,6 +51,10 @@ function createPayload(overrides: Partial<CandidateProfilePayload> = {}): Candid
 }
 
 describe('submitCandidateProfile', () => {
+  const cvFile = { name: 'cv-e2e.pdf', type: 'application/pdf', size: 12 } as File
+  const uploadUrl = 'https://clusterjobs.s3.us-east-1.amazonaws.com/cvs/candidate/candidate-1.pdf?signature=synthetic'
+  const uploadKey = 'cvs/candidate/candidate-1.pdf'
+
   it('posts the complete application and converts selected area IDs to numbers', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true })
     vi.stubGlobal('fetch', fetchMock)
@@ -90,5 +94,81 @@ describe('submitCandidateProfile', () => {
     )
 
     await expect(submitCandidateProfile(createPayload())).rejects.toThrow('API request failed (422): invalid payload')
+  })
+
+  it('uploads a CV using the API response data and includes its metadata in the candidature', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { uploadUrl, key: uploadKey } }) })
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await submitCandidateProfile(createPayload(), cvFile)
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/candidates/cv-upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ candidateId: 'candidate-1', filename: cvFile.name, contentType: cvFile.type, size: cvFile.size }),
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(2, uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': cvFile.type },
+      body: cvFile,
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/candidates', expect.objectContaining({
+      method: 'POST',
+      body: expect.any(String),
+    }))
+    const candidaturePayload = JSON.parse(fetchMock.mock.calls[2][1].body)
+    expect(candidaturePayload.cv).toEqual({
+      key: uploadKey,
+      filename: cvFile.name,
+      contentType: cvFile.type,
+      size: cvFile.size,
+    })
+  })
+
+  it('stops when the CV signing request fails', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500 })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(submitCandidateProfile(createPayload(), cvFile))
+      .rejects.toThrow('Não foi possível preparar o envio do currículo.')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects a malformed CV signing response before uploading', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ uploadUrl, key: uploadKey }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(submitCandidateProfile(createPayload(), cvFile))
+      .rejects.toThrow('A API retornou dados inválidos para o envio do currículo.')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not submit a candidature when the S3 PUT fails', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { uploadUrl, key: uploadKey } }) })
+      .mockResolvedValueOnce({ ok: false, status: 403 })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(submitCandidateProfile(createPayload(), cvFile))
+      .rejects.toThrow('Não foi possível enviar o currículo.')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('reports a candidature API error after a successful CV upload', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { uploadUrl, key: uploadKey } }) })
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: false, status: 422, statusText: 'Unprocessable', text: async () => 'invalid candidature' })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(submitCandidateProfile(createPayload(), cvFile))
+      .rejects.toThrow('API request failed (422): invalid candidature')
+    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 })
