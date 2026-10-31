@@ -60,6 +60,52 @@ describe("ApplicationBoard", () => {
     })
   })
 
+  it("normalizes the additional profile details shown in the company candidate modal", () => {
+    const candidate = normalizeCandidate({
+      id: "candidate-4",
+      nome: "Candidato Teste",
+      cidade: "Sao Paulo",
+      estado: "SP",
+      empresaAtual: "Empresa Atual",
+      setorAtual: "Produto",
+      timeAtual: ["Design", "Pesquisa"],
+      salarioAtual: "8000",
+      beneficiosAtuais: ["Vale refeicao"],
+      industriaInteresse: [1],
+      pretensaoSalarial: "10000",
+      tipoContratacao: ["CLT"],
+      areaPreferencia: [4],
+      setor: ["tecnologia-informacao-ti"],
+      time: ["Design"],
+      senioridadePreferencia: ["Pleno"],
+      viagemTrabalho: "sim",
+      idiomas: [{ idioma: "Ingles", fluencia: "Avancado" }],
+      sobreVoce: "Resumo profissional.",
+      mensagemEmpresa: "Mensagem de apresentacao.",
+    }, 0)
+
+    expect(candidate).toMatchObject({
+      cidade: "Sao Paulo",
+      estado: "SP",
+      empresaAtual: "Empresa Atual",
+      setorAtual: "Produto",
+      timeAtual: "Design, Pesquisa",
+      salarioAtual: "8000",
+      beneficiosAtuais: ["Vale refeicao"],
+      industriaInteresse: ["Finanças"],
+      pretensaoSalarial: "10000",
+      tipoContratacao: ["CLT"],
+      areaPreferencia: ["Dados"],
+      setoresPreferencia: ["Tecnologia da Informacao (TI)"],
+      timesPreferencia: ["Design"],
+      senioridadePreferencia: ["Pleno"],
+      viagemTrabalho: "sim",
+      idiomas: ["Ingles (Avancado)"],
+      sobreVoce: "Resumo profissional.",
+      mensagemEmpresa: "Mensagem de apresentacao.",
+    })
+  })
+
   it("renders candidate cards with recruiter note preview", () => {
     const html = renderToStaticMarkup(
       createElement(ApplicationBoard, {
