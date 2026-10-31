@@ -20,7 +20,7 @@ type SubmissionFeedback = {
 
 const REGISTRATION_STEPS = [
   { number: 1, label: "Dados pessoais" },
-  { number: 2, label: "Experiencia profissional" },
+  { number: 2, label: "Experiência Profissional" },
   { number: 3, label: "Preferencias" },
   { number: 4, label: "CV" },
 ]

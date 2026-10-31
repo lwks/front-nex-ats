@@ -15,10 +15,41 @@ export async function submitCandidateProfile(data: CandidateProfilePayload, cvFi
 
   let cv: { key: string; filename: string; contentType: string; size: number } | undefined
   if (cvFile) {
-    const uploadResponse = await fetch('/api/candidates/cv-upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ candidateId: data.guid_id, filename: cvFile.name, contentType: cvFile.type, size: cvFile.size }) })
+    const uploadResponse = await fetch('/api/candidates/cv-upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        candidateId: data.guid_id,
+        filename: cvFile.name,
+        contentType: cvFile.type,
+        size: cvFile.size,
+      }),
+    })
     if (!uploadResponse.ok) throw new Error('Não foi possível preparar o envio do currículo.')
-    const upload = await uploadResponse.json() as { uploadUrl: string; key: string }
-    const putResponse = await fetch(upload.uploadUrl, { method: 'PUT', headers: { 'Content-Type': cvFile.type }, body: cvFile })
+
+    const uploadPayload = await uploadResponse.json().catch(() => null) as {
+      data?: { uploadUrl?: unknown; key?: unknown }
+    } | null
+    const upload = uploadPayload?.data
+    if (typeof upload?.uploadUrl !== 'string' || typeof upload.key !== 'string' || !upload.key.trim()) {
+      throw new Error('A API retornou dados inválidos para o envio do currículo.')
+    }
+
+    let uploadUrl: URL
+    try {
+      uploadUrl = new URL(upload.uploadUrl)
+    } catch {
+      throw new Error('A API retornou dados inválidos para o envio do currículo.')
+    }
+    if (uploadUrl.protocol !== 'https:' && uploadUrl.protocol !== 'http:') {
+      throw new Error('A API retornou dados inválidos para o envio do currículo.')
+    }
+
+    const putResponse = await fetch(upload.uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': cvFile.type },
+      body: cvFile,
+    })
     if (!putResponse.ok) throw new Error('Não foi possível enviar o currículo.')
     cv = { key: upload.key, filename: cvFile.name, contentType: cvFile.type, size: cvFile.size }
   }

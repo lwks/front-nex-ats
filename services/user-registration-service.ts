@@ -30,6 +30,7 @@ export type UserRegistrationData = {
   lgpdAccepted: boolean
   empresaAtual: string
   indicacao?: UserRegistrationRecommendation
+  indicacoes?: UserRegistrationRecommendation[]
   senioridade: string
   beneficiosAtuais: string[]
   experiencia: string
@@ -118,12 +119,16 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
   requireNonEmptyValue(data.contatoCel, "Informe o celular.")
   requireNonEmptyValue(data.contato, "Informe o email.")
   requireNonEmptyValue(data.empresaAtual, "Informe a empresa atual.")
-  if (data.indicacao !== undefined) {
-    if (!data.indicacao || typeof data.indicacao !== "object") {
+  const recommendations = [
+    ...(data.indicacao === undefined ? [] : [data.indicacao]),
+    ...(data.indicacoes ?? []),
+  ]
+  for (const recommendation of recommendations) {
+    if (!recommendation || typeof recommendation !== "object") {
       throw new Error("Informe os dados da pessoa indicada corretamente.")
     }
 
-    const { nome, telefone, cargo } = data.indicacao
+    const { nome, telefone, cargo } = recommendation
     const hasAnyRecommendationValue = [nome, telefone, cargo].some(
       (value) => typeof value === "string" && value.trim().length > 0,
     )

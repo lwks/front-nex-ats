@@ -22,7 +22,7 @@ type SubmissionFeedback = {
 
 const CANDIDATURE_STEPS = [
   { number: 1, label: "Dados pessoais" },
-  { number: 2, label: "Experiência profissional" },
+  { number: 2, label: "Experiência Profissional" },
   { number: 3, label: "Preferências" },
   { number: 4, label: "CV" },
 ]

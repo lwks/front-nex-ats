@@ -83,6 +83,31 @@ describe("user-registration-service", () => {
     }))).toThrow("Informe o cargo da pessoa indicada.")
   })
 
+  it("allows multiple recommendations and validates every completed entry", () => {
+    expect(() => validateUserRegistrationData(createInput({
+      indicacao: undefined,
+      indicacoes: [
+        { nome: "Ana Souza", telefone: "11988887777", cargo: "Gerente" },
+        { nome: "Carlos Lima", telefone: "21977776666", cargo: "Diretor" },
+      ],
+    }))).not.toThrow()
+
+    expect(() => validateUserRegistrationData(createInput({
+      indicacao: undefined,
+      indicacoes: [
+        { nome: "Ana Souza", telefone: "11988887777", cargo: "Gerente" },
+        { nome: "Carlos", telefone: "21977776666", cargo: "Diretor" },
+      ],
+    }))).toThrow("Informe nome e sobrenome da pessoa indicada.")
+  })
+
+  it("allows an empty recommendation list", () => {
+    expect(() => validateUserRegistrationData(createInput({
+      indicacao: undefined,
+      indicacoes: [],
+    }))).not.toThrow()
+  })
+
   it("allows the recommendation to be omitted or entirely blank", () => {
     expect(() => validateUserRegistrationData(createInput({ indicacao: undefined }))).not.toThrow()
     expect(() => validateUserRegistrationData(createInput({
