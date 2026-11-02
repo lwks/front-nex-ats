@@ -5,6 +5,8 @@
 
 # next.js
 /.next/
+/.next-harness/
+/.next-e2e/
 /out/
 
 # production
@@ -41,3 +43,7 @@ next-env.d.ts
 /production-e2e-reports/
 /e2e-reports/
 /e2e
+
+# Local harness test artifacts
+playwright-harness-report/
+test-results-harness/

@@ -372,6 +372,7 @@ export function PublicJobsBoardView({
                 <div className="mt-6">
                   <h3 className="text-2xl font-semibold tracking-tight text-slate-950">{job.title}</h3>
                   <p className="mt-2 text-sm font-medium text-slate-600">{job.company}</p>
+                  {job.status === "Encerrada" ? <span className="mt-3 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">Encerrada</span> : null}
                 </div>
 
                 <div className="mt-5 flex flex-wrap gap-3 text-sm text-slate-600">
@@ -410,12 +411,7 @@ export function PublicJobsBoardView({
                   >
                     Ver detalhes
                   </button>
-                  <Link
-                    href={job.applyHref}
-                    className="text-sm font-semibold text-slate-700 transition group-hover:text-[#FF6B00]"
-                  >
-                    Ir para candidatura
-                  </Link>
+                  {job.status === "Encerrada" ? <span className="text-sm font-semibold text-slate-500">Candidaturas encerradas</span> : <Link href={job.applyHref} className="text-sm font-semibold text-slate-700 transition group-hover:text-[#FF6B00]">Ir para candidatura</Link>}
                 </div>
               </article>
             ))}
@@ -526,6 +522,7 @@ export function PublicJobDetailsModal({
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.26em] text-[#FF6B00]">{job.company}</p>
             <h3 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{job.title}</h3>
+            {job.status === "Encerrada" ? <span className="mt-3 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">Encerrada</span> : null}
             <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600">
               <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2">
                 <MapPin className="size-4" />
@@ -616,12 +613,12 @@ export function PublicJobDetailsModal({
               </div>
 
               <div className="mt-8 flex flex-col gap-3">
-                <Link
+                {job.status === "Encerrada" ? <p className="rounded-full bg-slate-100 px-5 py-3 text-center text-sm font-semibold text-slate-600">Esta vaga não aceita mais candidaturas.</p> : <Link
                   href={job.applyHref}
                   className="inline-flex items-center justify-center rounded-full bg-[#FF6B00] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#E55F00]"
                 >
                   Candidatar-se agora
-                </Link>
+                </Link>}
                 <button
                   type="button"
                   onClick={onClose}

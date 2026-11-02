@@ -10,7 +10,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:production": "playwright test --config=playwright.production.config.ts"
+    "test:e2e:production": "playwright test --config=playwright.production.config.ts",
+    "dev:local": "node scripts/local-harness.mjs",
+    "local:doctor": "node scripts/local-harness.mjs doctor",
+    "local:reset": "node scripts/local-harness.mjs reset",
+    "test:e2e:local": "playwright test --config=playwright.harness.config.ts"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "1.1.3",

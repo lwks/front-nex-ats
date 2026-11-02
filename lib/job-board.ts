@@ -65,6 +65,7 @@ export type JobBoardJob = {
   requirements: string[]
   responsibilities: string[]
   applyHref: string
+  status?: string
 }
 
 export type JobBoardPage = {
@@ -286,6 +287,7 @@ export function normalizeJobBoardJob(job: ApiJob, index: number): JobBoardJob {
     requirements: pickStringArray(job.requirements, job.requisitos),
     responsibilities: pickStringArray(job.responsibilities, job.responsabilidades),
     applyHref: buildJobApplicationHref(id, guid),
+    status: pickString(job.status) ?? "Aberto",
   }
 }
 

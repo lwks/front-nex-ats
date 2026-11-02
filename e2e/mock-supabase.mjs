@@ -1,8 +1,26 @@
-import { createHmac } from 'node:crypto'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import { createServer } from 'node:http'
 
 const roles = new Map()
 const port = Number(process.env.E2E_SUPABASE_PORT || 54329)
+const harness = process.env.HARNESS_MODE === 'local'
+if (harness && (process.env.NODE_ENV !== 'development' || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL || process.env.NETLIFY)) {
+  throw new Error('Local auth simulator is forbidden in hosted/production runtimes')
+}
+if (harness) {
+  roles.set('company', 'COMPANY')
+  roles.set('candidate', 'CANDIDATE')
+}
+
+function verifiedLocalUser(token) {
+  const [header, payload, signature, extra] = String(token).split('.')
+  if (!signature || extra) throw new Error('Invalid token')
+  const expected = createHmac('sha256', 'e2e-only-secret').update(`${header}.${payload}`).digest('base64url')
+  if (signature.length !== expected.length || !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) throw new Error('Invalid signature')
+  const claims = JSON.parse(Buffer.from(payload, 'base64url').toString())
+  if (claims.exp <= Date.now() / 1000 || !roles.has(claims.sub)) throw new Error('Invalid local session')
+  return claims.sub
+}
 
 function tokenFor(id) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')
@@ -35,7 +53,7 @@ async function bodyOf(request) {
 createServer(async (request, response) => {
   const url = new URL(request.url, `http://localhost:${port}`)
   if (request.method === 'OPTIONS') return send(response, 204, {})
-  if (url.pathname === '/health') return send(response, 200, { ok: true })
+  if (url.pathname === '/health') return send(response, 200, { ok: true, service: harness ? 'ats-local-auth' : 'e2e-auth' })
   if (url.pathname === '/auth/v1/.well-known/jwks.json') return send(response, 200, { keys: [] })
 
   if (url.pathname === '/auth/v1/authorize') {
@@ -51,11 +69,13 @@ createServer(async (request, response) => {
     if (grant === 'password') {
       if (body.password !== 'correct-password') return send(response, 400, { message: 'Invalid login credentials' })
       id = String(body.email).split('@')[0]
+      if (harness && !['candidate@example.com', 'company@example.com'].includes(body.email)) return send(response, 400, { message: 'Unknown local profile' })
       if (id === 'candidate') roles.set(id, 'CANDIDATE')
       if (id === 'company') roles.set(id, 'COMPANY')
     } else if (grant === 'refresh_token') {
       id = String(body.refresh_token).replace(/^refresh-/, '')
     }
+    if (harness && !roles.has(id)) return send(response, 400, { message: 'Unknown local profile' })
     const accessToken = tokenFor(id)
     return send(response, 200, { access_token: accessToken, refresh_token: `refresh-${id}`, token_type: 'bearer', expires_in: 3600, user: userFor(id) })
   }
@@ -63,7 +83,7 @@ createServer(async (request, response) => {
   if (url.pathname === '/auth/v1/user' && request.method === 'GET') {
     const token = request.headers.authorization?.replace(/^Bearer /i, '')
     try {
-      const id = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()).sub
+      const id = harness ? verifiedLocalUser(token) : JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()).sub
       return send(response, 200, userFor(id))
     } catch { return send(response, 401, { message: 'Invalid token' }) }
   }
@@ -71,7 +91,7 @@ createServer(async (request, response) => {
   if (url.pathname === '/auth/v1/user' && request.method === 'PUT') {
     const token = request.headers.authorization?.replace(/^Bearer /i, '')
     try {
-      const id = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()).sub
+      const id = harness ? verifiedLocalUser(token) : JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()).sub
       return send(response, 200, userFor(id))
     } catch { return send(response, 401, { message: 'Invalid token' }) }
   }
@@ -93,6 +113,7 @@ createServer(async (request, response) => {
   }
 
   if (url.pathname.startsWith('/auth/v1/admin/users/')) {
+    if (harness) return send(response, 403, { message: 'Local profiles are fixed' })
     const id = url.pathname.split('/').at(-1)
     if (request.method === 'GET') return send(response, 200, userFor(id))
     if (request.method === 'PUT') {
@@ -102,5 +123,6 @@ createServer(async (request, response) => {
     }
   }
 
+  if (url.pathname === '/auth/v1/logout') return send(response, 204, {})
   send(response, 404, { message: `Unmocked ${request.method} ${url.pathname}` })
-}).listen(port)
+}).listen(port, '127.0.0.1')
