@@ -157,3 +157,9 @@ compativel com o endpoint `/_vercel/insights/script.js`.
 - O quadro de candidaturas em `/empresa/candidaturas` permite mover candidatos entre etapas e persiste a mudanca via `PUT /api/candidates/:id`.
 - A candidatura gera `guid_id` no front e envia `guid_vaga` junto com os dados completos do perfil; nenhum CNPJ aleatório é gerado.
 - As guardas de tipo cobrem paginas e handlers Next.js. A API ATS externa ainda nao verifica o JWT Supabase e pode ser chamada diretamente; integrar sua autorizacao fica para outra etapa.
+
+## Ambiente local integrado para desenvolvedores e Codex
+
+Com o backend na pasta irmã `../lambda-api-next`, execute `npm run dev:local` para subir front, API e autenticação simulada, sem Supabase/AWS reais. Escolha empresa ou candidato na barra amarela. Os dados e currículos são fictícios e persistidos localmente.
+
+Veja [o guia do harness](docs/LOCAL_HARNESS.md). Copie [AGENTS.parent.md](docs/AGENTS.parent.md) para a pasta pai com o nome `AGENTS.md` e abra essa pasta no Codex. `npm run local:doctor` verifica os serviços, `npm run local:reset` restaura os dados com os serviços parados e `npm run test:e2e:local` executa os testes integrados.

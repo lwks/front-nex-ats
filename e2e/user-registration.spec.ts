@@ -24,6 +24,7 @@ async function selectMultipleOptions(page: Page, id: string, labels: string[]) {
 
 test("opens the candidate registration flow", async ({ page }) => {
   await signIn(page, 'candidate')
+  await page.route("**/api/jobs/e2e-job", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { status: "Aberto" } }) }))
   await page.goto("/candidaturas?vagaGuid=e2e-job")
   await page.waitForLoadState('networkidle')
 
@@ -78,6 +79,7 @@ test("allows five sectors and three preferred seniorities in candidate preferenc
       }),
     })
   })
+  await page.route("**/api/jobs/e2e-job", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { status: "Aberto" } }) }))
 
   await page.goto("/candidaturas?vagaGuid=e2e-job")
   await page.waitForLoadState('networkidle')

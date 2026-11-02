@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { CheckCircle2, CircleAlert } from "lucide-react"
@@ -36,6 +36,19 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
   const [feedbackModal, setFeedbackModal] = useState<SubmissionFeedback | null>(null)
   const [cvFile, setCvFile] = useState<File | null>(null)
   const [cvError, setCvError] = useState<string | null>(null)
+  const [jobAvailability, setJobAvailability] = useState<"loading" | "open" | "closed" | "error">("loading")
+
+  useEffect(() => {
+    let active = true
+    fetch(`/api/jobs/${encodeURIComponent(jobGuid)}`, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("job lookup failed")
+        const payload = await response.json() as { data?: { status?: string } }
+        if (active) setJobAvailability(payload.data?.status === "Encerrada" ? "closed" : "open")
+      })
+      .catch(() => { if (active) setJobAvailability("error") })
+    return () => { active = false }
+  }, [jobGuid])
 
   const updateData = (data: Partial<UserRegistrationData>) => {
     setCandidateData((previous) => ({ ...previous, ...data }))
@@ -91,6 +104,14 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
     const wasSuccessful = feedbackModal?.type === "success"
     setFeedbackModal(null)
     if (wasSuccessful) router.push("/jobs/list")
+  }
+
+  if (jobAvailability !== "open") {
+    return <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-4 bg-white p-8 text-center">
+      <h1 className="text-2xl font-semibold text-slate-950">{jobAvailability === "loading" ? "Verificando vaga..." : jobAvailability === "closed" ? "Vaga encerrada" : "Não foi possível verificar a vaga"}</h1>
+      <p className="text-slate-600">{jobAvailability === "closed" ? "Esta vaga não está mais recebendo candidaturas." : jobAvailability === "error" ? "Volte à lista de vagas e tente novamente." : "Aguarde enquanto confirmamos se a vaga está aberta."}</p>
+      <Link href="/jobs/list" className="rounded-full bg-[#FF6B00] px-5 py-3 font-semibold text-white">Voltar para vagas</Link>
+    </main>
   }
 
   return (

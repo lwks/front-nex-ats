@@ -5,6 +5,8 @@ import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import "./globals.css"
+import { isLocalHarness } from '@/lib/local-harness'
+import { LocalHarnessBar } from '@/components/local-harness-bar'
 
 export const metadata: Metadata = {
   title: "ClusterHR - Sistema de Gestao de Pessoas e Processos de RH",
@@ -20,6 +22,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+        {isLocalHarness() && <LocalHarnessBar />}
         <Suspense fallback={null}>{children}</Suspense>
         {process.env.NEXT_PUBLIC_VERCEL_ANALYTICS_ENABLED === "true" && <Analytics />}
       </body>

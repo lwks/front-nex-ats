@@ -7,13 +7,18 @@ export default defineConfig([
   ...nextTypescript,
   globalIgnores([
     '.next/**',
+    '.next-harness/**',
+    '.next-e2e/**',
+    '.next-verify/**',
     'out/**',
     'build/**',
     'next-env.d.ts',
     'playwright-report/**',
+    'playwright-harness-report/**',
     'playwright-report-production/**',
     'production-e2e-reports/**',
     'test-results/**',
+    'test-results-harness/**',
   ]),
   {
     files: [
