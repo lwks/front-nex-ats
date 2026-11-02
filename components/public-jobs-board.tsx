@@ -462,7 +462,7 @@ export function PublicJobsBoardView({
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-orange-200">Contato</p>
             <div className="mt-4 space-y-3 text-sm text-slate-400">
-              <a href="mailto:admin@clusterjobs.com.br" className="block transition hover:text-white">admin@clusterjobs.com.br</a>
+              <a href="mailto:contato@clusterjobs.com.br" className="block transition hover:text-white">contato@clusterjobs.com.br</a>
               <a href="tel:+5511973559089" className="block transition hover:text-white">11 97355-9089</a>
               <p>São Paulo, Brasil</p>
             </div>
