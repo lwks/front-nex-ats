@@ -7,6 +7,8 @@ import { fetchCandidatesByJobGuid } from "@/services/candidates-by-job-guids-ser
 import { cn } from "@/lib/utils"
 import { mapApiStatusToBoardStatus } from "@/lib/application-status"
 import type { ApplicationStatus } from "@/lib/application-status"
+import { defaultContractTypeOptions, defaultIndustryOptions, defaultSeniorityOptions } from "@/lib/onboarding-options"
+import { hardcodedAreaOptions } from "@/services/areas-service"
 
 export type { ApplicationStatus } from "@/lib/application-status"
 
@@ -22,6 +24,24 @@ export type Application = {
   experiencia?: string
   skills?: string[]
   linkedinUrl?: string
+  cidade?: string
+  estado?: string
+  empresaAtual?: string
+  setorAtual?: string
+  timeAtual?: string
+  salarioAtual?: string
+  beneficiosAtuais?: string[]
+  industriaInteresse?: string[]
+  pretensaoSalarial?: string
+  tipoContratacao?: string[]
+  areaPreferencia?: string[]
+  setoresPreferencia?: string[]
+  timesPreferencia?: string[]
+  senioridadePreferencia?: string[]
+  viagemTrabalho?: string
+  idiomas?: string[]
+  sobreVoce?: string
+  mensagemEmpresa?: string
   notes?: string
   status: ApplicationStatus | string
   atualizadoEm?: string
@@ -104,6 +124,15 @@ function pickStringArray(...values: Array<unknown>) {
   return undefined
 }
 
+function pickLabeledStringArray(values: unknown, options: Array<{ value: string; label: string }>) {
+  return pickStringArray(values)?.map((value) => options.find((option) => option.value === value)?.label ?? value)
+}
+
+function pickLabeledString(value: unknown, options: Array<{ value: string; label: string }>) {
+  const selected = pickString(value)
+  return selected ? options.find((option) => option.value === selected)?.label ?? selected : undefined
+}
+
 export { mapApiStatusToBoardStatus } from "@/lib/application-status"
 
 function extractCandidateItems(payload: unknown): unknown[] {
@@ -165,9 +194,34 @@ export function normalizeCandidate(item: unknown, index: number): Application | 
       pickString(item.modelo_trabalho, item.workModel, item.modalidade),
       ...(pickStringArray(item.modeloTrabalho, item.modelo_trabalho_preferencia) ?? []),
     ].filter(Boolean).join(", ") || undefined,
-    senioridade: pickString(item.senioridade, item.seniority, item.nivel),
+    senioridade: pickLabeledString(item.senioridade ?? item.seniority ?? item.nivel, defaultSeniorityOptions),
     experiencia: pickString(item.experiencia, item.experience),
     linkedinUrl: pickString(item.linkedin, item.linkedinUrl, item.linkedin_url),
+    cidade: pickString(item.cidade, item.city),
+    estado: pickString(item.estado, item.state),
+    empresaAtual: pickString(item.empresaAtual, item.empresa_atual, item.currentCompany),
+    setorAtual: pickLabeledString(item.setorAtual ?? item.setor_atual ?? item.currentSector, defaultIndustryOptions),
+    timeAtual: pickStringArray(item.timeAtual, item.time_atual, item.currentTeam)?.join(", "),
+    salarioAtual: pickString(item.salarioAtual, item.salario_atual, item.currentSalary),
+    beneficiosAtuais: pickStringArray(item.beneficiosAtuais, item.beneficios_atuais, item.currentBenefits),
+    industriaInteresse: pickLabeledStringArray(item.industriaInteresse ?? item.industria_interesse ?? item.industriesOfInterest, hardcodedAreaOptions),
+    pretensaoSalarial: pickString(item.pretensaoSalarial, item.pretensao_salarial, item.expectedSalary),
+    tipoContratacao: pickLabeledStringArray(item.tipoContratacao ?? item.tipo_contratacao ?? item.contractTypes, defaultContractTypeOptions),
+    areaPreferencia: pickLabeledStringArray(item.areaPreferencia ?? item.area_preferencia ?? item.preferredAreas, hardcodedAreaOptions),
+    setoresPreferencia: pickLabeledStringArray(item.setor ?? item.setorPreferencia ?? item.setor_preferencia ?? item.preferredSectors, defaultIndustryOptions),
+    timesPreferencia: pickStringArray(item.time, item.timePreferencia, item.time_preferencia, item.preferredTeams),
+    senioridadePreferencia: pickLabeledStringArray(item.senioridadePreferencia ?? item.senioridade_preferencia ?? item.preferredSeniority, defaultSeniorityOptions),
+    viagemTrabalho: pickString(item.viagemTrabalho, item.viagem_trabalho, item.travelAvailability),
+    idiomas: Array.isArray(item.idiomas)
+      ? item.idiomas.flatMap((language) => {
+          if (!isRecord(language)) return []
+          const name = pickString(language.idioma, language.language)
+          const level = pickString(language.fluencia, language.proficiencia, language.level)
+          return name ? [level ? `${name} (${level})` : name] : []
+        })
+      : pickStringArray(item.idiomas, item.languages),
+    sobreVoce: pickString(item.sobreVoce, item.sobre_voce, item.about),
+    mensagemEmpresa: pickString(item.mensagemEmpresa, item.mensagem_empresa, item.companyMessage),
     notes: pickString(
       item.anotacoes,
       item.anotacao,
