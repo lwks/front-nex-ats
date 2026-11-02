@@ -82,5 +82,5 @@ test('rejects invalid credentials without opening an internal page', async ({ pa
   await page.getByLabel('Senha').fill('wrong-password')
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
   await expect(page.getByRole('status')).toContainText('Invalid login credentials')
-  await expect(page).toHaveURL('http://localhost:3000/')
+  expect(new URL(page.url()).pathname).toBe('/')
 })

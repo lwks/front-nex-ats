@@ -11,7 +11,6 @@ import {
   type ApplicationColumn,
 } from "@/components/application-board"
 import { AtsSidebar } from "@/components/ats-sidebar"
-import { JOBS_API_URL } from "@/config"
 import {
   type JobCard,
   deriveCandidateMetrics,
@@ -26,6 +25,7 @@ import { mapApiStatusToBoardStatus } from "@/lib/application-status"
 import { shouldClearCandidateNoteFeedback } from "@/lib/candidate-note-feedback"
 import { fetchCandidatesByJobGuids } from "@/services/candidates-by-job-guids-service"
 import { getCandidateCvDownloadUrl } from "@/services/cv-download-service"
+import { closeCompanyJob } from "@/services/company-jobs-service"
 
 type ApiJob = Record<string, unknown>
 
@@ -42,6 +42,8 @@ export type CompanyApplicationsJob = JobCard & {
   createdAt: string
   salaryRange: string
   reportUrl: string
+  status?: string
+  closeReason?: string
 }
 
 export type CompanyApplicationsViewProps = {
@@ -61,6 +63,13 @@ export type CompanyApplicationsViewProps = {
   onJobSelect: (jobGuid: string) => void
   onPageChange: (page: number) => void
   board?: ReactNode
+  jobStatusFilter?: "open" | "closed" | "all"
+  onJobStatusFilterChange?: (value: "open" | "closed" | "all") => void
+  onCloseJob?: () => void
+  isClosingJob?: boolean
+  closeReasonDraft?: string
+  onCloseReasonChange?: (value: string) => void
+  closeJobFeedback?: string | null
 }
 
 export const COMPANY_APPLICATIONS_PAGE_SIZE = 5
@@ -256,6 +265,8 @@ export function normalizeCompanyJob(item: ApiJob, index: number): CompanyApplica
     createdAt: pickString(item.createdAt, item.created_at, item.data_criacao) ?? "Nao informado",
     salaryRange: formatCompanySalary(item),
     reportUrl: pickString(item.reportUrl, item.report_url, item.relatorio_url) ?? "Nao informado",
+    status: pickString(item.status) ?? "Aberto",
+    closeReason: pickString(item.motivo_encerramento),
   }
 }
 
@@ -357,6 +368,13 @@ export function CompanyApplicationsView({
   onJobSelect,
   onPageChange,
   board,
+  jobStatusFilter = "open",
+  onJobStatusFilterChange = () => undefined,
+  onCloseJob = () => undefined,
+  isClosingJob = false,
+  closeReasonDraft = "",
+  onCloseReasonChange = () => undefined,
+  closeJobFeedback = null,
 }: CompanyApplicationsViewProps) {
   const hasJobs = jobs.length > 0
   const hasSearchResults = filteredJobs.length > 0
@@ -389,7 +407,7 @@ export function CompanyApplicationsView({
             <MetricCard
               icon={Briefcase}
               label="Vagas abertas"
-              value={jobs.length}
+              value={jobs.filter((job) => job.status !== "Encerrada").length}
               helper="Oportunidades carregadas"
             />
             <MetricCard
@@ -433,6 +451,15 @@ export function CompanyApplicationsView({
                   disabled={!hasJobs && isLoadingJobs}
                 />
               </div>
+              <div className="flex flex-wrap gap-2" aria-label="Filtrar vagas por situação">
+                {([ ["open", "Abertas"], ["closed", "Encerradas"], ["all", "Todas"] ] as const).map(([value, label]) => (
+                  <button key={value} type="button" aria-pressed={jobStatusFilter === value}
+                    onClick={() => onJobStatusFilterChange(value)}
+                    className={`rounded-full border px-4 py-2 text-sm font-semibold ${jobStatusFilter === value ? "border-[#FF6B00] bg-orange-50 text-[#C44E00]" : "border-gray-300 text-gray-600"}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {isLoadingJobs ? (
@@ -464,6 +491,7 @@ export function CompanyApplicationsView({
                       >
                         <p className="text-sm font-semibold text-[#FF6B00]">{job.company}</p>
                         <p className="mt-1 text-base font-semibold text-black">{job.title}</p>
+                        <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${job.status === "Encerrada" ? "bg-gray-100 text-gray-700" : "bg-green-50 text-green-700"}`}>{job.status}</span>
                         <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-600">
                           <span className="inline-flex items-center gap-1">
                             <MapPin className="size-3.5" />
@@ -548,6 +576,19 @@ export function CompanyApplicationsView({
 
           {currentJob && hasSearchResults ? (
             <section className="rounded-lg border-2 border-gray-200 bg-white p-4 shadow-sm">
+              {currentJob.status !== "Encerrada" ? (
+                <div className="mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-gray-200 pb-4">
+                  <div className="min-w-60 flex-1">
+                    <label htmlFor="close-job-reason" className="mb-1 block text-sm font-semibold text-gray-700">Motivo do encerramento (opcional)</label>
+                    <input id="close-job-reason" maxLength={1000} value={closeReasonDraft} onChange={(event) => onCloseReasonChange(event.currentTarget.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" placeholder="Registre o motivo, se desejar" />
+                  </div>
+                  <button type="button" onClick={onCloseJob} disabled={isClosingJob} className="rounded-md bg-red-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{isClosingJob ? "Encerrando..." : "Encerrar vaga"}</button>
+                </div>
+              ) : (
+                <div className="mb-4 rounded-md bg-gray-50 p-4 text-sm text-gray-700"><strong>Vaga encerrada.</strong>{currentJob.closeReason ? <p className="mt-1">Motivo: {currentJob.closeReason}</p> : <p className="mt-1">Nenhum motivo informado.</p>}</div>
+              )}
+              {currentJob.status === "Encerrada" ? <p role="status" className="mb-3 text-sm text-gray-600">Pipeline somente leitura: vaga encerrada.</p> : null}
+              {closeJobFeedback ? <p role="status" className="mb-3 text-sm text-red-700">{closeJobFeedback}</p> : null}
               {board}
             </section>
           ) : null}
@@ -580,6 +621,10 @@ export function CompanyApplicationsPage({ companyUserId }: { companyUserId: stri
     byJobId: {},
     status: "idle",
   })
+  const [jobStatusFilter, setJobStatusFilter] = useState<"open" | "closed" | "all">("open")
+  const [closeReasonDraft, setCloseReasonDraft] = useState("")
+  const [isClosingJob, setIsClosingJob] = useState(false)
+  const [closeJobFeedback, setCloseJobFeedback] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
@@ -589,7 +634,7 @@ export function CompanyApplicationsPage({ companyUserId }: { companyUserId: stri
       setJobsError(null)
 
       try {
-        const response = await fetch(JOBS_API_URL, { cache: "no-store" })
+        const response = await fetch("/api/jobs/mine", { cache: "no-store" })
         if (!response.ok) {
           throw new Error(`Falha ao buscar vagas (${response.status}).`)
         }
@@ -622,6 +667,9 @@ export function CompanyApplicationsPage({ companyUserId }: { companyUserId: stri
       active = false
     }
   }, [])
+
+  const filteredByStatusJobs = useMemo(() => jobs.filter((job) => jobStatusFilter === "all"
+    || (jobStatusFilter === "closed" ? job.status === "Encerrada" : job.status !== "Encerrada")), [jobs, jobStatusFilter])
 
   useEffect(() => {
     const jobGuids = jobs
@@ -675,13 +723,13 @@ export function CompanyApplicationsPage({ companyUserId }: { companyUserId: stri
   } = useMemo(
     () =>
       deriveCompanyApplicationsState(
-        jobs,
+        filteredByStatusJobs,
         searchQuery,
         selectedJobGuid,
         candidateCounts.byJobId,
         currentPage,
       ),
-    [jobs, searchQuery, selectedJobGuid, candidateCounts.byJobId, currentPage],
+    [filteredByStatusJobs, searchQuery, selectedJobGuid, candidateCounts.byJobId, currentPage],
   )
 
   useEffect(() => {
@@ -697,9 +745,25 @@ export function CompanyApplicationsPage({ companyUserId }: { companyUserId: stri
   }, [resolvedCurrentPage, currentPage])
 
   const currentJob = useMemo(
-    () => filteredJobs.find((job) => job.jobGuid === resolvedSelectedJobGuid) ?? null,
-    [filteredJobs, resolvedSelectedJobGuid],
+    () => filteredByStatusJobs.find((job) => job.jobGuid === resolvedSelectedJobGuid) ?? null,
+    [filteredByStatusJobs, resolvedSelectedJobGuid],
   )
+
+  useEffect(() => { setCloseReasonDraft(""); setCloseJobFeedback(null) }, [currentJob?.jobGuid])
+
+  const handleCloseJob = async () => {
+    if (!currentJob?.jobGuid) return
+    setIsClosingJob(true)
+    setCloseJobFeedback(null)
+    try {
+      const updated = await closeCompanyJob(currentJob.jobGuid, closeReasonDraft)
+      const closedJob = normalizeCompanyJob({ ...updated, motivo_encerramento: (updated.motivo_encerramento as string | undefined) ?? closeReasonDraft, status: "Encerrada" }, 0)
+      if (closedJob) setJobs((previous) => previous.map((job) => job.jobGuid === closedJob.jobGuid ? closedJob : job))
+      setJobStatusFilter("closed")
+    } catch (error) {
+      setCloseJobFeedback(error instanceof Error ? error.message : "Não foi possível encerrar a vaga.")
+    } finally { setIsClosingJob(false) }
+  }
 
   const hydratedSelectedCandidate = useMemo(() => {
     if (!selectedCandidate) {
@@ -818,9 +882,9 @@ export function CompanyApplicationsPage({ companyUserId }: { companyUserId: stri
     <ApplicationBoardFromApi
       guidVaga={currentJob.jobGuid ?? ""}
       colunas={boardColumns}
-      draggable={true}
+      draggable={currentJob.status !== "Encerrada"}
       applicationOverrides={candidateOverrides}
-      onStatusChange={handleCandidateStatusChange}
+      onStatusChange={currentJob.status === "Encerrada" ? undefined : handleCandidateStatusChange}
       onApplicationSelect={(application) => setSelectedCandidate(application)}
     />
   ) : null
@@ -847,6 +911,13 @@ export function CompanyApplicationsPage({ companyUserId }: { companyUserId: stri
         }}
         onPageChange={setCurrentPage}
         board={board}
+        jobStatusFilter={jobStatusFilter}
+        onJobStatusFilterChange={setJobStatusFilter}
+        onCloseJob={handleCloseJob}
+        isClosingJob={isClosingJob}
+        closeReasonDraft={closeReasonDraft}
+        onCloseReasonChange={setCloseReasonDraft}
+        closeJobFeedback={closeJobFeedback}
       />
 
       {hydratedSelectedCandidate ? (
@@ -932,6 +1003,7 @@ export function CompanyApplicationsPage({ companyUserId }: { companyUserId: stri
               <textarea
                 value={candidateNotesDraft}
                 onChange={(event) => setCandidateNotesDraft(event.target.value)}
+                disabled={currentJob?.status === "Encerrada"}
                 rows={5}
                 placeholder="Registre observacoes sobre entrevista, proximos passos, riscos ou destaque do perfil."
                 className="mt-4 w-full rounded-lg border-2 border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 outline-none transition focus:border-[#FF6B00] focus:ring-2 focus:ring-orange-100"
@@ -950,14 +1022,14 @@ export function CompanyApplicationsPage({ companyUserId }: { companyUserId: stri
               ) : null}
 
               <div className="mt-4 flex justify-end">
-                <button
+                {currentJob?.status !== "Encerrada" ? <button
                   type="button"
                   onClick={() => void handleSaveCandidateNote()}
                   disabled={isSavingCandidateNote}
                   className="rounded-lg bg-[#FF6B00] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#e66000] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSavingCandidateNote ? "Salvando..." : "Salvar anotacao"}
-                </button>
+                </button> : <span className="text-sm text-gray-600">Somente leitura: vaga encerrada.</span>}
               </div>
             </div>
           </div>

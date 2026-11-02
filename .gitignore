@@ -5,6 +5,8 @@
 
 # next.js
 /.next/
+/.next-harness/
+/.next-e2e/
 /out/
 
 # production

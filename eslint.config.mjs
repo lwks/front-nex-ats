@@ -7,6 +7,9 @@ export default defineConfig([
   ...nextTypescript,
   globalIgnores([
     '.next/**',
+    '.next-harness/**',
+    '.next-e2e/**',
+    '.next-verify/**',
     'out/**',
     'build/**',
     'next-env.d.ts',

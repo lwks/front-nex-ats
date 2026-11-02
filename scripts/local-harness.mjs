@@ -31,6 +31,7 @@ const env = {
   NEXT_PUBLIC_API_BASE_URL: `http://localhost:${backPort}/api`,
   NEXT_PUBLIC_SUPABASE_URL: `http://localhost:${authPort}`,
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'e2e-public-key',
+  NEXT_DIST_DIR: '.next-harness',
   SUPABASE_SERVICE_ROLE_KEY: 'e2e-server-key', NEXT_PUBLIC_VERCEL_ANALYTICS_ENABLED: 'false',
 }
 

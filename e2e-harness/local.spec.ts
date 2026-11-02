@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { randomUUID } from 'node:crypto'
 
 const JOB_ID = '11111111-1111-4111-8111-111111111111'
 
@@ -158,4 +159,61 @@ test('full local flow uses both repositories, persists data and keeps permission
   expect(signedOut.ok()).toBe(true)
   expect((await context.request.get('/api/auth/session')).ok()).toBe(true)
   expect(remoteRequests).toEqual([])
+})
+
+test('browser creates and closes one vacancy, retains private reason, and blocks candidate application', async ({ page }) => {
+  test.setTimeout(120_000)
+  const title = `Vaga encerrada ${randomUUID()}`
+  const reason = 'Processo concluído no teste integrado'
+  await page.goto('/')
+  const setProfile = async (value: 'COMPANY' | 'CANDIDATE') => {
+    const response = await page.request.post('/api/local/profile', {
+      headers: { origin: new URL(page.url()).origin }, form: { profile: value }, maxRedirects: 0,
+    })
+    expect(response.status()).toBe(303)
+  }
+  await setProfile('COMPANY')
+  await page.goto('/empresa/candidaturas')
+  await page.goto('/jobs/create')
+  await page.getByLabel('Titulo da vaga').fill(title)
+  await page.getByLabel('Descricao').fill('Vaga criada pelo Playwright para testar seu encerramento integrado.')
+  await selectMultipleOptions(page, 'area', ['Tecnologia da Informação'])
+  await selectMultipleOptions(page, 'time', ['Desenvolvimento Back-end'])
+  await selectMultipleOptions(page, 'senioridade', ['Senior'])
+  await selectMultipleOptions(page, 'setor', ['Desenvolvimento de Software'])
+  await page.getByLabel('Cidade').fill('São Paulo')
+  await page.getByLabel('Estado').fill('SP')
+  await selectOption(page, 'modelo_trabalho', 'Remoto')
+  await selectOption(page, 'formato_contratacao', 'Integral')
+  await selectOption(page, 'experiencia', '3-5 anos')
+  await selectMultipleOptions(page, 'beneficios', ['Vale refeicao'])
+  await selectMultipleOptions(page, 'hardSkills', ['JavaScript'])
+  await selectMultipleOptions(page, 'softSkills', ['Colaboracao'])
+  await page.getByLabel('Valor inicial (R$)').fill('8000')
+  await page.getByLabel('Valor final (R$)').fill('12000')
+  const creation = page.waitForResponse(response => response.url().endsWith('/api/jobs') && response.request().method() === 'POST')
+  await page.getByRole('button', { name: 'Criar vaga' }).click()
+  const createdResponse = await creation
+  expect(createdResponse.status()).toBe(201)
+  const jobId = (await createdResponse.json()).data.guid_id as string
+  await expect(page).toHaveURL(/\/empresa\/candidaturas/, { timeout: 20_000 })
+
+  await page.getByRole('button').filter({ hasText: title }).click()
+  await page.getByLabel('Motivo do encerramento (opcional)').fill(reason)
+  const closing = page.waitForResponse(response => response.url().includes(`/api/jobs/${jobId}/close`) && response.request().method() === 'POST')
+  await page.getByRole('button', { name: 'Encerrar vaga' }).click()
+  expect((await closing).status()).toBe(200)
+  await expect(page.getByRole('button', { name: 'Encerradas', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByText(title, { exact: true }).first()).toBeVisible()
+  await expect(page.getByText(`Motivo: ${reason}`)).toBeVisible()
+  await expect(page.getByText('Pipeline somente leitura: vaga encerrada.')).toBeVisible()
+
+  await setProfile('CANDIDATE')
+  await page.goto('/jobs/list')
+  await page.goto(`/candidaturas?vagaGuid=${encodeURIComponent(jobId)}`)
+  await expect(page.getByRole('heading', { name: 'Vaga encerrada' })).toBeVisible()
+  await page.goto('/jobs/list')
+  const publicCard = page.locator('article').filter({ hasText: title })
+  await expect(publicCard).toContainText('Encerrada')
+  await expect(publicCard).toContainText('Candidaturas encerradas')
 })

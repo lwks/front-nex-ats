@@ -10,6 +10,7 @@ if (process.env.HARNESS_MODE === 'local') {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   agentRules: false,
   images: {
     unoptimized: true,
