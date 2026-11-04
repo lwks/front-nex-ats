@@ -11,7 +11,7 @@ import { UserRegistrationPersonalStep } from "@/components/steps/user-registrati
 import { UserRegistrationPreferencesStep } from "@/components/steps/user-registration-preferences-step"
 import { UserRegistrationProfessionalStep } from "@/components/steps/user-registration-professional-step"
 import { Button } from "@/components/ui/button"
-import { submitCandidateProfile } from "@/services/candidate-service"
+import { getOwnApplication, getSavedProfile, profileFromForm, sendApplication, uploadProfileCv, type CvAction, type SavedProfile } from "@/services/candidate-application-service"
 import type { UserRegistrationData } from "@/services/user-registration-service"
 
 type SubmissionFeedback = {
@@ -27,6 +27,12 @@ const CANDIDATURE_STEPS = [
   { number: 4, label: "CV" },
 ]
 
+function requiresLgpdRenewal(profile: SavedProfile | null) {
+  if (!profile) return true
+  const acceptedAt = Date.parse(profile.lgpdAcceptedAt || '')
+  return profile.lgpdRenewalRequired || !Number.isFinite(acceptedAt) || Date.now() - acceptedAt >= 21 * 24 * 60 * 60 * 1000
+}
+
 export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
@@ -37,6 +43,15 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
   const [cvFile, setCvFile] = useState<File | null>(null)
   const [cvError, setCvError] = useState<string | null>(null)
   const [jobAvailability, setJobAvailability] = useState<"loading" | "open" | "closed" | "error">("loading")
+  const [profile, setProfile] = useState<SavedProfile | null>(null)
+  const [profileState, setProfileState] = useState<'loading' | 'ready' | 'existing' | 'error'>('loading')
+  const [choice, setChoice] = useState<'USE_SAVED_PROFILE' | 'UPDATE_PROFILE' | null>(null)
+  const [review, setReview] = useState(false)
+  const [cvAction, setCvAction] = useState<CvAction>('KEEP')
+  const [salary, setSalary] = useState('')
+  const [message, setMessage] = useState('')
+  const [sharing, setSharing] = useState(false)
+  const [lgpdRenewal, setLgpdRenewal] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -49,6 +64,28 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
       .catch(() => { if (active) setJobAvailability("error") })
     return () => { active = false }
   }, [jobGuid])
+
+  useEffect(() => {
+    let active = true
+    Promise.all([getSavedProfile(), getOwnApplication(jobGuid)]).then(([saved, existing]) => {
+      if (!active) return
+      if (existing) { setProfileState('existing'); return }
+      setProfile(saved)
+      setProfileState('ready')
+      if (!saved) setChoice('UPDATE_PROFILE')
+    }).catch(() => { if (active) setProfileState('error') })
+    return () => { active = false }
+  }, [jobGuid])
+
+  const chooseReview = () => {
+    if (profile) setCandidateData({ ...profile,
+      industriaInteresse: profile.industriaInteresse?.map(String),
+      areaPreferencia: profile.areaPreferencia?.map(String),
+      lgpdAccepted: !profile.lgpdRenewalRequired,
+      compartilhamentoAccepted: false, pretensaoSalarial: '', mensagemEmpresa: '' })
+    setChoice('UPDATE_PROFILE')
+    setCurrentStep(1)
+  }
 
   const updateData = (data: Partial<UserRegistrationData>) => {
     setCandidateData((previous) => ({ ...previous, ...data }))
@@ -69,6 +106,11 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
   }
 
   const handleSubmit = async () => {
+    if (profile && requiresLgpdRenewal(profile) && !lgpdRenewal) {
+      setFeedbackModal({ type: 'error', title: 'Confirme os termos de privacidade',
+        message: 'Seu aceite precisa ser renovado antes de enviar a candidatura.' })
+      return
+    }
     if (cvFile && cvFile.size > 5 * 1024 * 1024) {
       setCvError("O arquivo excede o limite de 5 MB.")
       return
@@ -76,11 +118,17 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
     setIsSubmitting(true)
 
     try {
-      await submitCandidateProfile({
-        ...candidateData,
-        guid_id: crypto.randomUUID(),
-        guid_vaga: jobGuid,
-      } as UserRegistrationData & { guid_id: string; guid_vaga: string }, cvFile ?? undefined)
+      const cv = cvFile ? await uploadProfileCv(cvFile) : undefined
+      await sendApplication({ guid_vaga: jobGuid, mode: choice || 'UPDATE_PROFILE',
+        ...(profile ? { profileVersion: profile.version } : {}),
+        ...(choice === 'UPDATE_PROFILE' ? { profile: profileFromForm(candidateData) } : {}),
+        application: {
+          mensagemEmpresa: choice === 'USE_SAVED_PROFILE' ? message : candidateData.mensagemEmpresa || '',
+          pretensaoSalarial: choice === 'USE_SAVED_PROFILE' ? salary : candidateData.pretensaoSalarial || '',
+          compartilhamentoAccepted: choice === 'USE_SAVED_PROFILE' ? sharing : candidateData.compartilhamentoAccepted === true,
+          lgpdAccepted: profile ? lgpdRenewal : candidateData.lgpdAccepted === true,
+          cvAction: cvFile ? 'REPLACE' : cvAction, ...(cv ? { cv } : {}),
+        } })
       setFeedbackModal({
         type: "success",
         title: "Candidatura enviada com sucesso!",
@@ -106,9 +154,9 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
     if (wasSuccessful) router.push("/jobs/list")
   }
 
-  if (jobAvailability !== "open") {
+  if (jobAvailability !== "open" || profileState !== 'ready') {
     return <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-4 bg-white p-8 text-center">
-      <h1 className="text-2xl font-semibold text-slate-950">{jobAvailability === "loading" ? "Verificando vaga..." : jobAvailability === "closed" ? "Vaga encerrada" : "Não foi possível verificar a vaga"}</h1>
+      <h1 className="text-2xl font-semibold text-slate-950">{jobAvailability === 'closed' ? 'Vaga encerrada' : profileState === 'existing' ? 'Você já se candidatou a esta vaga' : jobAvailability === 'error' || profileState === 'error' ? 'Não foi possível carregar a candidatura' : 'Carregando candidatura...'}</h1>
       <p className="text-slate-600">{jobAvailability === "closed" ? "Esta vaga não está mais recebendo candidaturas." : jobAvailability === "error" ? "Volte à lista de vagas e tente novamente." : "Aguarde enquanto confirmamos se a vaga está aberta."}</p>
       <Link href="/jobs/list" className="rounded-full bg-[#FF6B00] px-5 py-3 font-semibold text-white">Voltar para vagas</Link>
     </main>
@@ -136,6 +184,37 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
           </p>
         </section>
 
+        {profile && !choice ? <section className="rounded-[2rem] border border-slate-200 bg-white p-8">
+          <h2 className="text-2xl font-semibold">Seu perfil salvo</h2>
+          <p className="mt-2">{profile.nome} · {profile.contato}</p>
+          <p className="mt-2">{profile.experiencia} · {profile.cv?.filename || 'Sem CV salvo'}</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button onClick={() => setChoice('USE_SAVED_PROFILE')}>Usar informações salvas</Button>
+            <Button variant="outline" onClick={chooseReview}>Revisar e alterar</Button>
+          </div>
+        </section> : null}
+        {choice === 'USE_SAVED_PROFILE' ? <section className="space-y-5 rounded-[2rem] border border-slate-200 bg-white p-8">
+          <h2 className="text-2xl font-semibold">Revise esta candidatura</h2>
+          <label className="block">Pretensão salarial da vaga<input className="mt-1 w-full rounded border p-2" value={salary} onChange={event => setSalary(event.target.value)} /></label>
+          <label className="block">Mensagem para a empresa<textarea className="mt-1 w-full rounded border p-2" value={message} onChange={event => setMessage(event.target.value)} /></label>
+          <label className="block">Currículo<select className="mt-1 w-full rounded border p-2" value={cvAction} onChange={event => setCvAction(event.target.value as CvAction)}>
+            <option value="KEEP">Manter CV do perfil</option><option value="REMOVE">Enviar sem CV</option>
+          </select></label>
+          <label className="block">Substituir CV<input type="file" accept=".pdf,.doc,.docx" onChange={event => setCvFile(event.target.files?.[0] || null)} /></label>
+          {requiresLgpdRenewal(profile) ? <label className="flex gap-2"><input type="checkbox" checked={lgpdRenewal} onChange={event => setLgpdRenewal(event.target.checked)} />Aceito novamente os termos de privacidade.</label> : null}
+          <label className="flex gap-2"><input type="checkbox" checked={sharing} onChange={event => setSharing(event.target.checked)} />Confirmo o compartilhamento dos meus dados para esta candidatura.</label>
+          <Button disabled={isSubmitting || !salary.trim() || !sharing || (requiresLgpdRenewal(profile) && !lgpdRenewal)} onClick={handleSubmit}>{isSubmitting ? 'Enviando...' : 'Enviar candidatura'}</Button>
+        </section> : null}
+        {choice === 'UPDATE_PROFILE' && review ? <section className="space-y-4 rounded-[2rem] border border-slate-200 bg-white p-8">
+          <h2 className="text-2xl font-semibold">Revisão final</h2>
+          <p>{candidateData.nome} · {candidateData.contato}</p><p>Pretensão salarial: {candidateData.pretensaoSalarial}</p>
+          <p>CV: {cvAction === 'REMOVE' && !cvFile ? 'Sem CV nesta candidatura' : cvFile?.name || profile?.cv?.filename || 'Sem CV'}</p>
+          <p>Compartilhamento confirmado: {candidateData.compartilhamentoAccepted ? 'Sim' : 'Não'}</p>
+          {profile && requiresLgpdRenewal(profile) ? <label className="flex gap-2"><input type="checkbox" checked={lgpdRenewal} onChange={event => setLgpdRenewal(event.target.checked)} />Aceito novamente os termos de privacidade.</label> : null}
+          <Button variant="outline" onClick={() => setReview(false)}>Voltar e alterar</Button>
+          <Button disabled={isSubmitting} onClick={handleSubmit}>{isSubmitting ? 'Enviando...' : 'Confirmar candidatura'}</Button>
+        </section> : null}
+        {choice === 'UPDATE_PROFILE' && !review ? <>
         <section className="rounded-[2rem] border border-slate-200 bg-white px-5 py-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] md:px-8">
           <ProgressIndicator
             currentStep={currentStep}
@@ -155,9 +234,11 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
         {currentStep === 3 ? (
           <UserRegistrationPreferencesStep data={candidateData} onUpdate={updateData} onNext={nextStep} onBack={prevStep} />
         ) : null}
-        {currentStep === 4 ? (
-          <UserRegistrationCvStep isSubmitting={isSubmitting} onSubmit={handleSubmit} onBack={prevStep} file={cvFile} onFileChange={(file) => { setCvError(null); if (file && file.size > 5 * 1024 * 1024) { setCvFile(null); setCvError("O arquivo excede o limite de 5 MB."); return } if (file && !/\.(pdf|docx?)$/i.test(file.name)) { setCvFile(null); setCvError("Formato inválido. Envie PDF, DOCX ou DOC."); return } setCvFile(file) }} error={cvError} />
-        ) : null}
+        {currentStep === 4 ? (<>
+          {profile?.cv ? <label className="block rounded-lg bg-white p-4">CV salvo: {profile.cv.filename}<select className="ml-3 rounded border p-2" value={cvAction} onChange={event => setCvAction(event.target.value as CvAction)}><option value="KEEP">Manter</option><option value="REMOVE">Enviar sem CV</option></select></label> : null}
+          <UserRegistrationCvStep isSubmitting={isSubmitting} onSubmit={() => setReview(true)} onBack={prevStep} file={cvFile} onFileChange={(file) => { setCvError(null); if (file && file.size > 5 * 1024 * 1024) { setCvFile(null); setCvError("O arquivo excede o limite de 5 MB."); return } if (file && !/\.(pdf|docx?)$/i.test(file.name)) { setCvFile(null); setCvError("Formato inválido. Envie PDF, DOCX ou DOC."); return } setCvFile(file) }} error={cvError} />
+        </>) : null}
+        </> : null}
       </main>
 
       {feedbackModal ? (

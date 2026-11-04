@@ -109,10 +109,15 @@ export function LoginPage() {
     if (!email || !password) return notice('Preencha e-mail e senha.', true)
     if (!client) return notice('Supabase não configurado.', true)
     setBusy(true)
-    const { error: signInError } = await client.auth.signInWithPassword({ email, password })
-    if (signInError) notice(signInError.message, true)
-    else await finishSignIn()
-    setBusy(false)
+    try {
+      const { error: signInError } = await client.auth.signInWithPassword({ email, password })
+      if (signInError) notice(signInError.message, true)
+      else await finishSignIn()
+    } catch {
+      notice('Não foi possível entrar. Tente novamente.', true)
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function register(event: FormEvent) {
@@ -196,12 +201,16 @@ export function LoginPage() {
       {screen === 'login' && <>
         <h1 className="text-center text-3xl font-bold">Cluster</h1>
         <p className="mb-7 mt-1 text-center text-slate-600">Entre na sua conta</p>
-        <form onSubmit={login}>
+        <form onSubmit={login} aria-busy={busy}>
           <label htmlFor="login-email" className="mb-1 block text-sm font-semibold">E-mail</label>
           <input id="login-email" type="email" autoComplete="email" className={inputClass} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="seu@email.com" />
           <label htmlFor="login-password" className="mb-1 mt-4 block text-sm font-semibold">Senha</label>
           <input id="login-password" type="password" autoComplete="current-password" className={inputClass} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Sua senha" />
-          <button className={primaryClass} disabled={busy}>Entrar</button>
+          <button className={`${primaryClass} flex items-center justify-center gap-2`} disabled={busy}>
+            {busy && <span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />}
+            <span>{busy ? 'Entrando...' : 'Entrar'}</span>
+          </button>
+          {busy && <p className="sr-only" role="status" aria-live="polite">Validando seus dados de acesso.</p>}
         </form>
         <button type="button" className="mt-4 w-full text-sm text-[#C44E00] hover:text-[#E55F00]" onClick={sendRecovery} disabled={busy}>Esqueci minha senha</button>
         <Divider />

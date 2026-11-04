@@ -22,8 +22,14 @@ async function selectMultipleOptions(page: Page, id: string, labels: string[]) {
   await page.keyboard.press("Escape")
 }
 
+async function mockEmptyCandidateProfile(page: Page) {
+  await page.route('**/api/candidates/me/profile', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"data":null}' }))
+  await page.route('**/api/candidates/me/applications?*', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"data":null}' }))
+}
+
 test("opens the candidate registration flow", async ({ page }) => {
   await signIn(page, 'candidate')
+  await mockEmptyCandidateProfile(page)
   await page.route("**/api/jobs/e2e-job", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { status: "Aberto" } }) }))
   await page.goto("/candidaturas?vagaGuid=e2e-job")
   await page.waitForLoadState('networkidle')
@@ -67,6 +73,7 @@ test("limits vacancy team selection to three teams from the selected area", asyn
 test("allows five sectors and three preferred seniorities in candidate preferences", async ({ page }) => {
   test.setTimeout(60_000)
   await signIn(page, 'candidate')
+  await mockEmptyCandidateProfile(page)
 
   await page.route("**/api/zips/01001000", async (route) => {
     await route.fulfill({
@@ -145,11 +152,13 @@ test("allows five sectors and three preferred seniorities in candidate preferenc
   await expect(page.getByText('cv-e2e.pdf')).toBeVisible()
   let uploaded = false
   let candidatePayload: Record<string, unknown> | null = null
-  await page.route('**/api/candidates/cv-upload', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { uploadUrl: 'http://localhost:3000/e2e-s3-upload', key: 'cvs/candidate/e2e.pdf' } }) }))
+  await page.route('**/api/candidates/me/cv-upload', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { uploadUrl: 'http://localhost:3000/e2e-s3-upload', key: 'cvs/candidate/profile/e2e.pdf' } }) }))
   await page.route('**/e2e-s3-upload', async route => { uploaded = route.request().method() === 'PUT'; await route.fulfill({ status: 200, body: '' }) })
-  await page.route('**/api/candidates', async route => { candidatePayload = route.request().postDataJSON() as Record<string, unknown>; await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ data: { id: 'e2e-candidate' } }) }) })
+  await page.route('**/api/candidates/applications', async route => { candidatePayload = route.request().postDataJSON() as Record<string, unknown>; await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ data: { id: 'e2e-candidate' } }) }) })
   await page.getByRole('button', { name: 'Enviar candidatura' }).click()
+  await expect(page.getByRole('heading', { name: 'Revisão final' })).toBeVisible()
+  await page.getByRole('button', { name: 'Confirmar candidatura' }).click()
   await expect(page.getByRole('heading', { name: 'Candidatura enviada com sucesso!' })).toBeVisible()
   expect(uploaded).toBe(true)
-  expect((candidatePayload as Record<string, unknown> | null)?.cv).toMatchObject({ filename: 'cv-e2e.pdf', key: 'cvs/candidate/e2e.pdf', size: 12 })
+  expect((candidatePayload as Record<string, unknown> | null)?.application).toMatchObject({ cvAction: 'REPLACE', cv: { filename: 'cv-e2e.pdf', key: 'cvs/candidate/profile/e2e.pdf', size: 12 } })
 })
