@@ -155,11 +155,17 @@ compativel com o endpoint `/_vercel/insights/script.js`.
 ## Observacoes atuais
 
 - O quadro de candidaturas em `/empresa/candidaturas` permite mover candidatos entre etapas e persiste a mudanca via `PUT /api/candidates/:id`.
-- A candidatura gera `guid_id` no front e envia `guid_vaga` junto com os dados completos do perfil; nenhum CNPJ aleatório é gerado.
-- As guardas de tipo cobrem paginas e handlers Next.js. A API ATS externa ainda nao verifica o JWT Supabase e pode ser chamada diretamente; integrar sua autorizacao fica para outra etapa.
+- A candidatura usa `/api/candidates/applications`; a API gera o ID, vincula o `sub` autenticado e guarda um snapshot dos dados enviados.
+- As guardas de tipo cobrem páginas e handlers Next.js. A API ATS também verifica o token e a propriedade da vaga nas rotas privadas.
 
 ## Ambiente local integrado para desenvolvedores e Codex
 
 Com o backend na pasta irmã `../lambda-api-next`, execute `npm run dev:local` para subir front, API e autenticação simulada, sem Supabase/AWS reais. Escolha empresa ou candidato na barra amarela. Os dados e currículos são fictícios e persistidos localmente.
 
 Veja [o guia do harness](docs/LOCAL_HARNESS.md). Copie [AGENTS.parent.md](docs/AGENTS.parent.md) para a pasta pai com o nome `AGENTS.md` e abra essa pasta no Codex. `npm run local:doctor` verifica os serviços, `npm run local:reset` restaura os dados com os serviços parados e `npm run test:e2e:local` executa os testes integrados.
+
+## Perfil reutilizável na candidatura
+
+Em `/candidaturas?vagaGuid=<id>`, o candidato autenticado consulta o próprio perfil e verifica se já se candidatou à vaga. Na primeira candidatura preenche o formulário completo. Nas seguintes pode usar as informações salvas ou revisar e alterar o perfil. Uma revisão final antecede o envio. A pretensão salarial e a mensagem são informadas para cada vaga; o compartilhamento deve ser confirmado novamente em toda candidatura. O aceite LGPD permanece válido por 21 dias e é solicitado de novo após esse prazo.
+
+O CV pode ser mantido, substituído por um novo upload ou omitido somente na candidatura atual. Omitir não remove o CV salvo no perfil. Candidaturas anteriores preservam os dados e o CV do momento do envio. Os proxies autenticados são `GET/PUT /api/candidates/me/profile`, `POST /api/candidates/me/cv-upload`, `GET /api/candidates/me/applications` e `POST /api/candidates/applications`. Uma vaga encerrada ou candidatura duplicada impede novo envio.

@@ -38,7 +38,7 @@ npm run test:e2e:local
 npm run test:e2e:local -- api.spec.ts
 ```
 
-O E2E integrado sobe os dois repositórios e auth local em portas 3100/3101/54330, com dados isolados em `.harness/e2e` no backend. O cenário de interface cria vaga, preenche candidatura, envia CV, salva anotação, consulta status e recupera arquivo pelos serviços locais. O cenário HTTP valida sessões, páginas renderizadas, integração e permissões sem exigir navegador.
+O E2E integrado sobe os dois repositórios e auth local em portas 3100/3101/54330, com dados isolados em `.harness/e2e` no backend. `profile-reuse.spec.ts` valida no navegador o formulário vazio sem perfil, a revisão preenchida, a reutilização do perfil salvo, o envio e o bloqueio de candidatura duplicada. O banco JSON também armazena perfis com versão, data do aceite LGPD e CV atual; cada candidatura mantém seu snapshot. `REMOVE` envia sem CV somente naquela candidatura.
 
 O modo local é recusado no build de produção, no Lambda handler e em runtimes hospedados. Os handlers `/api/local/*` ficam indisponíveis no modo normal. O simulador não é um servidor de identidade para uso público. Não configure `HARNESS_MODE=local` em Netlify/AWS/Vercel.
 
