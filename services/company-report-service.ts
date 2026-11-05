@@ -28,7 +28,7 @@ async function fetchJobsPage(lastKey?: string): Promise<JobsPage> {
     params.set("lastKey", lastKey)
   }
 
-  const response = await fetch(`/api/jobs?${params.toString()}`, {
+  const response = await fetch(`/api/jobs/mine?${params.toString()}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",

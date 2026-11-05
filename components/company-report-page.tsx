@@ -300,7 +300,7 @@ export function CompanyReportPage() {
           jobs: [],
           candidates: [],
           status: "error",
-          error: error instanceof Error ? error.message : "Nao foi possivel carregar o relatorio no momento.",
+          error: "Não foi possível carregar o relatório das suas vagas agora. Atualize a página para tentar novamente.",
         })
       }
     }
