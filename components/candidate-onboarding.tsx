@@ -42,7 +42,7 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
   const [feedbackModal, setFeedbackModal] = useState<SubmissionFeedback | null>(null)
   const [cvFile, setCvFile] = useState<File | null>(null)
   const [cvError, setCvError] = useState<string | null>(null)
-  const [jobAvailability, setJobAvailability] = useState<"loading" | "open" | "closed" | "error">("loading")
+  const [jobAvailability, setJobAvailability] = useState<"loading" | "open" | "closed" | "not-found" | "error">("loading")
   const [profile, setProfile] = useState<SavedProfile | null>(null)
   const [profileState, setProfileState] = useState<'loading' | 'ready' | 'existing' | 'error'>('loading')
   const [choice, setChoice] = useState<'USE_SAVED_PROFILE' | 'UPDATE_PROFILE' | null>(null)
@@ -57,6 +57,7 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
     let active = true
     fetch(`/api/jobs/${encodeURIComponent(jobGuid)}`, { cache: "no-store" })
       .then(async (response) => {
+        if (response.status === 404) { if (active) setJobAvailability("not-found"); return }
         if (!response.ok) throw new Error("job lookup failed")
         const payload = await response.json() as { data?: { status?: string } }
         if (active) setJobAvailability(payload.data?.status === "Encerrada" ? "closed" : "open")
@@ -140,7 +141,7 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
         type: "error",
         title: "Não foi possível enviar sua candidatura",
         message: error instanceof Error
-          ? error.message
+          ? "Revise os dados do seu perfil e tente novamente. Se o problema continuar, tente mais tarde."
           : "Não foi possível enviar seus dados. Tente novamente em instantes.",
       })
     } finally {
@@ -156,8 +157,8 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
 
   if (jobAvailability !== "open" || profileState !== 'ready') {
     return <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-4 bg-white p-8 text-center">
-      <h1 className="text-2xl font-semibold text-slate-950">{jobAvailability === 'closed' ? 'Vaga encerrada' : profileState === 'existing' ? 'Você já se candidatou a esta vaga' : jobAvailability === 'error' || profileState === 'error' ? 'Não foi possível carregar a candidatura' : 'Carregando candidatura...'}</h1>
-      <p className="text-slate-600">{jobAvailability === "closed" ? "Esta vaga não está mais recebendo candidaturas." : jobAvailability === "error" ? "Volte à lista de vagas e tente novamente." : "Aguarde enquanto confirmamos se a vaga está aberta."}</p>
+      <h1 className="text-2xl font-semibold text-slate-950">{jobAvailability === 'closed' ? 'Vaga encerrada' : jobAvailability === 'not-found' ? 'Vaga n\u00e3o encontrada' : profileState === 'existing' ? 'Voc\u00ea j\u00e1 se candidatou a esta vaga' : jobAvailability === 'error' || profileState === 'error' ? 'N\u00e3o foi poss\u00edvel carregar a candidatura' : 'Carregando candidatura...'}</h1>
+      <p className="text-slate-600">{jobAvailability === "closed" ? "Esta vaga n\u00e3o est\u00e1 mais recebendo candidaturas." : jobAvailability === "not-found" ? "Esta vaga n\u00e3o est\u00e1 dispon\u00edvel. Volte \u00e0 lista para escolher outra oportunidade." : profileState === 'existing' ? "Seu cadastro para esta vaga j\u00e1 foi recebido." : jobAvailability === "error" || profileState === 'error' ? "Ocorreu uma falha ao consultar os dados. Volte \u00e0 lista de vagas e tente novamente." : "Aguarde enquanto confirmamos se a vaga est\u00e1 aberta."}</p>
       <Link href="/jobs/list" className="rounded-full bg-[#FF6B00] px-5 py-3 font-semibold text-white">Voltar para vagas</Link>
     </main>
   }
