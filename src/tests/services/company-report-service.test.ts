@@ -40,12 +40,12 @@ describe("fetchCompanyReportData", () => {
 
     const result = await fetchCompanyReportData()
 
-    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/jobs?limit=50", {
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/jobs/mine?limit=50", {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       cache: "no-store",
     })
-    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/jobs?limit=50&lastKey=cursor-1", {
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/jobs/mine?limit=50&lastKey=cursor-1", {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       cache: "no-store",

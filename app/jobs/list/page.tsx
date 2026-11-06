@@ -1,5 +1,6 @@
 import { PublicJobsBoard } from "@/components/public-jobs-board"
 import { getVerifiedClaims } from "@/lib/auth/supabase-server"
+import { accountTypeFromClaims } from '@/lib/auth/supabase'
 
 export default async function JobsListPage({
   searchParams,
@@ -13,5 +14,5 @@ export default async function JobsListPage({
     ? userMetadata.full_name.trim()
     : typeof claims?.email === "string" ? claims.email : null
 
-  return <PublicJobsBoard authenticatedUser={displayName} notice={notice === "select-job" ? "select-job" : null} />
+  return <PublicJobsBoard authenticatedUser={displayName} isCandidate={claims ? accountTypeFromClaims(claims) === 'CANDIDATE' : false} notice={notice === "select-job" ? "select-job" : null} />
 }

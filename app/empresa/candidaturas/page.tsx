@@ -3,5 +3,5 @@ import { requireAccountType } from '@/lib/auth/supabase-server'
 
 export default async function CompanyApplicationsRoute() {
   const claims = await requireAccountType('COMPANY')
-  return <CompanyApplicationsPage companyUserId={claims.sub} />
+  return <CompanyApplicationsPage companyUserId={claims.sub} accountLabel={claims.email || 'Conta da empresa'} />
 }

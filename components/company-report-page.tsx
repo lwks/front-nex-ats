@@ -15,6 +15,7 @@ type CompanyReportState = {
 }
 
 export type CompanyReportViewProps = {
+  accountLabel?: string
   metrics: AtsReportMetrics
   jobOptions: Array<{ jobGuid: string; title: string }>
   selectedJobGuid: string
@@ -156,6 +157,7 @@ function ReportChartCard({
 }
 
 export function CompanyReportView({
+  accountLabel,
   metrics,
   jobOptions,
   selectedJobGuid,
@@ -171,6 +173,7 @@ export function CompanyReportView({
 
       <main className="min-w-0 flex-1">
         <header className="border-b border-slate-200 bg-white px-6 py-6">
+          <div className="mb-4 flex justify-end gap-4 text-sm"><span aria-label="Conta da empresa">{accountLabel || 'Conta da empresa'}</span><a href="/api/auth/logout" className="text-orange-700">Sair</a></div>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#FF6B00]">ATS • Relatorio</p>
@@ -265,7 +268,7 @@ export function CompanyReportView({
   )
 }
 
-export function CompanyReportPage() {
+export function CompanyReportPage({ accountLabel }: { accountLabel?: string }) {
   const [selectedJobGuid, setSelectedJobGuid] = useState("")
   const [state, setState] = useState<CompanyReportState>({
     jobs: [],
@@ -323,6 +326,7 @@ export function CompanyReportPage() {
 
   return (
     <CompanyReportView
+      accountLabel={accountLabel}
       metrics={metrics}
       jobOptions={jobOptions}
       selectedJobGuid={selectedJobGuid}
