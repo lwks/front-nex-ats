@@ -47,6 +47,7 @@ export type CompanyApplicationsJob = JobCard & {
 }
 
 export type CompanyApplicationsViewProps = {
+  accountLabel?: string
   jobs: CompanyApplicationsJob[]
   filteredJobs: CompanyApplicationsJob[]
   visibleJobs: CompanyApplicationsJob[]
@@ -352,6 +353,7 @@ function MetricCard({
 }
 
 export function CompanyApplicationsView({
+  accountLabel,
   jobs,
   filteredJobs,
   visibleJobs,
@@ -393,6 +395,7 @@ export function CompanyApplicationsView({
                 Acompanhe candidatos por vaga com notas e visao detalhada do processo.
               </p>
             </div>
+            <div className="flex items-center gap-4 text-sm"><span className="max-w-52 truncate font-medium text-slate-700" aria-label="Conta da empresa">{accountLabel || 'Conta da empresa'}</span><a href="/api/auth/logout" className="text-orange-700 hover:underline">Sair</a></div>
           </div>
         </header>
 
@@ -598,7 +601,7 @@ export function CompanyApplicationsView({
   )
 }
 
-export function CompanyApplicationsPage({ companyUserId }: { companyUserId: string }) {
+export function CompanyApplicationsPage({ companyUserId, accountLabel }: { companyUserId: string; accountLabel?: string }) {
   const [selectedCandidate, setSelectedCandidate] = useState<Application | null>(null)
   const [selectedJobGuid, setSelectedJobGuid] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
@@ -892,6 +895,7 @@ export function CompanyApplicationsPage({ companyUserId }: { companyUserId: stri
   return (
     <>
       <CompanyApplicationsView
+        accountLabel={accountLabel}
         jobs={jobs}
         filteredJobs={filteredJobs}
         visibleJobs={visibleJobs}
@@ -1095,6 +1099,7 @@ export function CompanyApplicationsPage({ companyUserId }: { companyUserId: stri
                 </button> : <span className="text-sm text-gray-600">Somente leitura: vaga encerrada.</span>}
               </div>
             </div>
+            <div className="mt-5 flex justify-end border-t pt-5"><a href={`/empresa/candidaturas/${encodeURIComponent(hydratedSelectedCandidate.recordId ?? hydratedSelectedCandidate.id)}`} className="rounded-lg bg-[#FF6B00] px-5 py-3 text-sm font-semibold text-white">Ver mais detalhes</a></div>
           </div>
         </div>
       ) : null}

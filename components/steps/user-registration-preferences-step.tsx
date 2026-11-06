@@ -59,6 +59,7 @@ function formatCurrencyInput(rawValue: string) {
 
 type UserRegistrationPreferencesStepProps = {
   data: Partial<UserRegistrationData>
+  profileMode?: boolean
   onBack: () => void
   onNext: () => void
   onUpdate: (data: Partial<UserRegistrationData>) => void
@@ -66,6 +67,7 @@ type UserRegistrationPreferencesStepProps = {
 
 export function UserRegistrationPreferencesStep({
   data,
+  profileMode = false,
   onBack,
   onNext,
   onUpdate,
@@ -139,9 +141,9 @@ export function UserRegistrationPreferencesStep({
     formData.softSkills.length > 0 &&
     formData.softSkills.length <= MAX_SKILL_SELECTIONS &&
     Boolean(formData.viagemTrabalho) &&
-    Boolean(formData.pretensaoSalarial.trim()) &&
+    (profileMode || Boolean(formData.pretensaoSalarial.trim())) &&
     Boolean(formData.sobreVoce.trim()) &&
-    formData.compartilhamentoAccepted
+    (profileMode || formData.compartilhamentoAccepted)
 
   const contractError =
     touched.tipoContratacao && formData.tipoContratacao.length === 0
@@ -421,7 +423,8 @@ export function UserRegistrationPreferencesStep({
             {travelError ? <p className="text-xs text-destructive">{travelError}</p> : null}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="pretensaoSalarial">Pretensao salarial</Label>
+            {!profileMode ? <Label htmlFor="pretensaoSalarial">Pretensao salarial</Label> : null}
+            {!profileMode ? <>
             <Input
               id="pretensaoSalarial"
               inputMode="numeric"
@@ -438,6 +441,7 @@ export function UserRegistrationPreferencesStep({
               aria-invalid={salaryError ? "true" : "false"}
             />
             {salaryError ? <p className="text-xs text-destructive">{salaryError}</p> : null}
+            </> : null}
           </div>
         </div>
 
@@ -499,7 +503,7 @@ export function UserRegistrationPreferencesStep({
           {summaryError ? <p className="text-xs text-destructive">{summaryError}</p> : null}
         </div>
 
-        <div className="space-y-2">
+        {!profileMode ? <div className="space-y-2">
           <Label htmlFor="mensagemEmpresa">Mensagem para empresa/gestor</Label>
           <textarea
             id="mensagemEmpresa"
@@ -507,9 +511,9 @@ export function UserRegistrationPreferencesStep({
             onChange={(event) => setFormData({ ...formData, mensagemEmpresa: event.target.value })}
             className="border-input focus-visible:border-ring focus-visible:ring-ring/50 min-h-28 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
           />
-        </div>
+        </div> : null}
 
-        <div
+        {!profileMode ? <div
           className={cn(
             "flex items-start gap-4 rounded-xl border-2 p-4 transition",
             formData.compartilhamentoAccepted
@@ -537,7 +541,7 @@ export function UserRegistrationPreferencesStep({
             </p>
             {shareError ? <p className="text-xs text-destructive">{shareError}</p> : null}
           </div>
-        </div>
+        </div> : null}
 
         <div className="flex gap-4 pt-2">
           <Button type="button" variant="outline" onClick={onBack} className="flex-1 rounded-full bg-transparent" size="lg">

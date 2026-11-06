@@ -24,6 +24,19 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export function getSavedProfile() { return request<SavedProfile | null>('/api/candidates/me/profile') }
+export function saveCandidateProfile(body: { version?: number; profile: ReturnType<typeof profileFromForm>;
+  lgpdAccepted: boolean; cvAction: CvAction; cv?: SavedProfile['cv'] }) {
+  return request<SavedProfile>('/api/candidates/me/profile', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  })
+}
+export function getOwnProfileCvDownloadUrl() {
+  return request<{ downloadUrl: string }>('/api/candidates/me/cv-download').then(result => {
+    const url = new URL(result.downloadUrl)
+    if (!['http:', 'https:'].includes(url.protocol)) throw new Error('A API retornou um link de CV inválido.')
+    return result.downloadUrl
+  })
+}
 export function getOwnApplication(jobGuid: string) {
   return request<{ guid_id: string } | null>(`/api/candidates/me/applications?guid_vaga=${encodeURIComponent(jobGuid)}`)
 }

@@ -67,7 +67,9 @@ Importante: nao versione segredos reais em `.env.local`.
 - `/jobs/list`: vagas publicas com filtros e links de candidatura; mostra nome ou e-mail e opcao de sair quando autenticado
 - `/candidaturas`: candidatura completa de Candidato autenticado em 4 etapas; exige `?vagaGuid=...` e retorna à listagem com orientação quando a vaga não foi informada
 - `/jobs/create`: formulario de criacao de vaga para Empresa autenticada, com seletores de Area, Time, Senioridade, Setor, experiencia, beneficios e skills; localizacao por cidade e estado informados manualmente
+- `/meu-perfil`: edição do perfil reutilizável pelo Candidato autenticado, incluindo dados pessoais, profissionais, preferências, indicações e CV salvo
 - `/empresa/candidaturas`: quadro ATS de candidaturas por vaga para Empresa autenticada, com card "Nova vaga" para abrir o formulario
+- `/empresa/candidaturas/:id`: detalhes de uma candidatura da vaga da Empresa autenticada, com o retrato dos dados enviados, indicações, etapa, anotações e CV
 - `/empresa/relatorio`: indicadores operacionais para Empresa autenticada
 
 ## Endpoints externos esperados (backend ATS)

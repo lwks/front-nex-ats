@@ -10,6 +10,7 @@ export default defineConfig([
     '.next-harness/**',
     '.next-e2e/**',
     '.next-verify/**',
+    '.next-production-local/**',
     'out/**',
     'build/**',
     'next-env.d.ts',

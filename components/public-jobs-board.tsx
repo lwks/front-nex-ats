@@ -42,6 +42,7 @@ const HOW_IT_WORKS = [
 
 export type PublicJobsBoardViewProps = {
   authenticatedUser?: string | null
+  isCandidate?: boolean
   notice?: "select-job" | null
   jobs: JobBoardJob[]
   query: string
@@ -64,11 +65,13 @@ export function PublicJobsBoard({
   initialJobs,
   initialLastKey = null,
   authenticatedUser = null,
+  isCandidate = false,
   notice = null,
 }: {
   initialJobs?: JobBoardJob[]
   initialLastKey?: string | null
   authenticatedUser?: string | null
+  isCandidate?: boolean
   notice?: "select-job" | null
 }) {
   const resolvedInitialJobs = initialJobs ?? EMPTY_INITIAL_JOBS
@@ -144,6 +147,7 @@ export function PublicJobsBoard({
   return (
     <PublicJobsBoardView
       authenticatedUser={authenticatedUser}
+      isCandidate={isCandidate}
       notice={notice}
       jobs={jobs}
       query={query}
@@ -162,6 +166,7 @@ export function PublicJobsBoard({
 
 export function PublicJobsBoardView({
   authenticatedUser = null,
+  isCandidate = false,
   notice = null,
   jobs,
   query,
@@ -194,6 +199,8 @@ export function PublicJobsBoardView({
             </div>
           </Link>
 
+          {authenticatedUser && isCandidate ? <Link href="/meu-perfil" className="text-sm font-semibold text-[#C44E00] md:hidden">Meu perfil</Link> : null}
+
           <div className="hidden items-center gap-6 md:flex">
             <nav className="flex items-center gap-6 text-sm font-medium text-slate-600">
               <a href="#vagas" className="transition hover:text-[#FF6B00]">Vagas</a>
@@ -202,6 +209,7 @@ export function PublicJobsBoardView({
             </nav>
             <div className="flex items-center gap-3">
               {authenticatedUser ? <>
+                {isCandidate ? <Link href="/meu-perfil" className="text-sm font-semibold text-[#C44E00] hover:underline">Meu perfil</Link> : null}
                 <span className="max-w-48 truncate text-sm font-semibold text-slate-700" aria-label="Usuário conectado">{authenticatedUser}</span>
                 <a href="/api/auth/logout" className="text-sm text-slate-500 hover:text-slate-900">Sair</a>
               </> : <>

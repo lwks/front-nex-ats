@@ -38,20 +38,30 @@ test('real local services: sessions, pages, CRUD, CV, role checks and doctor', a
   else expect(blockedPage.headers().location).toBe('/jobs/list')
   const registration = await request.get(`/candidaturas?vagaGuid=${jobId}`)
   expect(registration.status()).toBe(200)
-  const candidateId = randomUUID()
   const bytes = Buffer.from('%PDF-1.4 harness integration fixture')
-  const prepare = await request.post('/api/candidates/cv-upload', { data: {
-    candidateId, filename: 'curriculo.pdf', contentType: 'application/pdf', size: bytes.length,
+  const prepare = await request.post('/api/candidates/me/cv-upload', { data: {
+    filename: 'curriculo.pdf', contentType: 'application/pdf', size: bytes.length,
   } })
   expect(prepare.status()).toBe(200)
   const upload = (await prepare.json()).data
   expect(new URL(upload.uploadUrl).origin).toBe('http://localhost:3101')
-  expect((await request.put(upload.uploadUrl, { headers: { 'content-type': 'application/pdf' }, data: bytes })).status()).toBe(200)
-  const candidate = await request.post('/api/candidates', { data: {
-    guid_id: candidateId, guid_vaga: jobId, nome: 'Candidata HTTP', contato: 'candidate@example.com',
-    cv: { key: upload.key, filename: 'curriculo.pdf', contentType: 'application/pdf', size: bytes.length },
+  expect((await request.put(upload.uploadUrl, { headers: { 'content-type': 'application/pdf', 'if-none-match': '*' }, data: bytes })).status()).toBe(200)
+  const profileFields = ['nome', 'documento', 'dataNascimento', 'localResidencia', 'endereco', 'cidade', 'estado',
+    'contatoCel', 'contato', 'empresaAtual', 'senioridade', 'beneficiosAtuais', 'experiencia', 'salarioAtual',
+    'setorAtual', 'timeAtual', 'industriaInteresse', 'hardSkillsProfissionais', 'softSkillsProfissionais',
+    'tipoContratacao', 'modeloTrabalho', 'setor', 'time', 'senioridadePreferencia', 'areaPreferencia',
+    'hardSkills', 'softSkills', 'viagemTrabalho', 'sobreVoce']
+  const arrayFields = new Set(['beneficiosAtuais', 'timeAtual', 'industriaInteresse', 'hardSkillsProfissionais',
+    'softSkillsProfissionais', 'tipoContratacao', 'modeloTrabalho', 'setor', 'time', 'senioridadePreferencia',
+    'areaPreferencia', 'hardSkills', 'softSkills'])
+  const profile = Object.fromEntries(profileFields.map(field => [field, arrayFields.has(field) ? ['3'] : 'Candidata HTTP']))
+  const candidate = await request.post('/api/candidates/applications', { data: {
+    guid_vaga: jobId, mode: 'UPDATE_PROFILE', profile,
+    application: { mensagemEmpresa: 'Interesse na vaga', pretensaoSalarial: '12000', compartilhamentoAccepted: true,
+      lgpdAccepted: true, cvAction: 'REPLACE', cv: { key: upload.key, filename: 'curriculo.pdf', contentType: 'application/pdf', size: bytes.length } },
   } })
   expect(candidate.status()).toBe(201)
+  const candidateId = (await candidate.json()).data.guid_id as string
   expect((await request.get(`/api/candidates/${candidateId}/cv-download`)).status()).toBe(403)
 
   await signIn('COMPANY')

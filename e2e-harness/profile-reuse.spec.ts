@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
+import { randomUUID } from 'node:crypto'
 
-const jobGuid = '11111111-1111-4111-8111-111111111111'
 const arrays = new Set(['beneficiosAtuais', 'timeAtual', 'industriaInteresse', 'hardSkillsProfissionais',
   'softSkillsProfissionais', 'tipoContratacao', 'modeloTrabalho', 'setor', 'time', 'senioridadePreferencia',
   'areaPreferencia', 'idiomas', 'hardSkills', 'softSkills'])
@@ -13,13 +13,14 @@ const fields = ['nome', 'documento', 'dataNascimento', 'localResidencia', 'ender
 test('reuses a saved profile, confirms sharing, and blocks a duplicate application', async ({ page }) => {
   test.setTimeout(120_000)
   await page.goto('/')
+  await page.getByRole('button', { name: 'Entrar como empresa' }).click()
+  const jobGuid = randomUUID()
+  expect((await page.request.post('/api/jobs', { data: { guid_id: jobGuid, titulo: 'Vaga de reutilização', status: 'Aberto' } })).status()).toBe(201)
   await page.getByRole('button', { name: 'Entrar como candidato' }).click()
   await expect(page).toHaveURL(/\/jobs\/list/)
-  await page.goto(`/candidaturas?vagaGuid=${jobGuid}`)
-  await expect(page.getByRole('heading', { name: 'Dados pessoais' })).toBeVisible({ timeout: 30000 })
-  await expect(page.locator('#nome')).toHaveValue('')
-  const profile = Object.fromEntries(fields.map(field => [field, arrays.has(field) ? ['3'] : 'Candidata Local']))
-  const saved = await page.request.put('/api/candidates/me/profile', { data: { profile, lgpdAccepted: true } })
+  const currentProfile = (await (await page.request.get('/api/candidates/me/profile')).json()).data
+  const profile = Object.fromEntries(fields.map(field => [field, field === 'idiomas' ? [] : arrays.has(field) ? ['3'] : 'Candidata Local']))
+  const saved = await page.request.put('/api/candidates/me/profile', { data: { ...(currentProfile ? { version: currentProfile.version } : {}), profile, lgpdAccepted: true } })
   expect(saved.status()).toBe(200)
   expect((await page.request.get(`/api/candidates/me/applications?guid_vaga=${jobGuid}`)).status()).toBe(200)
   expect((await page.request.get(`/api/jobs/${jobGuid}`)).status()).toBe(200)

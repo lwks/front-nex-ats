@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getOwnApplication, getSavedProfile, profileFromForm, sendApplication, uploadProfileCv } from '@/services/candidate-application-service'
+import { getOwnApplication, getOwnProfileCvDownloadUrl, getSavedProfile, profileFromForm, saveCandidateProfile, sendApplication, uploadProfileCv } from '@/services/candidate-application-service'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -44,5 +44,22 @@ describe('candidate application service', () => {
     expect(fetchMock.mock.calls[1][0]).toBe('https://example.test/upload')
     expect(fetchMock.mock.calls[1][1].method).toBe('PUT')
     expect(fetchMock.mock.calls[1][1].headers['If-None-Match']).toBe('*')
+  })
+
+  it('saves profile version and CV choice through the authenticated proxy', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: { version: 3, nome: 'Ana' } }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await saveCandidateProfile({ version: 2, profile: profileFromForm({ nome: 'Ana' }), lgpdAccepted: false, cvAction: 'REMOVE' })).toMatchObject({ version: 3 })
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/candidates/me/profile')
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ version: 2, cvAction: 'REMOVE', profile: { nome: 'Ana' } })
+  })
+
+  it('reports profile version conflicts and validates the own CV download link', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ message: 'stale' }), { status: 409 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { downloadUrl: 'https://example.test/own.pdf' } }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(saveCandidateProfile({ version: 1, profile: profileFromForm({ nome: 'Ana' }), lgpdAccepted: false, cvAction: 'KEEP' })).rejects.toThrow('Recarregue')
+    expect(await getOwnProfileCvDownloadUrl()).toBe('https://example.test/own.pdf')
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/candidates/me/cv-download')
   })
 })

@@ -11,6 +11,24 @@ export async function OPTIONS() {
   return corsOptionsResponse()
 }
 
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  const authorization = await authorizeApiAccountType('COMPANY')
+  if (!authorization.ok) return authorization.response
+  try {
+    const { id } = await context.params
+    const upstream = await fetch(`${CANDIDATES_API_URL}/${encodeURIComponent(id)}`, {
+      headers: { Authorization: `Bearer ${authorization.accessToken}` }, cache: 'no-store',
+    })
+    return new NextResponse(await upstream.text(), { status: upstream.status,
+      headers: { ...CORS_HEADERS, 'Content-Type': upstream.headers.get('Content-Type') ?? 'application/json' } })
+  } catch {
+    return NextResponse.json({ message: 'Não foi possível carregar a candidatura.' }, { status: 503 })
+  }
+}
+
 export async function PUT(
   request: Request,
   context: { params: Promise<{ id: string }> },
