@@ -111,20 +111,19 @@ export function getZipValidationMessage(state: ZipValidationState) {
 }
 
 function isValidBirthDate(value: string) {
-  if (!value) {
-    return false
-  }
-
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
   const parsedDate = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(parsedDate.getTime())) {
-    return false
-  }
+  if (Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== value) return false
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  return parsedDate <= today
+  const currentYear = new Date().getFullYear()
+  const minimumDate = `${String(currentYear - 100).padStart(4, "0")}-01-01`
+  const maximumDate = `${String(currentYear + 100).padStart(4, "0")}-12-31`
+  return value >= minimumDate && value <= maximumDate
 }
+
+const currentYear = new Date().getFullYear()
+const birthDateMin = `${String(currentYear - 100).padStart(4, "0")}-01-01`
+const birthDateMax = `${String(currentYear + 100).padStart(4, "0")}-12-31`
 
 const getDocumentError = (value: string) => {
   if (!value) {
@@ -252,7 +251,7 @@ export function UserRegistrationPersonalStep({
       ? "Informe a data de nascimento."
       : isValidBirthDate(formData.dataNascimento)
         ? ""
-        : "Informe uma data de nascimento valida."
+        : "Informe uma data entre 100 anos antes e 100 anos depois do ano atual."
     newErrors.localResidencia = getZipErrorMessage()
     newErrors.endereco = hasNonEmptyValue(formData.endereco) ? "" : "Informe o endereco."
     newErrors.cidade = hasNonEmptyValue(formData.cidade) ? "" : "Informe a cidade."
@@ -283,7 +282,7 @@ export function UserRegistrationPersonalStep({
             ? "Informe a data de nascimento."
             : isValidBirthDate(value)
               ? ""
-              : "Informe uma data de nascimento valida."
+              : "Informe uma data entre 100 anos antes e 100 anos depois do ano atual."
           break
         }
         case "localResidencia":
@@ -494,6 +493,8 @@ export function UserRegistrationPersonalStep({
             <Input
               id="dataNascimento"
               type="date"
+              min={birthDateMin}
+              max={birthDateMax}
               value={formData.dataNascimento}
               onChange={(event) => {
                 const value = event.target.value
