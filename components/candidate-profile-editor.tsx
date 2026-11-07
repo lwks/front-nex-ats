@@ -101,7 +101,6 @@ export function CandidateProfileEditor() {
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
         if (textFields.has(target.id)) {
           typedFields.current = { ...typedFields.current, [target.id]: target.value }
-          setData(previous => ({ ...previous, [target.id]: target.value }))
         }
       }
     }} onChangeCapture={() => setPending(true)}>
