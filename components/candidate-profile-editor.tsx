@@ -95,7 +95,7 @@ export function CandidateProfileEditor() {
       <Link href="/jobs/list" className="font-medium text-slate-600 hover:text-orange-600">Voltar às vagas</Link>
       <div className="flex items-center gap-4"><span className="font-semibold">Meu perfil</span><a href="/api/auth/logout" className="text-sm text-slate-600">Sair</a></div>
     </div></header>
-    <main className="mx-auto max-w-5xl space-y-6 px-5 py-8" onInputCapture={event => {
+    <main className="mx-auto max-w-5xl space-y-6 px-5 py-8" onInput={event => {
       setPending(true)
       const target = event.target
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
@@ -103,7 +103,7 @@ export function CandidateProfileEditor() {
           typedFields.current = { ...typedFields.current, [target.id]: target.value }
         }
       }
-    }} onChangeCapture={() => setPending(true)}>
+    }} onChange={() => setPending(true)}>
       <div><h1 className="text-3xl font-semibold">Meu perfil</h1><p className="mt-2 text-slate-600">Edite seus dados para usar em futuras candidaturas.</p></div>
       <nav aria-label="Seções do perfil" className="flex flex-wrap gap-2">{steps.map((label, index) =>
         <span key={label} aria-current={step === index ? 'step' : undefined} className={`rounded-full px-4 py-2 text-sm ${step === index ? 'bg-orange-600 text-white' : 'bg-white text-slate-600'}`}>{index + 1}. {label}</span>)}</nav>
