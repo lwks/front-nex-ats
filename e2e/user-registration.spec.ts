@@ -139,8 +139,6 @@ test("allows five sectors and three preferred seniorities in candidate preferenc
   await selectMultipleOptions(page, "modeloTrabalho", ["Remoto"])
   await selectOption(page, "viagemTrabalho", "Sim")
   await page.locator("#pretensaoSalarial").fill("12000")
-  await selectMultipleOptions(page, "hardSkills", ["JavaScript"])
-  await selectMultipleOptions(page, "softSkills", ["Colaboracao"])
   await page.locator("#sobreVoce").fill("Profissional com experiencia em produto e tecnologia.")
   await page.locator("#compartilhamentoAccepted").click()
 

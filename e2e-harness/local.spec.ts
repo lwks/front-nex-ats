@@ -126,8 +126,8 @@ test('full local flow uses both repositories, persists data and keeps permission
   await selectMultipleOptions(page, "modeloTrabalho", ["Remoto"])
   await selectOption(page, "viagemTrabalho", "Sim")
   await page.locator("#pretensaoSalarial").fill("12000")
-  await selectMultipleOptions(page, "hardSkills", ["JavaScript"])
-  await selectMultipleOptions(page, "softSkills", ["Colaboracao"])
+  await expect(page.locator("#hardSkills")).toHaveCount(0)
+  await expect(page.locator("#softSkills")).toHaveCount(0)
   await page.locator("#sobreVoce").fill("Profissional com experiencia em produto e tecnologia.")
   await page.locator("#compartilhamentoAccepted").click()
 
@@ -150,6 +150,7 @@ test('full local flow uses both repositories, persists data and keeps permission
   await profile(page, 'empresa')
   await expect(page.getByText(candidate.nome, { exact: true }).first()).toBeVisible({ timeout: 30_000 })
   await page.getByText(candidate.nome, { exact: true }).first().click()
+  await expect(page.getByRole('button', { name: 'Baixar CV' })).toBeVisible()
   await page.getByPlaceholder('Registre observacoes sobre entrevista, proximos passos, riscos ou destaque do perfil.').fill('Entrevista local confirmada')
   await page.getByRole('button', { name: 'Salvar anotacao', exact: true }).click()
   await expect(page.getByText('Anotacao salva com sucesso.', { exact: true })).toBeVisible({ timeout: 30_000 })

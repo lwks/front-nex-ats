@@ -174,8 +174,6 @@ export function validateUserRegistrationData(data: UserRegistrationData) {
   requireSelection(data.senioridadePreferencia, "Selecione ao menos uma senioridade de preferencia.")
   requireSelection(data.areaPreferencia, "Selecione ao menos uma area de preferencia.")
   requireLanguageSelection(data.idiomas, "Selecione ao menos um idioma.")
-  requireSelection(data.hardSkills, "Selecione ao menos uma hard skill.")
-  requireSelection(data.softSkills, "Selecione ao menos uma soft skill.")
   requireNonEmptyValue(data.viagemTrabalho, "Selecione a disponibilidade para viagem de trabalho.")
   requireNonEmptyValue(data.pretensaoSalarial, "Informe a pretensao salarial.")
   requireNonEmptyValue(data.sobreVoce, "Conte um pouco sobre voce.")
