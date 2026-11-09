@@ -113,6 +113,7 @@ export function CandidateProfileEditor() {
       {step === 3 ? <section className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
         <h2 className="text-2xl font-semibold">Currículo</h2>
         <p className="mt-2 text-slate-600">O CV é opcional. Escolha o que ficará salvo no seu perfil.</p>
+        <p className="mt-4 text-sm text-slate-600">Alterações no CV do perfil valem para futuras candidaturas. Candidaturas já enviadas mantêm o CV escolhido no envio.</p>
         {profile?.cv ? <div className="mt-5 rounded-xl bg-slate-50 p-4"><p>CV salvo: {profile.cv.filename}</p>
           <button type="button" onClick={viewCv} className="mt-2 text-sm font-semibold text-orange-700 underline">Baixar CV salvo</button></div> : <p className="mt-5 text-slate-500">Nenhum CV salvo.</p>}
         {profile?.cv ? <label className="mt-5 block">Ação para o CV salvo

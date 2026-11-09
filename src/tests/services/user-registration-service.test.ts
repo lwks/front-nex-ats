@@ -278,21 +278,9 @@ describe("user-registration-service", () => {
       ),
     ).toThrow("Selecione ao menos uma area de preferencia.")
 
-    expect(() =>
-      validateUserRegistrationData(
-        createInput({
-          hardSkills: [],
-        }),
-      ),
-    ).toThrow("Selecione ao menos uma hard skill.")
+    expect(() => validateUserRegistrationData(createInput({ hardSkills: [] }))).not.toThrow()
 
-    expect(() =>
-      validateUserRegistrationData(
-        createInput({
-          softSkills: [],
-        }),
-      ),
-    ).toThrow("Selecione ao menos uma soft skill.")
+    expect(() => validateUserRegistrationData(createInput({ softSkills: [] }))).not.toThrow()
 
   })
 

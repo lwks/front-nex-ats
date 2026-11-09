@@ -15,10 +15,8 @@ import {
   MAX_AREA_SELECTIONS,
   MAX_PREFERENCE_SENIORITY_SELECTIONS,
   MAX_PREFERENCE_SECTOR_SELECTIONS,
-  MAX_SKILL_SELECTIONS,
   MAX_TEAM_SELECTIONS,
   defaultSeniorityOptions,
-  defaultSoftSkillOptions,
   defaultTravelAvailabilityOptions,
   defaultWorkTypeOptions,
   getTeamOptionsForAreas,
@@ -33,13 +31,11 @@ import { cn } from "@/lib/utils"
 import {
   fetchContractTypeOptions,
   fetchSeniorityOptions,
-  fetchSoftSkillOptions,
   fetchTravelAvailabilityOptions,
   fetchWorkTypeOptions,
 } from "@/services/onboarding-options-service"
 import type { UserRegistrationData } from "@/services/user-registration-service"
 import { useAreaOptions } from "@/hooks/use-area-options"
-import { getHardSkillOptionsForAreas } from "@/services/hard-skills-service"
 
 const BRL_NUMBER_FORMATTER = new Intl.NumberFormat("pt-BR")
 
@@ -94,8 +90,6 @@ export function UserRegistrationPreferencesStep({
     areaPreferencia: false,
     tipoContratacao: false,
     modeloTrabalho: false,
-    hardSkills: false,
-    softSkills: false,
     viagemTrabalho: false,
     pretensaoSalarial: false,
     sobreVoce: false,
@@ -105,12 +99,7 @@ export function UserRegistrationPreferencesStep({
   const [contractTypeOptions, setContractTypeOptions] = useState<OnboardingOption[]>(defaultContractTypeOptions)
   const industryOptions = useAreaOptions()
   const [seniorityOptions, setSeniorityOptions] = useState<OnboardingOption[]>(defaultSeniorityOptions)
-  const [softSkillOptions, setSoftSkillOptions] = useState<OnboardingOption[]>(defaultSoftSkillOptions)
   const [travelOptions, setTravelOptions] = useState<TravelAvailabilityOption[]>(defaultTravelAvailabilityOptions)
-  const hardSkillOptions = useMemo(
-    () => getHardSkillOptionsForAreas(formData.areaPreferencia, industryOptions),
-    [formData.areaPreferencia, industryOptions],
-  )
   const teamOptions = useMemo(
     () => getTeamOptionsForAreas(formData.areaPreferencia, industryOptions),
     [formData.areaPreferencia, industryOptions],
@@ -136,10 +125,6 @@ export function UserRegistrationPreferencesStep({
     formData.areaPreferencia.length <= MAX_AREA_SELECTIONS &&
     formData.tipoContratacao.length > 0 &&
     formData.modeloTrabalho.length > 0 &&
-    formData.hardSkills.length > 0 &&
-    formData.hardSkills.length <= MAX_SKILL_SELECTIONS &&
-    formData.softSkills.length > 0 &&
-    formData.softSkills.length <= MAX_SKILL_SELECTIONS &&
     Boolean(formData.viagemTrabalho) &&
     (profileMode || Boolean(formData.pretensaoSalarial.trim())) &&
     Boolean(formData.sobreVoce.trim()) &&
@@ -176,18 +161,6 @@ export function UserRegistrationPreferencesStep({
         : ""
   const workTypeError =
     touched.modeloTrabalho && formData.modeloTrabalho.length === 0 ? "Selecione ao menos um modelo de trabalho." : ""
-  const hardSkillError =
-    touched.hardSkills && formData.hardSkills.length === 0
-      ? "Selecione ao menos uma hard skill."
-      : touched.hardSkills && formData.hardSkills.length > MAX_SKILL_SELECTIONS
-        ? `Selecione no maximo ${MAX_SKILL_SELECTIONS} hard skills.`
-        : ""
-  const softSkillError =
-    touched.softSkills && formData.softSkills.length === 0
-      ? "Selecione ao menos uma soft skill."
-      : touched.softSkills && formData.softSkills.length > MAX_SKILL_SELECTIONS
-        ? `Selecione no maximo ${MAX_SKILL_SELECTIONS} soft skills.`
-        : ""
   const travelError =
     touched.viagemTrabalho && !formData.viagemTrabalho ? "Selecione a disponibilidade para viagem de trabalho." : ""
   const salaryError =
@@ -202,11 +175,10 @@ export function UserRegistrationPreferencesStep({
     let isMounted = true
 
     const loadOptions = async () => {
-      const [workTypes, contractTypes, seniorities, softSkills, travel] = await Promise.all([
+      const [workTypes, contractTypes, seniorities, travel] = await Promise.all([
         fetchWorkTypeOptions(),
         fetchContractTypeOptions(),
         fetchSeniorityOptions(),
-        fetchSoftSkillOptions(),
         fetchTravelAvailabilityOptions(),
       ])
 
@@ -214,7 +186,6 @@ export function UserRegistrationPreferencesStep({
         setWorkTypeOptions(workTypes)
         setContractTypeOptions(contractTypes)
         setSeniorityOptions(seniorities)
-        setSoftSkillOptions(softSkills)
         setTravelOptions(travel)
       }
     }
@@ -226,18 +197,6 @@ export function UserRegistrationPreferencesStep({
     }
   }, [])
 
-  useEffect(() => {
-    if (industryOptions.length === 0) {
-      return
-    }
-
-    const allowedValues = new Set(hardSkillOptions.map((option) => option.value))
-    setFormData((previous) => ({
-      ...previous,
-      hardSkills: previous.hardSkills.filter((value) => allowedValues.has(value)),
-    }))
-  }, [hardSkillOptions, industryOptions.length])
-
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
     if (!isFormComplete) {
@@ -248,8 +207,6 @@ export function UserRegistrationPreferencesStep({
         areaPreferencia: true,
         tipoContratacao: true,
         modeloTrabalho: true,
-        hardSkills: true,
-        softSkills: true,
         viagemTrabalho: true,
         pretensaoSalarial: true,
         sobreVoce: true,
@@ -267,7 +224,7 @@ export function UserRegistrationPreferencesStep({
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#C44E00]">Cadastro oficial</p>
         <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Preferencias e Perfil</h2>
         <p className="mt-3 text-sm leading-6 text-slate-600">
-          Defina seus modelos de trabalho, habilidades, disponibilidade e sua apresentacao para a empresa.
+          Defina seus modelos de trabalho, disponibilidade e sua apresentacao para a empresa.
         </p>
       </div>
 
@@ -282,12 +239,10 @@ export function UserRegistrationPreferencesStep({
               placeholder="Selecione uma area"
               value={formData.areaPreferencia}
               onChange={(value) => {
-                const allowedValues = new Set(getHardSkillOptionsForAreas(value, industryOptions).map((option) => option.value))
                 setFormData((previous) => ({
                   ...previous,
                   areaPreferencia: value,
                   time: normalizeTeamValueForAreas(previous.time, value, industryOptions),
-                  hardSkills: previous.hardSkills.filter((skill) => allowedValues.has(skill)),
                 }))
                 if (!touched.areaPreferencia) {
                   setTouched((previous) => ({ ...previous, areaPreferencia: true }))
@@ -442,44 +397,6 @@ export function UserRegistrationPreferencesStep({
             />
             {salaryError ? <p className="text-xs text-destructive">{salaryError}</p> : null}
             </> : null}
-          </div>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="hardSkills">Hard Skills</Label>
-            <MultiSelect
-              id="hardSkills"
-              maxSelections={MAX_SKILL_SELECTIONS}
-              options={hardSkillOptions}
-              placeholder={formData.areaPreferencia.length > 0 ? `Selecione ate ${MAX_SKILL_SELECTIONS} hard skills` : "Selecione uma area primeiro"}
-              disabled={hardSkillOptions.length === 0}
-              value={formData.hardSkills}
-              onChange={(value) => {
-                setFormData({ ...formData, hardSkills: value })
-                if (!touched.hardSkills) {
-                  setTouched((previous) => ({ ...previous, hardSkills: true }))
-                }
-              }}
-            />
-            {hardSkillError ? <p className="text-xs text-destructive">{hardSkillError}</p> : null}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="softSkills">Soft Skills</Label>
-            <MultiSelect
-              id="softSkills"
-              maxSelections={MAX_SKILL_SELECTIONS}
-              options={softSkillOptions}
-              placeholder={`Selecione ate ${MAX_SKILL_SELECTIONS} soft skills`}
-              value={formData.softSkills}
-              onChange={(value) => {
-                setFormData({ ...formData, softSkills: value })
-                if (!touched.softSkills) {
-                  setTouched((previous) => ({ ...previous, softSkills: true }))
-                }
-              }}
-            />
-            {softSkillError ? <p className="text-xs text-destructive">{softSkillError}</p> : null}
           </div>
         </div>
 
