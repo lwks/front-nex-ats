@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { normalizeJobBoardJob, type JobBoardJob } from '@/lib/job-board'
+import type { JobBoardJob } from '@/lib/job-board'
+import { fetchPublicJobDetail } from '@/services/public-job-detail-service'
 
 export function PublicJobDetailPage({ guid }: { guid: string }) {
   const [job, setJob] = useState<JobBoardJob | null>(null)
@@ -10,13 +11,9 @@ export function PublicJobDetailPage({ guid }: { guid: string }) {
 
   useEffect(() => {
     const controller = new AbortController()
-    fetch(`/api/jobs/${encodeURIComponent(guid)}`, { signal: controller.signal, cache: 'no-store' })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('not-found')
-        const payload = await response.json()
-        setJob(normalizeJobBoardJob(payload, 0))
-      })
-      .catch((cause) => { if (!controller.signal.aborted) setError(true) })
+    fetchPublicJobDetail(guid, controller.signal)
+      .then(setJob)
+      .catch(() => { if (!controller.signal.aborted) setError(true) })
     return () => controller.abort()
   }, [guid])
 
