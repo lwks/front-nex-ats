@@ -29,7 +29,7 @@ export function LoginPage() {
   const client = useMemo(() => createSupabaseBrowserClient(), [])
 
   const notice = useCallback((value: string, isError = false) => { setMessage(value); setError(isError) }, [])
-  function changeScreen(next: Screen) { setScreen(next); setMessage(''); setRegistrationFeedback(null); setType(null) }
+  function changeScreen(next: Screen) { setScreen(next); setMessage(''); setRegistrationFeedback(null); setType(next === 'register' || next === 'complete' ? 'CANDIDATE' : null) }
   const showRegistrationFeedback = useCallback((value: string, isError = false) => {
     setMessage('')
     setRegistrationFeedback({ type: isError ? 'error' : 'success', message: value })
@@ -122,7 +122,7 @@ export function LoginPage() {
 
   async function register(event: FormEvent) {
     event.preventDefault()
-    if (!type) return showRegistrationFeedback('Selecione Candidato ou Empresa.', true)
+    if (type !== 'CANDIDATE') return showRegistrationFeedback('Cadastro disponível somente para candidatos.', true)
     if (!name || !email || !password || !confirm) return showRegistrationFeedback('Preencha todos os campos.', true)
     if (password !== confirm) return showRegistrationFeedback('As senhas não são iguais.', true)
     if (!client) return showRegistrationFeedback('Supabase não configurado.', true)
@@ -155,7 +155,7 @@ export function LoginPage() {
 
   async function oauth(provider: 'github' | 'linkedin_oidc', registration = false) {
     if (!client) return notice('Supabase não configurado.', true)
-    if (registration && !type) return notice('Selecione Candidato ou Empresa.', true)
+    if (registration && type !== 'CANDIDATE') return notice('Cadastro disponível somente para candidatos.', true)
     if (registration && type) sessionStorage.setItem('cluster_pending_account_type', type)
     else sessionStorage.removeItem('cluster_pending_account_type')
     setBusy(true)
@@ -220,13 +220,7 @@ export function LoginPage() {
       </>}
       {(screen === 'register' || screen === 'complete') && <>
         <h1 className="text-center text-3xl font-bold">Criar conta</h1>
-        <p className="mb-5 mt-1 text-center text-slate-600">Primeiro, escolha o tipo da sua conta</p>
-        <div className="grid grid-cols-2 gap-2.5">
-          {([['CANDIDATE', 'Candidato', 'Quero buscar vagas'], ['COMPANY', 'Empresa', 'Quero gerenciar vagas']] as const).map(([value, label, description]) =>
-            <button key={value} type="button" aria-pressed={type === value} disabled={busy || value === 'COMPANY'} onClick={() => { setType(value); if (screen === 'complete') { setBusy(true); void finalizeAccount(value).finally(() => setBusy(false)) } }} className={`rounded-xl border-2 p-3 text-center hover:border-[#FF6B00] disabled:cursor-not-allowed disabled:opacity-50 ${type === value ? 'border-[#FF6B00] bg-[#FFF1E8] text-[#C44E00]' : 'border-slate-200'}`}>
-              <strong className="block">{label}</strong><small>{value === 'COMPANY' ? 'Cadastro indisponível no momento' : description}</small>
-            </button>)}
-        </div>
+        <p className="mb-5 mt-1 text-center text-slate-600">Cadastro de candidato</p>
         {screen === 'register' && type && <>
           <form onSubmit={register} className="mt-5">
             <label htmlFor="register-name" className="mb-1 block text-sm font-semibold">Nome</label>
@@ -242,7 +236,6 @@ export function LoginPage() {
           <Divider />
           <button type="button" className={`${socialClass} mb-2 bg-[#24292f]`} onClick={() => oauth('github', true)} disabled={busy}>Cadastrar com GitHub</button>
           <button type="button" className={`${socialClass} bg-[#0a66c2]`} onClick={() => oauth('linkedin_oidc', true)} disabled={busy}>Cadastrar com LinkedIn</button>
-          <button type="button" className="mt-3 w-full text-sm text-[#C44E00] hover:text-[#E55F00]" onClick={() => setType(null)}>Alterar tipo da conta</button>
         </>}
         {screen === 'complete' && <p className="mt-4 text-center text-sm text-slate-600">Login autenticado. Escolha seu tipo para concluir o cadastro.</p>}
         <p className="mt-4 text-center text-sm">Já possui uma conta? <button className="text-[#C44E00] hover:text-[#E55F00]" onClick={() => changeScreen('login')}>Entrar</button></p>
