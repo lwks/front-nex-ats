@@ -5,6 +5,7 @@ import { getVerifiedClaims } from '@/lib/auth/supabase-server'
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
   const { mode } = await searchParams
+  if (!mode) redirect('/jobs/list')
   const claims = await getVerifiedClaims()
   const type = accountTypeFromClaims(claims)
   if (type && mode !== 'recover') redirect(destinationForAccountType(type))

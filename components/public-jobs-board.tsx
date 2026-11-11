@@ -220,7 +220,7 @@ export function PublicJobsBoardView({
                   </Link>
                 </Button>
                 <Button asChild className="rounded-full bg-[#FF6B00] px-5 text-white hover:bg-[#E55F00]">
-                  <Link href="/">
+                  <Link href="/?mode=login">
                     <LogIn className="size-4" />
                     Entrar no ATS
                   </Link>
@@ -464,7 +464,7 @@ export function PublicJobsBoardView({
             <div className="mt-4 space-y-3 text-sm text-slate-400">
               <Link href="/jobs/list" className="block transition hover:text-[#FF6B00]">Todas as vagas</Link>
               <Link href="/?mode=register" className="block transition hover:text-[#FF6B00]">Criar conta</Link>
-              <Link href="/" className="block transition hover:text-[#FF6B00]">Entrar no ATS</Link>
+              <Link href="/?mode=login" className="block transition hover:text-[#FF6B00]">Entrar no ATS</Link>
             </div>
           </div>
           <div>
@@ -490,6 +490,7 @@ export function PublicJobDetailsModal({
   job: JobBoardJob | null
   onClose: () => void
 }) {
+  const [copyStatus, setCopyStatus] = useState("")
   useEffect(() => {
     if (!job) {
       return
@@ -514,6 +515,21 @@ export function PublicJobDetailsModal({
     { title: "Requisitos", items: job.requirements },
     { title: "Benefícios", items: job.benefits },
   ].filter((section) => section.items.length > 0)
+  const guidHex = (job.guid ?? job.id).replaceAll("-", "")
+  const guidBytes = guidHex.match(/.{2}/g)?.map((byte) => String.fromCharCode(parseInt(byte, 16))).join("") ?? ""
+  const shortCode = typeof window === "undefined" ? "" : window.btoa(guidBytes).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "")
+  const slug = job.title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+  const sharePath = `/jobs/${slug}-${shortCode}`
+  const jobUrl = `${typeof window === "undefined" ? "" : window.location.origin}${sharePath}`
+
+  async function shareJob() {
+    try {
+      await navigator.clipboard.writeText(jobUrl)
+      setCopyStatus("Link copiado!")
+    } catch {
+      setCopyStatus("Não foi possível copiar o link.")
+    }
+  }
 
   return (
     <div
@@ -546,15 +562,13 @@ export function PublicJobDetailsModal({
               </span>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-950"
-            aria-label="Fechar detalhes da vaga"
-          >
-            <X className="size-5" />
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link href={sharePath} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">+ Detalhes</Link>
+            <button type="button" onClick={shareJob} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Compartilhar</button>
+            <button type="button" onClick={onClose} className="rounded-full border border-slate-200 p-2 text-slate-500" aria-label="Fechar detalhes da vaga"><X className="size-5" /></button>
+          </div>
         </div>
+        {copyStatus ? <p role="status" className="px-6 pt-3 text-right text-sm text-slate-600">{copyStatus}</p> : null}
 
         <div className="overflow-y-auto px-6 py-6">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(260px,0.8fr)]">
