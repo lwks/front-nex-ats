@@ -33,18 +33,21 @@ test('details and copied short URL open the correct vacancy, with copy feedback'
   })
   await page.getByRole('button', { name: 'Compartilhar', exact: true }).click()
   const miniModal = page.getByRole('dialog', { name: 'Compartilhar vaga' })
-  await expect(miniModal.getByRole('status')).toHaveText('Link copiado!')
-  const url = await miniModal.getByLabel('URL da vaga').inputValue()
-  expect(url).toBe(`http://localhost:3100${path}`)
+  await expect(miniModal.getByRole('status')).toHaveText('Link copiado')
+  await expect(miniModal).toHaveClass(/max-w-xs/)
+  const url = `http://localhost:3100${path}`
   expect(await page.evaluate(() => (window as Window & { copiedJobUrl?: string }).copiedJobUrl)).toBe(url)
-  await miniModal.getByRole('button', { name: 'Copiar novamente' }).click()
+  await miniModal.getByRole('button', { name: 'Fechar compartilhamento' }).click()
   await page.evaluate(() => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
       writeText: async () => { throw new Error('clipboard unavailable') },
     } })
   })
-  await miniModal.getByRole('button', { name: 'Copiar novamente' }).click()
-  await expect(miniModal.getByRole('status')).toContainText('copie manualmente')
+  await page.getByRole('button', { name: 'Compartilhar', exact: true }).click()
+  await expect(miniModal.getByRole('alert')).toHaveText('Não foi possível copiar')
+  await expect(miniModal.getByLabel('URL da vaga')).toHaveValue(url)
+  await miniModal.getByRole('button', { name: 'Tentar copiar novamente' }).click()
+  await expect(miniModal.getByRole('alert')).toBeVisible()
   await page.goto(url)
   await expect(page.getByRole('heading', { name: title })).toBeVisible()
 })
