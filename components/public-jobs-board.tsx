@@ -491,7 +491,7 @@ export function PublicJobDetailsModal({
   job: JobBoardJob | null
   onClose: () => void
 }) {
-  const [copyStatus, setCopyStatus] = useState("")
+  const [copyStatus, setCopyStatus] = useState<"copying" | "success" | "error">("copying")
   const [shareOpen, setShareOpen] = useState(false)
   const [shareUrl, setShareUrl] = useState("")
   const closeJob = useCallback(() => { setShareOpen(false); onClose() }, [onClose])
@@ -502,13 +502,14 @@ export function PublicJobDetailsModal({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        closeJob()
+        if (shareOpen) setShareOpen(false)
+        else closeJob()
       }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [job, closeJob])
+  }, [job, closeJob, shareOpen])
 
   if (!job) {
     return null
@@ -524,9 +525,9 @@ export function PublicJobDetailsModal({
   async function copyLink(url: string) {
     try {
       await navigator.clipboard.writeText(url)
-      setCopyStatus("Link copiado!")
+      setCopyStatus("success")
     } catch {
-      setCopyStatus("Não foi possível copiar automaticamente. Selecione a URL abaixo e copie manualmente.")
+      setCopyStatus("error")
     }
   }
 
@@ -534,7 +535,7 @@ export function PublicJobDetailsModal({
     if (!sharePath) return
     const url = `${window.location.origin}${sharePath}`
     setShareUrl(url)
-    setCopyStatus("Copiando link...")
+    setCopyStatus("copying")
     setShareOpen(true)
     await copyLink(url)
   }
@@ -576,14 +577,6 @@ export function PublicJobDetailsModal({
             <button type="button" onClick={closeJob} className="rounded-full border border-slate-200 p-2 text-slate-500" aria-label="Fechar detalhes da vaga"><X className="size-5" /></button>
           </div>
         </div>
-        {shareOpen ? <div className="px-6 pt-4"><div role="dialog" aria-label="Compartilhar vaga" className="ml-auto max-w-md rounded-2xl border border-orange-200 bg-orange-50 p-4 shadow-lg">
-          <div className="flex items-start justify-between gap-3"><p className="font-semibold text-slate-950">Compartilhar vaga</p><button type="button" onClick={() => setShareOpen(false)} aria-label="Fechar compartilhamento" className="rounded-full p-1 text-slate-600 hover:bg-orange-100 focus-visible:outline-2 focus-visible:outline-orange-600"><X className="size-4" /></button></div>
-          <p role="status" className={`mt-2 text-sm ${copyStatus === 'Link copiado!' ? 'text-emerald-700' : 'text-red-700'}`}>{copyStatus}</p>
-          <label htmlFor="shared-job-url" className="mt-3 block text-xs font-semibold text-slate-700">URL da vaga</label>
-          <input id="shared-job-url" readOnly value={shareUrl} onFocus={(event) => event.target.select()} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus-visible:outline-2 focus-visible:outline-orange-600" />
-          <button type="button" onClick={() => copyLink(shareUrl)} className="mt-3 rounded-full border border-orange-600 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600">Copiar novamente</button>
-        </div></div> : null}
-
         <div className="overflow-y-auto px-6 py-6">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(260px,0.8fr)]">
             <div>
@@ -657,7 +650,7 @@ export function PublicJobDetailsModal({
                 </Link>}
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={closeJob}
                   className="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   Voltar para a lista
@@ -667,6 +660,32 @@ export function PublicJobDetailsModal({
           </div>
         </div>
       </div>
+      {shareOpen ? (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 px-4"
+          onClick={(event) => { event.stopPropagation(); setShareOpen(false) }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Compartilhar vaga"
+            className={`relative w-full rounded-2xl bg-white px-6 py-8 text-center shadow-2xl ${copyStatus === "error" ? "max-w-sm" : "max-w-xs"}`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button type="button" onClick={() => setShareOpen(false)} aria-label="Fechar compartilhamento" className="absolute right-3 top-3 rounded-full p-2 text-slate-500 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-orange-600"><X className="size-4" /></button>
+            {copyStatus === "success" ? <>
+              <div aria-hidden="true" className="mx-auto flex size-12 items-center justify-center rounded-full bg-emerald-100 text-2xl font-bold text-emerald-700">✓</div>
+              <p role="status" className="mt-4 text-lg font-semibold text-slate-950">Link copiado</p>
+            </> : copyStatus === "copying" ? <p role="status" className="text-base font-medium text-slate-700">Copiando link...</p> : <>
+              <p role="alert" className="text-lg font-semibold text-slate-950">Não foi possível copiar</p>
+              <p className="mt-2 text-sm text-slate-600">Tente novamente ou copie o endereço abaixo.</p>
+              <label htmlFor="shared-job-url" className="sr-only">URL da vaga</label>
+              <input id="shared-job-url" readOnly value={shareUrl} onFocus={(event) => event.target.select()} className="mt-4 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus-visible:outline-2 focus-visible:outline-orange-600" />
+              <button type="button" onClick={() => copyLink(shareUrl)} className="mt-4 rounded-full bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900">Tentar copiar novamente</button>
+            </>}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
