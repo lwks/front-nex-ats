@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import type { ChangeEventHandler, ReactNode } from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Briefcase, ChevronLeft, ChevronRight, MapPin, Plus, Search, Users } from "lucide-react"
@@ -427,12 +428,12 @@ export function CompanyApplicationsView({
                 <p className="text-lg font-bold text-black">Nova vaga</p>
                 <p className="mt-1 text-sm text-gray-600">Abra uma nova oportunidade para sua empresa.</p>
               </div>
-              <a
+              <Link
                 href="/jobs/create"
                 className="mt-4 inline-flex w-fit items-center rounded-md bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#e66000]"
               >
                 Nova vaga
-              </a>
+              </Link>
             </div>
           </section>
 

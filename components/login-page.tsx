@@ -6,8 +6,6 @@ import { createSupabaseBrowserClient } from '@/lib/auth/supabase-browser'
 import {
   accountTypeFromClaims,
   destinationForAccountType,
-  pendingAccountTypeFromClaims,
-  type AccountType,
 } from '@/lib/auth/supabase'
 
 type Screen = 'login' | 'register' | 'complete' | 'recover'
@@ -16,7 +14,6 @@ type RegistrationFeedback = { type: 'success' | 'error'; message: string }
 export function LoginPage() {
   const params = useSearchParams()
   const [screen, setScreen] = useState<Screen>(params.get('mode') === 'recover' ? 'recover' : params.get('mode') === 'complete' ? 'complete' : params.get('mode') === 'register' ? 'register' : 'login')
-  const [type, setType] = useState<AccountType | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -29,7 +26,7 @@ export function LoginPage() {
   const client = useMemo(() => createSupabaseBrowserClient(), [])
 
   const notice = useCallback((value: string, isError = false) => { setMessage(value); setError(isError) }, [])
-  function changeScreen(next: Screen) { setScreen(next); setMessage(''); setRegistrationFeedback(null); setType(next === 'register' || next === 'complete' ? 'CANDIDATE' : null) }
+  function changeScreen(next: Screen) { setScreen(next); setMessage(''); setRegistrationFeedback(null) }
   const showRegistrationFeedback = useCallback((value: string, isError = false) => {
     setMessage('')
     setRegistrationFeedback({ type: isError ? 'error' : 'success', message: value })
@@ -39,7 +36,6 @@ export function LoginPage() {
     setRegistrationFeedback(null)
     if (isSuccess) {
       setScreen('login')
-      setType(null)
       setName('')
       setPassword('')
       setConfirm('')
@@ -47,19 +43,19 @@ export function LoginPage() {
     }
   }
 
-  const finalizeAccount = useCallback(async (accountType?: AccountType | null, redirectAfterFinalize = true) => {
+  const finalizeAccount = useCallback(async (redirectAfterFinalize = true) => {
     if (!client) { notice('Supabase não configurado.', true); return false }
     try {
       const response = await fetch('/api/auth/account-type', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountType }),
+        body: JSON.stringify({}),
       })
-      const result = await response.json() as { accountType?: AccountType; destination?: string; message?: string }
+      const result = await response.json() as { accountType?: 'CANDIDATE' | 'COMPANY'; destination?: string; message?: string }
       if (!response.ok || !result.accountType) { notice(result.message ?? 'Não foi possível concluir o cadastro.', true); return false }
       const refreshed = await client.auth.refreshSession()
       if (refreshed.error) { notice('Não foi possível atualizar a sessão. Entre novamente.', true); return false }
-      sessionStorage.removeItem('cluster_pending_account_type')
+      sessionStorage.removeItem('cluster_pending_registration')
       if (redirectAfterFinalize) window.location.assign(result.destination ?? destinationForAccountType(result.accountType))
       return true
     } catch {
@@ -70,24 +66,19 @@ export function LoginPage() {
 
   useEffect(() => {
     if (params.get('mode') !== 'complete' || !client || autoFinalized.current) return
-    const pending = sessionStorage.getItem('cluster_pending_account_type')
-    if (pending === 'CANDIDATE' || pending === 'COMPANY') {
-      const timer = window.setTimeout(() => {
-        autoFinalized.current = true
-        void (async () => {
-          const finalized = await finalizeAccount(pending, false)
-          if (!finalized) {
-            showRegistrationFeedback('Não foi possível concluir o cadastro. Tente novamente.', true)
-            return
-          }
-          const { error: signOutError } = await client.auth.signOut()
-          if (signOutError) showRegistrationFeedback('Cadastro concluído. Saia da sessão atual para entrar com a nova conta.', true)
-          else showRegistrationFeedback('Cadastro concluído com sucesso. Entre com seu e-mail e senha para validar o acesso.')
-        })()
-      }, 0)
-      return () => window.clearTimeout(timer)
-    }
-    // The callback may also be a first OAuth login without a chosen account type.
+    const registration = sessionStorage.getItem('cluster_pending_registration') === '1'
+    const timer = window.setTimeout(() => {
+      autoFinalized.current = true
+      void (async () => {
+        if (!registration) { await finalizeAccount(); return }
+        const finalized = await finalizeAccount(false)
+        if (!finalized) return
+        const { error: signOutError } = await client.auth.signOut()
+        if (signOutError) showRegistrationFeedback('Cadastro concluído. Saia da sessão atual para entrar com a nova conta.', true)
+        else showRegistrationFeedback('Cadastro concluído com sucesso. Entre com seu e-mail e senha para validar o acesso.')
+      })()
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [client, params, finalizeAccount, showRegistrationFeedback])
 
   async function finishSignIn() {
@@ -99,9 +90,7 @@ export function LoginPage() {
       window.location.assign(destinationForAccountType(current))
       return
     }
-    const pending = pendingAccountTypeFromClaims(data.claims)
-    if (pending) await finalizeAccount(pending)
-    else changeScreen('complete')
+    await finalizeAccount()
   }
 
   async function login(event: FormEvent) {
@@ -122,7 +111,6 @@ export function LoginPage() {
 
   async function register(event: FormEvent) {
     event.preventDefault()
-    if (type !== 'CANDIDATE') return showRegistrationFeedback('Cadastro disponível somente para candidatos.', true)
     if (!name || !email || !password || !confirm) return showRegistrationFeedback('Preencha todos os campos.', true)
     if (password !== confirm) return showRegistrationFeedback('As senhas não são iguais.', true)
     if (!client) return showRegistrationFeedback('Supabase não configurado.', true)
@@ -130,14 +118,14 @@ export function LoginPage() {
     try {
       const { data, error: signUpError } = await client.auth.signUp({
         email, password,
-        options: { data: { full_name: name, account_type: type }, emailRedirectTo: `${window.location.origin}/auth/confirm` },
+        options: { data: { full_name: name, account_type: 'CANDIDATE' }, emailRedirectTo: `${window.location.origin}/auth/confirm` },
       })
       if (signUpError) {
         showRegistrationFeedback(signUpError.message, true)
       } else if (!data.session) {
         showRegistrationFeedback('Cadastro realizado! Confirme seu e-mail antes de entrar.')
       } else {
-        const finalized = await finalizeAccount(type, false)
+        const finalized = await finalizeAccount(false)
         if (!finalized) {
           showRegistrationFeedback('Sua conta foi criada, mas não foi possível concluir o cadastro. Tente entrar novamente ou contate o suporte.', true)
         } else {
@@ -155,15 +143,14 @@ export function LoginPage() {
 
   async function oauth(provider: 'github' | 'linkedin_oidc', registration = false) {
     if (!client) return notice('Supabase não configurado.', true)
-    if (registration && type !== 'CANDIDATE') return notice('Cadastro disponível somente para candidatos.', true)
-    if (registration && type) sessionStorage.setItem('cluster_pending_account_type', type)
-    else sessionStorage.removeItem('cluster_pending_account_type')
+    if (registration) sessionStorage.setItem('cluster_pending_registration', '1')
+    else sessionStorage.removeItem('cluster_pending_registration')
     setBusy(true)
     const { error: oauthError } = await client.auth.signInWithOAuth({
       provider, options: { redirectTo: `${window.location.origin}/auth/callback` },
     })
     if (oauthError) {
-      sessionStorage.removeItem('cluster_pending_account_type')
+      sessionStorage.removeItem('cluster_pending_registration')
       if (registration) showRegistrationFeedback(oauthError.message, true)
       else notice(oauthError.message, true)
     }
@@ -221,7 +208,7 @@ export function LoginPage() {
       {(screen === 'register' || screen === 'complete') && <>
         <h1 className="text-center text-3xl font-bold">Criar conta</h1>
         <p className="mb-5 mt-1 text-center text-slate-600">Cadastro de candidato</p>
-        {screen === 'register' && type && <>
+        {screen === 'register' && <>
           <form onSubmit={register} className="mt-5">
             <label htmlFor="register-name" className="mb-1 block text-sm font-semibold">Nome</label>
             <input id="register-name" className={inputClass} value={name} onChange={(event) => setName(event.target.value)} placeholder="Seu nome" />
@@ -237,7 +224,7 @@ export function LoginPage() {
           <button type="button" className={`${socialClass} mb-2 bg-[#24292f]`} onClick={() => oauth('github', true)} disabled={busy}>Cadastrar com GitHub</button>
           <button type="button" className={`${socialClass} bg-[#0a66c2]`} onClick={() => oauth('linkedin_oidc', true)} disabled={busy}>Cadastrar com LinkedIn</button>
         </>}
-        {screen === 'complete' && <p className="mt-4 text-center text-sm text-slate-600">Login autenticado. Escolha seu tipo para concluir o cadastro.</p>}
+        {screen === 'complete' && <p className="mt-4 text-center text-sm text-slate-600">Concluindo seu cadastro de candidato...</p>}
         <p className="mt-4 text-center text-sm">Já possui uma conta? <button className="text-[#C44E00] hover:text-[#E55F00]" onClick={() => changeScreen('login')}>Entrar</button></p>
       </>}
       {screen === 'recover' && <>

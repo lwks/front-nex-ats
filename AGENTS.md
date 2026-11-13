@@ -16,8 +16,9 @@
 
 ## Harness local integrado
 
+- Antes de executar `dev:local`, `test:e2e:local`, `local:doctor`, `local:reset` ou `scripts/local-harness.mjs` diretamente, peça autorização humana explícita e aguarde a resposta. Um pedido genérico de implementação ou validação não autoriza iniciar o harness. Se não houver autorização, registre a validação local como pendente.
 - Leia `docs/LOCAL_HARNESS.md` e o guia compartilhado em `docs/AGENTS.parent.md`.
 - Com o backend na pasta irmã `../lambda-api-next`, `npm run dev:local` sobe front, API e auth simulada; `npm run local:doctor` verifica os serviços. Pare com Ctrl+C.
 - Alterne empresa/candidato na barra amarela. Preserve as validações de sessão, perfil e propriedade.
-- Teste a integração com `npm run test:e2e:local`; pare outros processos Next antes de executar.
+- Após autorização humana explícita, teste a integração com `npm run test:e2e:local`; pare outros processos Next antes de executar.
 - No Linux/macOS, os comandos `npm.cmd` acima correspondem a `npm`.
