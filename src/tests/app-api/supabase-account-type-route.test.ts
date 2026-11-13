@@ -26,15 +26,34 @@ describe('POST /api/auth/account-type', () => {
     expect(auth.updateUserById).not.toHaveBeenCalled()
   })
 
-  it('persists a first choice in server-controlled metadata', async () => {
+  it('assigns candidate to a new account despite company user metadata', async () => {
     auth.claims.mockResolvedValue({ sub: 'user-1', user_metadata: { account_type: 'COMPANY' } })
     auth.getUserById.mockResolvedValue({ data: { user: { app_metadata: { provider: 'email' } } }, error: null })
     auth.updateUserById.mockResolvedValue({ error: null })
     const { POST } = await import('@/app/api/auth/account-type/route')
     const response = await POST(new Request('http://localhost/api/auth/account-type', { method: 'POST', body: '{}' }))
     expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ accountType: 'CANDIDATE', destination: '/jobs/list' })
+    expect(auth.updateUserById).toHaveBeenCalledWith('user-1', { app_metadata: { provider: 'email', account_type: 'CANDIDATE' } })
+  })
+
+  it('ignores a company role requested in the body for a new account', async () => {
+    auth.claims.mockResolvedValue({ sub: 'new-user' })
+    auth.getUserById.mockResolvedValue({ data: { user: { app_metadata: {} } }, error: null })
+    auth.updateUserById.mockResolvedValue({ error: null })
+    const { POST } = await import('@/app/api/auth/account-type/route')
+    const response = await POST(new Request('http://localhost/api/auth/account-type', { method: 'POST', body: JSON.stringify({ accountType: 'COMPANY' }) }))
+    expect(await response.json()).toMatchObject({ accountType: 'CANDIDATE' })
+    expect(auth.updateUserById).toHaveBeenCalledWith('new-user', { app_metadata: { account_type: 'CANDIDATE' } })
+  })
+
+  it('preserves an existing company account', async () => {
+    auth.claims.mockResolvedValue({ sub: 'company-user' })
+    auth.getUserById.mockResolvedValue({ data: { user: { app_metadata: { account_type: 'COMPANY' } } }, error: null })
+    const { POST } = await import('@/app/api/auth/account-type/route')
+    const response = await POST(new Request('http://localhost/api/auth/account-type', { method: 'POST', body: JSON.stringify({ accountType: 'CANDIDATE' }) }))
     expect(await response.json()).toMatchObject({ accountType: 'COMPANY', destination: '/empresa/candidaturas' })
-    expect(auth.updateUserById).toHaveBeenCalledWith('user-1', { app_metadata: { provider: 'email', account_type: 'COMPANY' } })
+    expect(auth.updateUserById).not.toHaveBeenCalled()
   })
 
   it('does not allow a later role change', async () => {

@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react"
+import { startTransition, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
 import {
   Briefcase,
   Clock3,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 
 import { filterJobBoardJobs, mergeJobBoardJobs, type JobBoardJob } from "@/lib/job-board"
+import { sharedJobPath } from "@/lib/job-share"
 import { cn } from "@/lib/utils"
 import { fetchPublicJobsPage } from "@/services/public-jobs-service"
 
@@ -491,6 +492,9 @@ export function PublicJobDetailsModal({
   onClose: () => void
 }) {
   const [copyStatus, setCopyStatus] = useState("")
+  const [shareOpen, setShareOpen] = useState(false)
+  const [shareUrl, setShareUrl] = useState("")
+  const closeJob = useCallback(() => { setShareOpen(false); onClose() }, [onClose])
   useEffect(() => {
     if (!job) {
       return
@@ -498,13 +502,13 @@ export function PublicJobDetailsModal({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onClose()
+        closeJob()
       }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [job, onClose])
+  }, [job, closeJob])
 
   if (!job) {
     return null
@@ -515,26 +519,30 @@ export function PublicJobDetailsModal({
     { title: "Requisitos", items: job.requirements },
     { title: "Benefícios", items: job.benefits },
   ].filter((section) => section.items.length > 0)
-  const guidHex = (job.guid ?? job.id).replaceAll("-", "")
-  const guidBytes = guidHex.match(/.{2}/g)?.map((byte) => String.fromCharCode(parseInt(byte, 16))).join("") ?? ""
-  const shortCode = typeof window === "undefined" ? "" : window.btoa(guidBytes).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "")
-  const slug = job.title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-  const sharePath = `/jobs/${slug}-${shortCode}`
-  const jobUrl = `${typeof window === "undefined" ? "" : window.location.origin}${sharePath}`
+  const sharePath = sharedJobPath(job.guid ?? job.id, job.title)
 
-  async function shareJob() {
+  async function copyLink(url: string) {
     try {
-      await navigator.clipboard.writeText(jobUrl)
+      await navigator.clipboard.writeText(url)
       setCopyStatus("Link copiado!")
     } catch {
-      setCopyStatus("Não foi possível copiar o link.")
+      setCopyStatus("Não foi possível copiar automaticamente. Selecione a URL abaixo e copie manualmente.")
     }
+  }
+
+  async function shareJob() {
+    if (!sharePath) return
+    const url = `${window.location.origin}${sharePath}`
+    setShareUrl(url)
+    setCopyStatus("Copiando link...")
+    setShareOpen(true)
+    await copyLink(url)
   }
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm"
-      onClick={onClose}
+      onClick={closeJob}
       role="dialog"
       aria-modal="true"
     >
@@ -562,13 +570,19 @@ export function PublicJobDetailsModal({
               </span>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <Link href={sharePath} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">+ Detalhes</Link>
-            <button type="button" onClick={shareJob} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Compartilhar</button>
-            <button type="button" onClick={onClose} className="rounded-full border border-slate-200 p-2 text-slate-500" aria-label="Fechar detalhes da vaga"><X className="size-5" /></button>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {sharePath ? <Link href={sharePath} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600">+ Detalhes</Link> : null}
+            <button type="button" onClick={shareJob} disabled={!sharePath} className="rounded-full bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:opacity-50">Compartilhar</button>
+            <button type="button" onClick={closeJob} className="rounded-full border border-slate-200 p-2 text-slate-500" aria-label="Fechar detalhes da vaga"><X className="size-5" /></button>
           </div>
         </div>
-        {copyStatus ? <p role="status" className="px-6 pt-3 text-right text-sm text-slate-600">{copyStatus}</p> : null}
+        {shareOpen ? <div className="px-6 pt-4"><div role="dialog" aria-label="Compartilhar vaga" className="ml-auto max-w-md rounded-2xl border border-orange-200 bg-orange-50 p-4 shadow-lg">
+          <div className="flex items-start justify-between gap-3"><p className="font-semibold text-slate-950">Compartilhar vaga</p><button type="button" onClick={() => setShareOpen(false)} aria-label="Fechar compartilhamento" className="rounded-full p-1 text-slate-600 hover:bg-orange-100 focus-visible:outline-2 focus-visible:outline-orange-600"><X className="size-4" /></button></div>
+          <p role="status" className={`mt-2 text-sm ${copyStatus === 'Link copiado!' ? 'text-emerald-700' : 'text-red-700'}`}>{copyStatus}</p>
+          <label htmlFor="shared-job-url" className="mt-3 block text-xs font-semibold text-slate-700">URL da vaga</label>
+          <input id="shared-job-url" readOnly value={shareUrl} onFocus={(event) => event.target.select()} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus-visible:outline-2 focus-visible:outline-orange-600" />
+          <button type="button" onClick={() => copyLink(shareUrl)} className="mt-3 rounded-full border border-orange-600 px-4 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600">Copiar novamente</button>
+        </div></div> : null}
 
         <div className="overflow-y-auto px-6 py-6">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(260px,0.8fr)]">
