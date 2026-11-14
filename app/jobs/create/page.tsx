@@ -174,10 +174,10 @@ export default function CreateJobPage() {
   const fieldClass = "w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
 
   return (
-    <div className="min-h-screen bg-background px-4 py-12">
+    <div className="bg-background px-4 py-12">
       {isSubmitting ? <div className="fixed inset-0 z-40 flex items-center justify-center bg-background/80 backdrop-blur-sm"><p className="rounded-lg border bg-card px-6 py-5 shadow-xl">Criando vaga...</p></div> : null}
       {toast ? <div role="alert" className={cn("fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-full px-6 py-3 text-sm font-semibold shadow-lg", toast.type === "success" ? "bg-emerald-500 text-white" : "bg-destructive text-destructive-foreground")}>{toast.message}</div> : null}
-      <main className="mx-auto max-w-4xl rounded-3xl border border-border bg-card px-6 py-8 shadow-sm md:px-10">
+      <section className="mx-auto max-w-4xl rounded-3xl border border-border bg-card px-6 py-8 shadow-sm md:px-10">
         <header className="mb-8">
           <p className="text-sm font-medium uppercase tracking-widest text-primary">Cadastro de vaga</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight">Abertura de nova vaga</h1>
@@ -262,7 +262,7 @@ export default function CreateJobPage() {
           </section>
           <div className="flex justify-end"><Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Criando vaga..." : "Criar vaga"}</Button></div>
         </form>
-      </main>
+      </section>
     </div>
   )
 }

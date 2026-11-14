@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { getCandidateCvDownloadUrl } from '@/services/cv-download-service'
 import { hardcodedAreaOptions } from '@/services/areas-service'
+import { CompanyPageShell } from '@/components/company-page-shell'
 
 type RecordData = Record<string, unknown>
 const groups: Array<{ title: string; fields: Array<[string, string]> }> = [
@@ -51,9 +52,10 @@ export function CompanyApplicationDetails({ id, accountLabel }: { id: string; ac
     catch { setDownloadError('Não foi possível baixar o CV. Tente novamente.') }
   }
 
-  return <main className="min-h-screen bg-slate-50 px-5 py-8 text-slate-950">
+  return <CompanyPageShell title="Detalhes da candidatura" description="Consulte os dados enviados pelo candidato nesta vaga." accountLabel={accountLabel}>
+    <div className="bg-slate-50 px-5 py-8 text-slate-950">
     <div className="mx-auto max-w-5xl">
-      <div className="flex flex-wrap items-center justify-between gap-4"><Link href="/empresa/candidaturas" className="font-medium text-orange-700">Voltar ao pipeline</Link><div className="flex items-center gap-4 text-sm"><span aria-label="Conta da empresa">{accountLabel}</span><a href="/api/auth/logout">Sair</a></div></div>
+      <Link href="/empresa/candidaturas" className="font-medium text-orange-700">Voltar ao pipeline</Link>
       <h1 className="mt-8 text-3xl font-semibold">Detalhes da candidatura</h1>
       {state !== 'ready' ? <p role="status" className="mt-6 rounded-xl bg-white p-6">{state === 'loading' ? 'Carregando candidatura...' : state === 'missing' ? 'Candidatura não encontrada.' : 'Não foi possível carregar esta candidatura. Confira sua conta e tente novamente.'}</p> : null}
       {record ? <>
@@ -78,5 +80,6 @@ export function CompanyApplicationDetails({ id, accountLabel }: { id: string; ac
           {downloadError ? <p role="alert" className="mt-2 text-red-700">{downloadError}</p> : null}</section>
       </> : null}
     </div>
-  </main>
+    </div>
+  </CompanyPageShell>
 }
