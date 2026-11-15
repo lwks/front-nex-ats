@@ -14,6 +14,7 @@ import { UserRegistrationProfessionalStep } from "@/components/steps/user-regist
 import { Button } from "@/components/ui/button"
 import { getOwnApplication, getSavedProfile, profileFromForm, sendApplication, uploadProfileCv, type CvAction, type SavedProfile } from "@/services/candidate-application-service"
 import type { UserRegistrationData } from "@/services/user-registration-service"
+import { captureEvent } from "@/lib/analytics"
 
 type SubmissionFeedback = {
   type: "success" | "error"
@@ -94,6 +95,7 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
   }
 
   const nextStep = () => {
+    captureEvent("application_step_completed", { job_id: jobGuid, step: currentStep })
     setCurrentStep((current) => {
       const next = Math.min(current + 1, CANDIDATURE_STEPS.length)
       setVisitedSteps((previous) => previous.includes(next) ? previous : [...previous, next])
@@ -109,11 +111,13 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
 
   const handleSubmit = async () => {
     if (profile && requiresLgpdRenewal(profile) && !lgpdRenewal) {
+      captureEvent("application_failed", { job_id: jobGuid, reason: "validation" })
       setFeedbackModal({ type: 'error', title: 'Confirme os termos de privacidade',
         message: 'Seu aceite precisa ser renovado antes de enviar a candidatura.' })
       return
     }
     if (cvFile && cvFile.size > 5 * 1024 * 1024) {
+      captureEvent("application_failed", { job_id: jobGuid, reason: "validation" })
       setCvError("O arquivo excede o limite de 5 MB.")
       return
     }
@@ -131,12 +135,14 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
           lgpdAccepted: profile ? lgpdRenewal : candidateData.lgpdAccepted === true,
           cvAction: cvFile ? 'REPLACE' : cvAction, ...(cv ? { cv } : {}),
         } })
+      captureEvent("application_submitted", { job_id: jobGuid, mode: choice === 'USE_SAVED_PROFILE' ? 'saved_profile' : 'updated_profile' })
       setFeedbackModal({
         type: "success",
         title: "Candidatura enviada com sucesso!",
         message: "Recebemos seus dados e em breve a empresa poderá avaliar seu perfil.",
       })
     } catch (error) {
+      captureEvent("application_failed", { job_id: jobGuid, reason: "request" })
       console.error("Failed to submit candidate application", error)
       setFeedbackModal({
         type: "error",
@@ -232,7 +238,7 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
         ) : null}
         {currentStep === 4 ? (<>
           {profile?.cv ? <label className="block rounded-lg bg-white p-4">CV salvo: {profile.cv.filename}<select className="ml-3 rounded border p-2" value={cvAction} onChange={event => setCvAction(event.target.value as CvAction)}><option value="KEEP">Manter</option><option value="REMOVE">Enviar sem CV</option></select></label> : null}
-          <UserRegistrationCvStep isSubmitting={isSubmitting} onSubmit={() => setReview(true)} onBack={prevStep} file={cvFile} onFileChange={(file) => { setCvError(null); if (file && file.size > 5 * 1024 * 1024) { setCvFile(null); setCvError("O arquivo excede o limite de 5 MB."); return } if (file && !/\.(pdf|docx?)$/i.test(file.name)) { setCvFile(null); setCvError("Formato inválido. Envie PDF, DOCX ou DOC."); return } setCvFile(file) }} error={cvError} />
+          <UserRegistrationCvStep isSubmitting={isSubmitting} onSubmit={() => { captureEvent("application_step_completed", { job_id: jobGuid, step: 4 }); setReview(true) }} onBack={prevStep} file={cvFile} onFileChange={(file) => { setCvError(null); if (file && file.size > 5 * 1024 * 1024) { setCvFile(null); setCvError("O arquivo excede o limite de 5 MB."); return } if (file && !/\.(pdf|docx?)$/i.test(file.name)) { setCvFile(null); setCvError("Formato inválido. Envie PDF, DOCX ou DOC."); return } setCvFile(file) }} error={cvError} />
         </>) : null}
         </> : null}
       </main>

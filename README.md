@@ -155,6 +155,12 @@ No deploy Hostinger, Vercel Analytics fica desativado por padrao. Configure
 `NEXT_PUBLIC_VERCEL_ANALYTICS_ENABLED=true` no build apenas em um deploy
 compativel com o endpoint `/_vercel/insights/script.js`.
 
+O tracking de cliques e conversoes usa PostHog quando `NEXT_PUBLIC_POSTHOG_ENABLED=true`,
+`NEXT_PUBLIC_POSTHOG_KEY` e `NEXT_PUBLIC_POSTHOG_HOST` estao configurados no build.
+O visitante escolhe se aceita analytics; a coleta permanece desligada ate o aceite.
+Veja [docs/POSTHOG.md](docs/POSTHOG.md) para configurar o projeto, validar eventos
+e montar os dashboards.
+
 ## Observacoes atuais
 
 - O quadro de candidaturas em `/empresa/candidaturas` permite mover candidatos entre etapas e persiste a mudanca via `PUT /api/candidates/:id`.

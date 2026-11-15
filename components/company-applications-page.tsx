@@ -27,6 +27,7 @@ import { shouldClearCandidateNoteFeedback } from "@/lib/candidate-note-feedback"
 import { fetchCandidatesByJobGuids } from "@/services/candidates-by-job-guids-service"
 import { getCandidateCvDownloadUrl } from "@/services/cv-download-service"
 import { closeCompanyJob } from "@/services/company-jobs-service"
+import { captureEvent } from "@/lib/analytics"
 
 type ApiJob = Record<string, unknown>
 
@@ -863,6 +864,7 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
     }
 
     const result = await updateCandidateStatus(application.recordId, status)
+    captureEvent("candidate_status_changed", { job_id: currentJob?.jobGuid, status: result.status })
     const nextFields: Partial<Application> = {
       recordId: result.id ?? application.recordId,
       status: mapApiStatusToBoardStatus(result.status),
