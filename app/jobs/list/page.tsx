@@ -14,5 +14,5 @@ export default async function JobsListPage({
     ? userMetadata.full_name.trim()
     : typeof claims?.email === "string" ? claims.email : null
 
-  return <PublicJobsBoard authenticatedUser={displayName} isCandidate={claims ? accountTypeFromClaims(claims) === 'CANDIDATE' : false} notice={notice === "select-job" ? "select-job" : null} />
+  return <PublicJobsBoard authenticatedUser={displayName} isCandidate={claims ? accountTypeFromClaims(claims) === 'CANDIDATE' : false} isCompany={claims ? accountTypeFromClaims(claims) === 'COMPANY' : false} notice={notice === "select-job" ? "select-job" : null} />
 }

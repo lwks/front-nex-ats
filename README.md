@@ -64,10 +64,10 @@ Importante: nao versione segredos reais em `.env.local`.
 ## Rotas de pagina (UI)
 
 - `/`: redireciona para `/jobs/list`; use `/?mode=login`, `/?mode=register` ou `/?mode=recover` para autenticação
-- `/jobs/list`: vagas publicas com filtros e links de candidatura; mostra nome ou e-mail e opcao de sair quando autenticado
-- `/jobs/:guid`: detalhes públicos de uma vaga compartilhada por URL curta
+- `/jobs/list`: vagas públicas com filtros; Empresa autenticada pode consultar sem ações de candidatura, enquanto Candidato e visitante mantêm os links de candidatura
+- `/jobs/:guid`: detalhes públicos de uma vaga compartilhada por URL curta; Empresa autenticada pode consultar sem ação de candidatura
 - `/candidaturas`: candidatura completa de Candidato autenticado em 4 etapas; exige `?vagaGuid=...` e retorna à listagem com orientação quando a vaga não foi informada
-- `/jobs/create`: formulario de criacao de vaga para Empresa autenticada, com seletores de Area, Time, Senioridade, Setor, experiencia, beneficios e skills; localizacao por cidade e estado informados manualmente
+- `/jobs/create`: formulario de criacao de vaga para Empresa autenticada, dentro da navegação ATS, com seletores de Area, Time, Senioridade, Setor, experiencia, beneficios e skills; localizacao por cidade e estado informados manualmente
 - `/meu-perfil`: edição do perfil reutilizável pelo Candidato autenticado, incluindo dados pessoais, profissionais, preferências, indicações e CV salvo
 - `/empresa/candidaturas`: quadro ATS de candidaturas por vaga para Empresa autenticada, com card "Nova vaga" para abrir o formulario
 - `/empresa/candidaturas/:id`: detalhes de uma candidatura da vaga da Empresa autenticada, com o retrato dos dados enviados, indicações, etapa, anotações e CV

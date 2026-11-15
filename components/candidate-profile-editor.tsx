@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
+import { CandidatePageHeader } from '@/components/candidate-page-header'
 import { UserRegistrationPersonalStep } from '@/components/steps/user-registration-personal-step'
 import { UserRegistrationProfessionalStep } from '@/components/steps/user-registration-professional-step'
 import { UserRegistrationPreferencesStep } from '@/components/steps/user-registration-preferences-step'
@@ -85,16 +85,16 @@ export function CandidateProfileEditor() {
     catch { setError('Não foi possível abrir o CV salvo. Tente novamente.') }
   }
 
-  if (state !== 'ready') return <main className="mx-auto max-w-3xl p-8 text-center">
+  if (state !== 'ready') return <div className="min-h-screen bg-slate-50 text-slate-950">
+    <CandidatePageHeader area="profile" />
+    <main className="mx-auto max-w-3xl p-8 text-center">
     <h1 className="text-2xl font-semibold">{state === 'loading' ? 'Carregando seu perfil...' : 'Não foi possível carregar seu perfil'}</h1>
     {state === 'error' ? <p className="mt-3 text-slate-600">Recarregue a página e tente novamente.</p> : null}
-  </main>
+    </main>
+  </div>
 
   return <div className="min-h-screen bg-slate-50 text-slate-950">
-    <header className="border-b bg-white"><div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-5">
-      <Link href="/jobs/list" className="font-medium text-slate-600 hover:text-orange-600">Voltar às vagas</Link>
-      <div className="flex items-center gap-4"><span className="font-semibold">Meu perfil</span><a href="/api/auth/logout" className="text-sm text-slate-600">Sair</a></div>
-    </div></header>
+    <CandidatePageHeader area="profile" />
     <main className="mx-auto max-w-5xl space-y-6 px-5 py-8" onInput={event => {
       setPending(true)
       const target = event.target

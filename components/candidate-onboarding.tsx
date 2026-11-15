@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { CheckCircle2, CircleAlert } from "lucide-react"
 
 import { ProgressIndicator } from "@/components/progress-indicator"
+import { CandidatePageHeader } from "@/components/candidate-page-header"
 import { UserRegistrationCvStep } from "@/components/steps/user-registration-cv-step"
 import { UserRegistrationPersonalStep } from "@/components/steps/user-registration-personal-step"
 import { UserRegistrationPreferencesStep } from "@/components/steps/user-registration-preferences-step"
@@ -156,25 +157,19 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
   }
 
   if (jobAvailability !== "open" || profileState !== 'ready') {
-    return <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-4 bg-white p-8 text-center">
+    return <div className="min-h-screen bg-[linear-gradient(180deg,_#fff8f1_0%,_#ffffff_20%,_#f8fafc_100%)]">
+      <CandidatePageHeader area="application" />
+      <main className="mx-auto flex max-w-2xl flex-col items-center justify-center gap-4 p-8 text-center">
       <h1 className="text-2xl font-semibold text-slate-950">{jobAvailability === 'closed' ? 'Vaga encerrada' : jobAvailability === 'not-found' ? 'Vaga n\u00e3o encontrada' : profileState === 'existing' ? 'Voc\u00ea j\u00e1 se candidatou a esta vaga' : jobAvailability === 'error' || profileState === 'error' ? 'N\u00e3o foi poss\u00edvel carregar a candidatura' : 'Carregando candidatura...'}</h1>
       <p className="text-slate-600">{jobAvailability === "closed" ? "Esta vaga n\u00e3o est\u00e1 mais recebendo candidaturas." : jobAvailability === "not-found" ? "Esta vaga n\u00e3o est\u00e1 dispon\u00edvel. Volte \u00e0 lista para escolher outra oportunidade." : profileState === 'existing' ? "Seu cadastro para esta vaga j\u00e1 foi recebido." : jobAvailability === "error" || profileState === 'error' ? "Ocorreu uma falha ao consultar os dados. Volte \u00e0 lista de vagas e tente novamente." : "Aguarde enquanto confirmamos se a vaga est\u00e1 aberta."}</p>
       <Link href="/jobs/list" className="rounded-full bg-[#FF6B00] px-5 py-3 font-semibold text-white">Voltar para vagas</Link>
-    </main>
+      </main>
+    </div>
   }
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,_#fff8f1_0%,_#ffffff_20%,_#f8fafc_100%)]">
-      <header className="border-b border-black/5 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-4">
-          <Link href="/jobs/list" className="text-sm font-medium text-slate-600 transition hover:text-[#FF6B00]">
-            Voltar às vagas
-          </Link>
-          <div className="rounded-full border border-[#FF6B00]/15 bg-[#FF6B00]/8 px-4 py-2 text-sm font-medium text-[#C44E00]">
-            Candidatura
-          </div>
-        </div>
-      </header>
+      <CandidatePageHeader area="application" />
 
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10">
         <section className="rounded-[2rem] border border-black/5 bg-slate-950 px-6 py-8 text-white shadow-[0_30px_80px_rgba(15,23,42,0.16)] md:px-8">
