@@ -13,5 +13,5 @@ export default async function SharedJobPage({ params }: { params: Promise<{ guid
   const displayName = typeof userMetadata?.full_name === 'string' && userMetadata.full_name.trim()
     ? userMetadata.full_name.trim()
     : typeof claims?.email === 'string' ? claims.email : null
-  return <PublicJobDetailPage guid={guid} authenticatedUser={displayName} isCandidate={claims ? accountTypeFromClaims(claims) === 'CANDIDATE' : false} />
+  return <PublicJobDetailPage guid={guid} authenticatedUser={displayName} isCandidate={claims ? accountTypeFromClaims(claims) === 'CANDIDATE' : false} isCompany={claims ? accountTypeFromClaims(claims) === 'COMPANY' : false} />
 }

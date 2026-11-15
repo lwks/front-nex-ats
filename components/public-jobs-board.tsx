@@ -41,6 +41,7 @@ const HOW_IT_WORKS = [
 export type PublicJobsBoardViewProps = {
   authenticatedUser?: string | null
   isCandidate?: boolean
+  isCompany?: boolean
   notice?: "select-job" | null
   jobs: JobBoardJob[]
   query: string
@@ -64,12 +65,14 @@ export function PublicJobsBoard({
   initialLastKey = null,
   authenticatedUser = null,
   isCandidate = false,
+  isCompany = false,
   notice = null,
 }: {
   initialJobs?: JobBoardJob[]
   initialLastKey?: string | null
   authenticatedUser?: string | null
   isCandidate?: boolean
+  isCompany?: boolean
   notice?: "select-job" | null
 }) {
   const resolvedInitialJobs = initialJobs ?? EMPTY_INITIAL_JOBS
@@ -146,6 +149,7 @@ export function PublicJobsBoard({
     <PublicJobsBoardView
       authenticatedUser={authenticatedUser}
       isCandidate={isCandidate}
+      isCompany={isCompany}
       notice={notice}
       jobs={jobs}
       query={query}
@@ -165,6 +169,7 @@ export function PublicJobsBoard({
 export function PublicJobsBoardView({
   authenticatedUser = null,
   isCandidate = false,
+  isCompany = false,
   notice = null,
   jobs,
   query,
@@ -375,7 +380,7 @@ export function PublicJobsBoardView({
                   >
                     Ver detalhes
                   </button>
-                  {job.status === "Encerrada" ? <span className="text-sm font-semibold text-slate-500">Candidaturas encerradas</span> : <Link href={job.applyHref} className="text-sm font-semibold text-slate-700 transition group-hover:text-[#FF6B00]">Ir para candidatura</Link>}
+                  {isCompany ? <span className="text-sm font-semibold text-slate-500">Somente visualização</span> : job.status === "Encerrada" ? <span className="text-sm font-semibold text-slate-500">Candidaturas encerradas</span> : <Link href={job.applyHref} className="text-sm font-semibold text-slate-700 transition group-hover:text-[#FF6B00]">Ir para candidatura</Link>}
                 </div>
               </article>
             ))}
@@ -434,7 +439,7 @@ export function PublicJobsBoardView({
         </div>
       </footer>
 
-      <PublicJobDetailsModal job={selectedJob} onClose={onCloseJob} />
+      <PublicJobDetailsModal job={selectedJob} onClose={onCloseJob} isCompany={isCompany} />
     </div>
   )
 }
@@ -442,9 +447,11 @@ export function PublicJobsBoardView({
 export function PublicJobDetailsModal({
   job,
   onClose,
+  isCompany = false,
 }: {
   job: JobBoardJob | null
   onClose: () => void
+  isCompany?: boolean
 }) {
   const [copyStatus, setCopyStatus] = useState<"copying" | "success" | "error">("copying")
   const [shareOpen, setShareOpen] = useState(false)
@@ -597,7 +604,7 @@ export function PublicJobDetailsModal({
               </div>
 
               <div className="mt-8 flex flex-col gap-3">
-                {job.status === "Encerrada" ? <p className="rounded-full bg-slate-100 px-5 py-3 text-center text-sm font-semibold text-slate-600">Esta vaga não aceita mais candidaturas.</p> : <Link
+                {isCompany ? <p className="rounded-full bg-slate-100 px-5 py-3 text-center text-sm font-semibold text-slate-600">Somente visualização</p> : job.status === "Encerrada" ? <p className="rounded-full bg-slate-100 px-5 py-3 text-center text-sm font-semibold text-slate-600">Esta vaga não aceita mais candidaturas.</p> : <Link
                   href={job.applyHref}
                   className="inline-flex items-center justify-center rounded-full bg-[#FF6B00] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#E55F00]"
                 >

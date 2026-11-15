@@ -396,7 +396,7 @@ export function CompanyApplicationsView({
                 Acompanhe candidatos por vaga com notas e visao detalhada do processo.
               </p>
             </div>
-            <div className="flex items-center gap-4 text-sm"><span className="max-w-52 truncate font-medium text-slate-700" aria-label="Conta da empresa">{accountLabel || 'Conta da empresa'}</span><a href="/api/auth/logout" className="text-orange-700 hover:underline">Sair</a></div>
+            <div className="flex items-center gap-4 text-sm"><Link href="/jobs/list" className="font-semibold text-orange-700 hover:underline">Vagas</Link><span className="max-w-52 truncate font-medium text-slate-700" aria-label="Conta da empresa">{accountLabel || 'Conta da empresa'}</span><a href="/api/auth/logout" className="text-orange-700 hover:underline">Sair</a></div>
           </div>
         </header>
 

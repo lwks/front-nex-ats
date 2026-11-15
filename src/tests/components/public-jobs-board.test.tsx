@@ -74,6 +74,16 @@ describe("PublicJobsBoardView", () => {
     expect(html.match(/<header.*?<\/header>/)?.[0]).not.toContain("Entrar no ATS")
   })
 
+  it("shows jobs to a company without application links", () => {
+    const html = renderToStaticMarkup(
+      <PublicJobsBoardView {...createViewProps({ authenticatedUser: "Empresa Local", isCompany: true })} />,
+    )
+
+    expect(html).toContain("Vaga job-1")
+    expect(html).toContain("Somente visualização")
+    expect(html).not.toContain('href="/candidaturas?vagaGuid=job-1-guid"')
+  })
+
   it("keeps sign-in and signup actions for anonymous visitors", () => {
     const html = renderToStaticMarkup(<PublicJobsBoardView {...createViewProps()} />)
 
@@ -126,6 +136,16 @@ describe("PublicJobDetailsModal", () => {
     expect(html).toContain("Responsabilidades")
     expect(html).toContain("Requisitos")
     expect(html).toContain("Benefícios")
+  })
+
+  it("shows vacancy details to a company without the application action", () => {
+    const html = renderToStaticMarkup(
+      <PublicJobDetailsModal job={createJob("job-1", "guid-1")} onClose={vi.fn()} isCompany />,
+    )
+
+    expect(html).toContain("Somente visualização")
+    expect(html).not.toContain("Candidatar-se agora")
+    expect(html).not.toContain('href="/candidaturas?vagaGuid=guid-1"')
   })
 
   it("hides empty optional sections", () => {

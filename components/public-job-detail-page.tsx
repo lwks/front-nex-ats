@@ -6,7 +6,7 @@ import type { JobBoardJob } from '@/lib/job-board'
 import { fetchPublicJobDetail } from '@/services/public-job-detail-service'
 import { PublicJobsHeader } from '@/components/public-jobs-header'
 
-export function PublicJobDetailPage({ guid, authenticatedUser, isCandidate }: { guid: string; authenticatedUser?: string | null; isCandidate?: boolean }) {
+export function PublicJobDetailPage({ guid, authenticatedUser, isCandidate, isCompany }: { guid: string; authenticatedUser?: string | null; isCandidate?: boolean; isCompany?: boolean }) {
   const [job, setJob] = useState<JobBoardJob | null>(null)
   const [error, setError] = useState(false)
 
@@ -30,7 +30,7 @@ export function PublicJobDetailPage({ guid, authenticatedUser, isCandidate }: { 
     {job.responsibilities.length ? <section className="mt-8"><h2 className="text-xl font-semibold">Responsabilidades</h2><ul className="mt-3 list-disc pl-6">{job.responsibilities.map((item) => <li key={item}>{item}</li>)}</ul></section> : null}
     {job.requirements.length ? <section className="mt-8"><h2 className="text-xl font-semibold">Requisitos</h2><ul className="mt-3 list-disc pl-6">{job.requirements.map((item) => <li key={item}>{item}</li>)}</ul></section> : null}
     {job.benefits.length ? <section className="mt-8"><h2 className="text-xl font-semibold">Benefícios</h2><ul className="mt-3 list-disc pl-6">{job.benefits.map((item) => <li key={item}>{item}</li>)}</ul></section> : null}
-    <Link href={job.applyHref} className="mt-8 inline-flex rounded-full bg-orange-600 px-6 py-3 font-semibold text-white">Candidatar-se</Link>
+    {isCompany ? <p className="mt-8 inline-flex rounded-full bg-slate-100 px-6 py-3 font-semibold text-slate-600">Somente visualização</p> : <Link href={job.applyHref} className="mt-8 inline-flex rounded-full bg-orange-600 px-6 py-3 font-semibold text-white">Candidatar-se</Link>}
     </main>}
   </div>
 }

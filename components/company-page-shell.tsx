@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 import { AtsSidebar } from '@/components/ats-sidebar'
 
 export function CompanyPageShell({ title, description, accountLabel, children }: {
@@ -18,6 +19,7 @@ export function CompanyPageShell({ title, description, accountLabel, children }:
             <p className="mt-1 text-sm text-gray-600">{description}</p>
           </div>
           <div className="flex items-center gap-4 text-sm">
+            <Link href="/jobs/list" className="font-semibold text-orange-700 hover:underline">Vagas</Link>
             <span className="max-w-52 truncate font-medium text-slate-700" aria-label="Conta da empresa">{accountLabel}</span>
             <a href="/api/auth/logout" className="text-orange-700 hover:underline">Sair</a>
           </div>
