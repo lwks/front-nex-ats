@@ -3,6 +3,7 @@
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/auth/supabase-browser'
+import { captureEvent } from '@/lib/analytics'
 import {
   accountTypeFromClaims,
   destinationForAccountType,
@@ -55,6 +56,8 @@ export function LoginPage() {
       if (!response.ok || !result.accountType) { notice(result.message ?? 'Não foi possível concluir o cadastro.', true); return false }
       const refreshed = await client.auth.refreshSession()
       if (refreshed.error) { notice('Não foi possível atualizar a sessão. Entre novamente.', true); return false }
+      if (sessionStorage.getItem('cluster_pending_registration') === '1') captureEvent('signup_completed', { account_type: result.accountType })
+      else captureEvent('login_completed', { account_type: result.accountType })
       sessionStorage.removeItem('cluster_pending_registration')
       if (redirectAfterFinalize) window.location.assign(result.destination ?? destinationForAccountType(result.accountType))
       return true
@@ -87,6 +90,7 @@ export function LoginPage() {
     if (claimsError || !data?.claims) return notice('Não foi possível validar a sessão.', true)
     const current = accountTypeFromClaims(data.claims)
     if (current) {
+      captureEvent('login_completed', { account_type: current })
       window.location.assign(destinationForAccountType(current))
       return
     }
@@ -123,8 +127,10 @@ export function LoginPage() {
       if (signUpError) {
         showRegistrationFeedback(signUpError.message, true)
       } else if (!data.session) {
+        sessionStorage.setItem('cluster_pending_registration', '1')
         showRegistrationFeedback('Cadastro realizado! Confirme seu e-mail antes de entrar.')
       } else {
+        sessionStorage.setItem('cluster_pending_registration', '1')
         const finalized = await finalizeAccount(false)
         if (!finalized) {
           showRegistrationFeedback('Sua conta foi criada, mas não foi possível concluir o cadastro. Tente entrar novamente ou contate o suporte.', true)

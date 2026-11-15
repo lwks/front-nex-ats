@@ -7,6 +7,7 @@ import { Suspense } from "react"
 import "./globals.css"
 import { isLocalHarness } from '@/lib/local-harness'
 import { LocalHarnessBar } from '@/components/local-harness-bar'
+import { AnalyticsConsent } from '@/components/analytics-consent'
 
 export const metadata: Metadata = {
   title: "ClusterHR - Sistema de Gestao de Pessoas e Processos de RH",
@@ -24,7 +25,8 @@ export default function RootLayout({
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         {isLocalHarness() && <LocalHarnessBar />}
         <Suspense fallback={null}>{children}</Suspense>
-        {process.env.NEXT_PUBLIC_VERCEL_ANALYTICS_ENABLED === "true" && <Analytics />}
+        <Suspense fallback={null}><AnalyticsConsent /></Suspense>
+        {process.env.NEXT_PUBLIC_VERCEL_ANALYTICS_ENABLED === "true" && process.env.NEXT_PUBLIC_POSTHOG_ENABLED !== "true" && <Analytics />}
       </body>
     </html>
   )

@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils"
 import { buildJobPayload, MAX_JOB_SKILL_SELECTIONS, MIN_DESCRIPTION_LENGTH, type JobFormState } from "@/lib/job-form"
 import { useAreaOptions } from "@/hooks/use-area-options"
 import { getHardSkillOptionsForAreas } from "@/services/hard-skills-service"
+import { captureEvent } from "@/lib/analytics"
 import {
   fetchCurrentBenefitOptions,
   fetchExperienceOptions,
@@ -132,6 +133,7 @@ export default function CreateJobPage() {
     try {
       payload = buildJobPayload(form, generateGuid(), new Date().toISOString().split("T")[0], areaOptions)
     } catch (validationError) {
+      captureEvent("job_create_failed", { reason: "validation" })
       setToast({ type: "error", message: validationError instanceof Error ? validationError.message : "Revise os campos obrigatorios." })
       return
     }
@@ -153,8 +155,10 @@ export default function CreateJobPage() {
       }
       setForm(createDefaultFormState())
       setToast({ type: "success", message: "Vaga criada com sucesso." })
+      captureEvent("job_created", { job_id: payload.guid_id })
       setTimeout(() => router.push("/empresa/candidaturas"), 1200)
     } catch (submitError) {
+      captureEvent("job_create_failed", { reason: "request" })
       setToast({ type: "error", message: submitError instanceof Error ? submitError.message : "Erro inesperado ao criar a vaga." })
     } finally {
       setIsSubmitting(false)

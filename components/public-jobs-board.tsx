@@ -17,6 +17,7 @@ import { sharedJobPath } from "@/lib/job-share"
 import { cn } from "@/lib/utils"
 import { fetchPublicJobsPage } from "@/services/public-jobs-service"
 import { PublicJobsHeader } from "@/components/public-jobs-header"
+import { captureEvent } from "@/lib/analytics"
 
 const INITIAL_PAGE_LIMIT = 6
 const EMPTY_INITIAL_JOBS: JobBoardJob[] = []
@@ -155,7 +156,7 @@ export function PublicJobsBoard({
       query={query}
       onQueryChange={handleQueryChange}
       selectedJob={selectedJob}
-      onOpenJob={setSelectedJob}
+      onOpenJob={(job) => { captureEvent("job_details_opened", { job_id: job.guid ?? job.id, source: "modal" }); setSelectedJob(job) }}
       onCloseJob={() => setSelectedJob(null)}
       onLoadMore={handleLoadMore}
       isLoading={isLoading}
@@ -380,7 +381,7 @@ export function PublicJobsBoardView({
                   >
                     Ver detalhes
                   </button>
-                  {isCompany ? <span className="text-sm font-semibold text-slate-500">Somente visualização</span> : job.status === "Encerrada" ? <span className="text-sm font-semibold text-slate-500">Candidaturas encerradas</span> : <Link href={job.applyHref} className="text-sm font-semibold text-slate-700 transition group-hover:text-[#FF6B00]">Ir para candidatura</Link>}
+                  {isCompany ? <span className="text-sm font-semibold text-slate-500">Somente visualização</span> : job.status === "Encerrada" ? <span className="text-sm font-semibold text-slate-500">Candidaturas encerradas</span> : <Link href={job.applyHref} onClick={() => captureEvent("apply_clicked", { job_id: job.guid ?? job.id, source: "list" })} className="text-sm font-semibold text-slate-700 transition group-hover:text-[#FF6B00]">Ir para candidatura</Link>}
                 </div>
               </article>
             ))}
@@ -606,6 +607,7 @@ export function PublicJobDetailsModal({
               <div className="mt-8 flex flex-col gap-3">
                 {isCompany ? <p className="rounded-full bg-slate-100 px-5 py-3 text-center text-sm font-semibold text-slate-600">Somente visualização</p> : job.status === "Encerrada" ? <p className="rounded-full bg-slate-100 px-5 py-3 text-center text-sm font-semibold text-slate-600">Esta vaga não aceita mais candidaturas.</p> : <Link
                   href={job.applyHref}
+                  onClick={() => captureEvent("apply_clicked", { job_id: job.guid ?? job.id, source: "modal" })}
                   className="inline-flex items-center justify-center rounded-full bg-[#FF6B00] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#E55F00]"
                 >
                   Candidatar-se agora
