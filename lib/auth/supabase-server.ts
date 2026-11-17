@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { accountTypeFromClaims, supabaseConfig, type AccountType } from './supabase'
+import { accountTypeFromClaims, authPagePath, supabaseConfig, type AccountType } from './supabase'
 
 export async function createSupabaseServerClient() {
   const config = supabaseConfig()
@@ -28,11 +28,11 @@ export async function getVerifiedClaims() {
   return error ? null : data?.claims ?? null
 }
 
-export async function requireAccountType(type: AccountType) {
+export async function requireAccountType(type: AccountType, requestedPath?: string) {
   const claims = await getVerifiedClaims()
-  if (!claims) redirect('/')
+  if (!claims) redirect(requestedPath ? authPagePath('login', requestedPath) : '/')
   const actual = accountTypeFromClaims(claims)
-  if (!actual) redirect('/?mode=complete')
+  if (!actual) redirect(authPagePath('complete', requestedPath))
   if (actual !== type) redirect(actual === 'COMPANY' ? '/empresa/candidaturas' : '/jobs/list')
   return claims
 }

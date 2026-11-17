@@ -8,10 +8,12 @@ export default async function CandidateApplicationPage({
 }: {
   searchParams: Promise<{ vagaGuid?: string; vaga?: string }>
 }) {
-  await requireAccountType('CANDIDATE')
   const params = await searchParams
   const jobGuid = params.vagaGuid?.trim() || params.vaga?.trim()
   if (!jobGuid) redirect('/jobs/list?notice=select-job')
+
+  const key = params.vagaGuid?.trim() ? 'vagaGuid' : 'vaga'
+  await requireAccountType('CANDIDATE', `/candidaturas?${key}=${encodeURIComponent(jobGuid)}`)
 
   return <CandidateOnboarding jobGuid={jobGuid} />
 }
