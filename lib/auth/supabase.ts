@@ -21,3 +21,32 @@ export function pendingAccountTypeFromClaims(claims: JwtPayload | null | undefin
 export function destinationForAccountType(type: AccountType): string {
   return type === 'COMPANY' ? '/empresa/candidaturas' : '/jobs/list'
 }
+
+export function candidateApplicationPath(value: string | null | undefined): string | null {
+  if (!value?.startsWith('/candidaturas?')) return null
+
+  try {
+    const url = new URL(value, 'https://clusterjobs.invalid')
+    if (url.origin !== 'https://clusterjobs.invalid' || url.pathname !== '/candidaturas') return null
+
+    for (const key of ['vagaGuid', 'vaga'] as const) {
+      const jobId = url.searchParams.get(key)?.trim()
+      if (jobId && jobId.length <= 256) return `/candidaturas?${key}=${encodeURIComponent(jobId)}`
+    }
+  } catch {
+    return null
+  }
+
+  return null
+}
+
+export function destinationAfterSignIn(type: AccountType, requestedPath: string | null | undefined): string {
+  return type === 'CANDIDATE'
+    ? candidateApplicationPath(requestedPath) ?? destinationForAccountType(type)
+    : destinationForAccountType(type)
+}
+
+export function authPagePath(mode: 'login' | 'complete', requestedPath: string | null | undefined): string {
+  const path = candidateApplicationPath(requestedPath)
+  return `/?mode=${mode}${path ? `&next=${encodeURIComponent(path)}` : ''}`
+}
