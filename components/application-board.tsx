@@ -45,6 +45,7 @@ export type Application = {
   notes?: string
   status: ApplicationStatus | string
   atualizadoEm?: string
+  cvFilename?: string
   hasCv?: boolean
 }
 
@@ -60,7 +61,7 @@ type ApplicationBoardProps = {
   draggable?: boolean
   applicationOverrides?: Record<string, Partial<Application>>
   onStatusChange?: (application: Application, status: ApplicationStatus) => Promise<void> | void
-  onApplicationSelect?: (application: Application) => void
+  onApplicationSelect?: (application: Application, candidates: Application[]) => void
 }
 
 type ApplicationBoardFromApiProps = {
@@ -69,7 +70,7 @@ type ApplicationBoardFromApiProps = {
   draggable?: boolean
   applicationOverrides?: Record<string, Partial<Application>>
   onStatusChange?: (application: Application, status: ApplicationStatus) => Promise<void> | void
-  onApplicationSelect?: (application: Application) => void
+  onApplicationSelect?: (application: Application, candidates: Application[]) => void
 }
 
 const defaultColumns: ApplicationColumn[] = [
@@ -239,6 +240,7 @@ export function normalizeCandidate(item: unknown, index: number): Application | 
     ])],
     status: mapApiStatusToBoardStatus(rawStatus),
     atualizadoEm: pickString(item.updatedAt, item.updated_at, item.atualizadoEm),
+    cvFilename: isRecord(item.cv) ? pickString(item.cv.filename) : undefined,
     hasCv: Boolean(item.cv && typeof item.cv === 'object' && (item.cv as Record<string, unknown>).filename),
   }
 }
@@ -376,7 +378,7 @@ export function ApplicationBoard({
                 draggable={draggable}
                 onDragStart={handleDragStart(application)}
                 onDragEnd={handleDragEnd}
-                onClick={() => onApplicationSelect?.(application)}
+                onClick={() => onApplicationSelect?.(application, colunas.flatMap(column => groupedApplications[column.id]))}
                 className={cn(
                   "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition",
                   draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
@@ -390,7 +392,7 @@ export function ApplicationBoard({
                     ? (event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault()
-                          onApplicationSelect(application)
+                          onApplicationSelect(application, colunas.flatMap(column => groupedApplications[column.id]))
                         }
                       }
                     : undefined
@@ -443,7 +445,7 @@ export function ApplicationBoard({
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {(application.skills?.length ? application.skills.slice(0, 3) : ["Sem skills"]).map((skill) => (
+                  {(application.skills?.slice(0, 3) ?? []).map((skill) => (
                     <span
                       key={skill}
                       className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-600"
