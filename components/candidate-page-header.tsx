@@ -4,7 +4,7 @@ export function CandidatePageHeader({ area }: { area: 'profile' | 'application' 
   if (area === 'profile') {
     return <header className="border-b bg-white"><div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-5">
       <Link href="/jobs/list" className="font-medium text-slate-600 hover:text-orange-600">Voltar às vagas</Link>
-      <div className="flex items-center gap-4"><span className="font-semibold">Meu perfil</span><a href="/api/auth/logout" className="text-sm text-slate-600">Sair</a></div>
+      <div className="flex flex-wrap items-center gap-4"><Link href="/minhas-candidaturas" className="text-sm text-orange-700">Minhas candidaturas</Link><span className="font-semibold">Meu perfil</span><a href="/api/auth/logout" className="text-sm text-slate-600">Sair</a></div>
     </div></header>
   }
 

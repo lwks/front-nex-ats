@@ -8,6 +8,15 @@ export type SavedProfile = Omit<UserRegistrationData, 'pretensaoSalarial' | 'men
   cv?: { key: string; filename: string; contentType: string; size: number } | null
 }
 export type CvAction = 'KEEP' | 'REPLACE' | 'REMOVE'
+export class VacancyClosedError extends Error {
+  constructor() { super('Esta vaga foi encerrada e não aceita mais candidaturas.') }
+}
+
+export async function assertVacancyOpen(jobGuid: string) {
+  const job = await request<{ status?: string }>(`/api/jobs/${encodeURIComponent(jobGuid)}`)
+  if (!job || typeof job.status !== 'string') throw new Error('Não foi possível confirmar se a vaga está aberta.')
+  if (job.status === 'Encerrada') throw new VacancyClosedError()
+}
 export type ApplicationData = { mensagemEmpresa: string; pretensaoSalarial: string; compartilhamentoAccepted: boolean;
   lgpdAccepted?: boolean; cvAction: CvAction; cv?: SavedProfile['cv'] }
 
@@ -15,6 +24,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { cache: 'no-store', ...init })
   const payload = await response.json().catch(() => null) as { data?: T; message?: string } | null
   if (!response.ok) {
+    if (response.status === 409 && payload?.message === 'Vacancy is closed') throw new VacancyClosedError()
     if (response.status === 409) throw new Error('Seu perfil, a vaga ou a candidatura mudou. Recarregue a página e tente novamente.')
     if (response.status === 401 || response.status === 403) throw new Error('Entre como candidato para continuar.')
     throw new Error(payload?.message || 'Não foi possível carregar ou enviar a candidatura.')
@@ -39,6 +49,15 @@ export function getOwnProfileCvDownloadUrl() {
 }
 export function getOwnApplication(jobGuid: string) {
   return request<{ guid_id: string } | null>(`/api/candidates/me/applications?guid_vaga=${encodeURIComponent(jobGuid)}`)
+}
+export type CandidateApplicationSummary = {
+  id: string; jobGuid: string; title: string; company: string; jobStatus: string | null;
+  status: string; createdAt: string; closedAt: string | null
+}
+export async function getMyApplications(status: 'open' | 'closed' | 'all', signal?: AbortSignal) {
+  const data = await request<{ items: CandidateApplicationSummary[] }>(`/api/candidates/me/applications?status=${status}`, { signal })
+  if (!Array.isArray(data?.items)) throw new Error('Lista de candidaturas inválida.')
+  return data.items
 }
 export function profileFromForm(data: Partial<UserRegistrationData>) {
   const { lgpdAccepted: _lgpd, compartilhamentoAccepted: _sharing,

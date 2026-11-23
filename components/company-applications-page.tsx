@@ -26,6 +26,7 @@ import { mapApiStatusToBoardStatus } from "@/lib/application-status"
 import { shouldClearCandidateNoteFeedback } from "@/lib/candidate-note-feedback"
 import { fetchCandidatesByJobGuids } from "@/services/candidates-by-job-guids-service"
 import { getCandidateCvDownloadUrl } from "@/services/cv-download-service"
+import { CandidateNotificationDialog } from "@/components/candidate-notification-dialog"
 import { closeCompanyJob } from "@/services/company-jobs-service"
 
 type ApiJob = Record<string, unknown>
@@ -603,6 +604,9 @@ export function CompanyApplicationsView({
 }
 
 export function CompanyApplicationsPage({ companyUserId, accountLabel }: { companyUserId: string; accountLabel?: string }) {
+  const [notificationTarget, setNotificationTarget] = useState<{ jobId: string; jobTitle: string; candidateId?: string; close: boolean } | null>(null)
+  const [candidateSequence, setCandidateSequence] = useState<Application[]>([])
+  const modalContentRef = useRef<HTMLDivElement>(null)
   const [selectedCandidate, setSelectedCandidate] = useState<Application | null>(null)
   const [selectedJobGuid, setSelectedJobGuid] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
@@ -761,11 +765,13 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
     setCloseJobFeedback(null)
     try {
       const updated = await closeCompanyJob(currentJob.jobGuid, closeReasonDraft)
-      const closedJob = normalizeCompanyJob({ ...updated, motivo_encerramento: (updated.motivo_encerramento as string | undefined) ?? closeReasonDraft, status: "Encerrada" }, 0)
-      if (closedJob) setJobs((previous) => previous.map((job) => job.jobGuid === closedJob.jobGuid ? closedJob : job))
+      const closedJob = { ...currentJob, status: "Encerrada", closeReason: (updated.motivo_encerramento as string | undefined) ?? closeReasonDraft }
+      setJobs((previous) => previous.map((job) => job.jobGuid === currentJob.jobGuid ? closedJob : job))
       setJobStatusFilter("closed")
+      setCloseJobFeedback("Vaga encerrada com sucesso.")
     } catch (error) {
       setCloseJobFeedback(error instanceof Error ? error.message : "Não foi possível encerrar a vaga.")
+      throw error
     } finally { setIsClosingJob(false) }
   }
 
@@ -782,6 +788,8 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
 
   useEffect(() => {
     const currentCandidateId = hydratedSelectedCandidate?.id ?? null
+    setCvDownloadError(null)
+    modalContentRef.current?.scrollTo?.(0, 0)
     setCandidateNotesDraft(hydratedSelectedCandidate?.notes ?? "")
     if (shouldClearCandidateNoteFeedback(previousSelectedCandidateId.current, currentCandidateId)) {
       setCandidateNoteFeedback(null)
@@ -882,14 +890,18 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
     )
   }
 
+  const selectedCandidateIndex = candidateSequence.findIndex(candidate => candidate.id === selectedCandidate?.id)
+  const nextCandidate = selectedCandidateIndex >= 0 ? candidateSequence[selectedCandidateIndex + 1] : undefined
+
   const board = currentJob ? (
     <ApplicationBoardFromApi
+      key={currentJob.jobGuid}
       guidVaga={currentJob.jobGuid ?? ""}
       colunas={boardColumns}
       draggable={currentJob.status !== "Encerrada"}
       applicationOverrides={candidateOverrides}
       onStatusChange={currentJob.status === "Encerrada" ? undefined : handleCandidateStatusChange}
-      onApplicationSelect={(application) => setSelectedCandidate(application)}
+      onApplicationSelect={(application, candidates) => { setCandidateSequence(candidates); setSelectedCandidate(application) }}
     />
   ) : null
 
@@ -918,16 +930,20 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
         board={board}
         jobStatusFilter={jobStatusFilter}
         onJobStatusFilterChange={setJobStatusFilter}
-        onCloseJob={handleCloseJob}
+        onCloseJob={() => { if (currentJob?.jobGuid) setNotificationTarget({ jobId: currentJob.jobGuid, jobTitle: currentJob.title, close: true }) }}
         isClosingJob={isClosingJob}
         closeReasonDraft={closeReasonDraft}
         onCloseReasonChange={setCloseReasonDraft}
         closeJobFeedback={closeJobFeedback}
       />
 
+      {notificationTarget ? <CandidateNotificationDialog
+        jobId={notificationTarget.jobId} jobTitle={notificationTarget.jobTitle} candidateId={notificationTarget.candidateId}
+        closeJob={notificationTarget.close ? handleCloseJob : undefined} onClose={() => setNotificationTarget(null)}
+      /> : null}
       {hydratedSelectedCandidate ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-xl sm:p-8">
+          <div ref={modalContentRef} role="dialog" aria-modal="true" aria-label="Informações do candidato" className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-xl sm:p-8">
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-widest text-[#FF6B00]">ATS</p>
@@ -936,6 +952,9 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
                 </h2>
                 <p className="text-sm text-gray-600">{fallback(hydratedSelectedCandidate.cargo)}</p>
               </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => { if (currentJob?.jobGuid) setNotificationTarget({ jobId: currentJob.jobGuid, jobTitle: currentJob.title, candidateId: hydratedSelectedCandidate.recordId ?? hydratedSelectedCandidate.id, close: false }) }} className="rounded-lg border-2 border-orange-300 px-3 py-1 text-xs font-semibold">Enviar e-mail</button>
+              <button type="button" disabled={!nextCandidate || isSavingCandidateNote} onClick={() => { if (nextCandidate) setSelectedCandidate(nextCandidate) }} className="rounded-lg border-2 border-gray-300 px-3 py-1 text-xs font-semibold disabled:opacity-50">Próximo</button>
               <button
                 type="button"
                 onClick={() => setSelectedCandidate(null)}
@@ -943,10 +962,28 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
               >
                 Fechar
               </button>
+              </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              {hydratedSelectedCandidate.hasCv && currentJob?.ownerSub === companyUserId ? <div className="sm:col-span-2"><button type="button" onClick={handleDownloadCv} disabled={isDownloadingCv} className="rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{isDownloadingCv ? 'Preparando download...' : 'Baixar CV'}</button>{cvDownloadError ? <p role="alert" className="mt-2 text-sm text-red-700">{cvDownloadError}</p> : null}</div> : null}
+              {hydratedSelectedCandidate.hasCv && currentJob?.ownerSub === companyUserId ? (
+                <div className="sm:col-span-2">
+                  <div className="flex flex-wrap gap-3">
+                    <button type="button" onClick={handleDownloadCv} disabled={isDownloadingCv} className="rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+                      {isDownloadingCv ? 'Preparando download...' : 'Baixar CV'}
+                    </button>
+                    {hydratedSelectedCandidate.cvFilename?.toLowerCase().endsWith('.pdf') ? (
+                      <a href={`/api/candidates/${encodeURIComponent(hydratedSelectedCandidate.recordId ?? hydratedSelectedCandidate.id)}/cv-download?view=inline`} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-orange-600 px-4 py-2 text-sm font-semibold text-orange-700">
+                        Visualizar CV
+                      </a>
+                    ) : null}
+                  </div>
+                  {!hydratedSelectedCandidate.cvFilename?.toLowerCase().endsWith('.pdf') ? (
+                    <p className="mt-2 text-sm text-gray-600">Este currículo está em formato Word e não pode ser visualizado no navegador. Use Baixar CV para abrir o arquivo.</p>
+                  ) : null}
+                  {cvDownloadError ? <p role="alert" className="mt-2 text-sm text-red-700">{cvDownloadError}</p> : null}
+                </div>
+              ) : null}
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Email</p>
                 {hydratedSelectedCandidate.email ? (
@@ -1004,12 +1041,12 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
               </div>
             </section>
 
-            <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+            {hydratedSelectedCandidate.skills?.length ? <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Skills</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(hydratedSelectedCandidate.skills?.length
                   ? hydratedSelectedCandidate.skills
-                  : ["Nao informado"]
+                  : []
                 ).map((skill) => (
                   <span
                     key={skill}
@@ -1019,7 +1056,7 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
                   </span>
                 ))}
               </div>
-            </div>
+            </div> : null}
 
             <section className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4 sm:p-5">
               <h3 className="text-sm font-semibold text-gray-900">Preferencias profissionais</h3>

@@ -12,7 +12,7 @@ import { UserRegistrationPersonalStep } from "@/components/steps/user-registrati
 import { UserRegistrationPreferencesStep } from "@/components/steps/user-registration-preferences-step"
 import { UserRegistrationProfessionalStep } from "@/components/steps/user-registration-professional-step"
 import { Button } from "@/components/ui/button"
-import { getOwnApplication, getSavedProfile, profileFromForm, sendApplication, uploadProfileCv, type CvAction, type SavedProfile } from "@/services/candidate-application-service"
+import { assertVacancyOpen, VacancyClosedError, getOwnApplication, getSavedProfile, profileFromForm, sendApplication, uploadProfileCv, type CvAction, type SavedProfile } from "@/services/candidate-application-service"
 import type { UserRegistrationData } from "@/services/user-registration-service"
 
 type SubmissionFeedback = {
@@ -120,6 +120,7 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
     setIsSubmitting(true)
 
     try {
+      await assertVacancyOpen(jobGuid)
       const cv = cvFile ? await uploadProfileCv(cvFile) : undefined
       await sendApplication({ guid_vaga: jobGuid, mode: choice || 'UPDATE_PROFILE',
         ...(profile ? { profileVersion: profile.version } : {}),
@@ -137,6 +138,10 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
         message: "Recebemos seus dados e em breve a empresa poderá avaliar seu perfil.",
       })
     } catch (error) {
+      if (error instanceof VacancyClosedError) {
+        setJobAvailability('closed')
+        return
+      }
       console.error("Failed to submit candidate application", error)
       setFeedbackModal({
         type: "error",

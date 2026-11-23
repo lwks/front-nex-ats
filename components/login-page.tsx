@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { createSupabaseBrowserClient } from '@/lib/auth/supabase-browser'
 import {
   accountTypeFromClaims,
+  candidateApplicationPath,
+  destinationAfterSignIn,
   destinationForAccountType,
 } from '@/lib/auth/supabase'
 
@@ -13,6 +15,7 @@ type RegistrationFeedback = { type: 'success' | 'error'; message: string }
 
 export function LoginPage() {
   const params = useSearchParams()
+  const returnTo = candidateApplicationPath(params.get('next'))
   const [screen, setScreen] = useState<Screen>(params.get('mode') === 'recover' ? 'recover' : params.get('mode') === 'complete' ? 'complete' : params.get('mode') === 'register' ? 'register' : 'login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -56,13 +59,17 @@ export function LoginPage() {
       const refreshed = await client.auth.refreshSession()
       if (refreshed.error) { notice('Não foi possível atualizar a sessão. Entre novamente.', true); return false }
       sessionStorage.removeItem('cluster_pending_registration')
-      if (redirectAfterFinalize) window.location.assign(result.destination ?? destinationForAccountType(result.accountType))
+      if (redirectAfterFinalize) window.location.assign(
+        returnTo && result.accountType === 'CANDIDATE'
+          ? returnTo
+          : result.destination ?? destinationForAccountType(result.accountType),
+      )
       return true
     } catch {
       notice('Não foi possível concluir o cadastro. Tente novamente.', true)
       return false
     }
-  }, [client, notice])
+  }, [client, notice, returnTo])
 
   useEffect(() => {
     if (params.get('mode') !== 'complete' || !client || autoFinalized.current) return
@@ -87,7 +94,7 @@ export function LoginPage() {
     if (claimsError || !data?.claims) return notice('Não foi possível validar a sessão.', true)
     const current = accountTypeFromClaims(data.claims)
     if (current) {
-      window.location.assign(destinationForAccountType(current))
+      window.location.assign(destinationAfterSignIn(current, returnTo))
       return
     }
     await finalizeAccount()
@@ -118,7 +125,7 @@ export function LoginPage() {
     try {
       const { data, error: signUpError } = await client.auth.signUp({
         email, password,
-        options: { data: { full_name: name, account_type: 'CANDIDATE' }, emailRedirectTo: `${window.location.origin}/auth/confirm` },
+        options: { data: { full_name: name, account_type: 'CANDIDATE' }, emailRedirectTo: authRedirectUrl('/auth/confirm') },
       })
       if (signUpError) {
         showRegistrationFeedback(signUpError.message, true)
@@ -147,7 +154,7 @@ export function LoginPage() {
     else sessionStorage.removeItem('cluster_pending_registration')
     setBusy(true)
     const { error: oauthError } = await client.auth.signInWithOAuth({
-      provider, options: { redirectTo: `${window.location.origin}/auth/callback` },
+      provider, options: { redirectTo: authRedirectUrl('/auth/callback') },
     })
     if (oauthError) {
       sessionStorage.removeItem('cluster_pending_registration')
@@ -162,7 +169,7 @@ export function LoginPage() {
     if (!client) return notice('Supabase não configurado.', true)
     setBusy(true)
     const { error: recoveryError } = await client.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/confirm`,
+      redirectTo: authRedirectUrl('/auth/confirm'),
     })
     notice(recoveryError?.message ?? 'Enviamos as instruções de recuperação para seu e-mail.', Boolean(recoveryError))
     setBusy(false)
@@ -179,6 +186,12 @@ export function LoginPage() {
     setBusy(false)
   }
 
+  function authRedirectUrl(path: string) {
+    const url = new URL(path, window.location.origin)
+    if (returnTo) url.searchParams.set('next', returnTo)
+    return url.toString()
+  }
+
   const inputClass = 'w-full rounded-lg border border-slate-300 px-3 py-3 text-[15px] outline-none focus:border-[#FF6B00] focus:ring-2 focus:ring-[#FF6B00]/20'
   const primaryClass = 'mt-5 w-full rounded-lg bg-[#FF6B00] px-4 py-3 font-semibold text-white hover:bg-[#E55F00] disabled:opacity-50'
   const socialClass = 'w-full rounded-lg px-4 py-3 font-semibold text-white disabled:opacity-50'
@@ -187,7 +200,7 @@ export function LoginPage() {
     <section className="w-full max-w-[420px] rounded-2xl bg-white p-7 shadow-[0_8px_30px_rgba(0,0,0,.08)] sm:p-10">
       {screen === 'login' && <>
         <h1 className="text-center text-3xl font-bold">Cluster</h1>
-        <p className="mb-7 mt-1 text-center text-slate-600">Entre na sua conta</p>
+        <p className="mb-7 mt-1 text-center text-slate-600">{returnTo ? 'Entre na sua conta para continuar a candidatura' : 'Entre na sua conta'}</p>
         <form onSubmit={login} aria-busy={busy}>
           <label htmlFor="login-email" className="mb-1 block text-sm font-semibold">E-mail</label>
           <input id="login-email" type="email" autoComplete="email" className={inputClass} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="seu@email.com" />

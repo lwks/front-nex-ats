@@ -22,7 +22,7 @@ describe("fetchPublicJobsPage", () => {
 
     const result = await fetchPublicJobsPage()
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/jobs?limit=6", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/jobs?limit=6&status=open", {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       cache: "no-store",
@@ -46,7 +46,7 @@ describe("fetchPublicJobsPage", () => {
 
     await fetchPublicJobsPage({ limit: 3, lastKey: "cursor-2" })
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/jobs?limit=3&lastKey=cursor-2", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/jobs?limit=3&status=open&lastKey=cursor-2", {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       cache: "no-store",

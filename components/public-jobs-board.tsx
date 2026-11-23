@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { startTransition, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
 import {
   Briefcase,
   Clock3,
@@ -39,6 +39,8 @@ const HOW_IT_WORKS = [
 ] as const
 
 export type PublicJobsBoardViewProps = {
+  jobStatus?: 'open' | 'closed'
+  onJobStatusChange?: (status: 'open' | 'closed') => void
   authenticatedUser?: string | null
   isCandidate?: boolean
   isCompany?: boolean
@@ -60,7 +62,21 @@ export function hasInitialPublicJobs(initialJobs?: JobBoardJob[]) {
   return (initialJobs?.length ?? 0) > 0
 }
 
-export function PublicJobsBoard({
+export function PublicJobsBoard(props: {
+  initialJobs?: JobBoardJob[]; initialLastKey?: string | null; authenticatedUser?: string | null;
+  isCandidate?: boolean; isCompany?: boolean; notice?: "select-job" | null
+}) {
+  const [jobStatus, setJobStatus] = useState<'open' | 'closed'>('open')
+  const [query, setQuery] = useState('')
+  return <PublicJobsResults key={jobStatus} {...props}
+    initialJobs={jobStatus === 'open' ? props.initialJobs : undefined}
+    initialLastKey={jobStatus === 'open' ? props.initialLastKey : null}
+    jobStatus={jobStatus} onJobStatusChange={setJobStatus} query={query} setQuery={setQuery} />
+}
+
+function PublicJobsResults({
+  query, setQuery,
+  jobStatus, onJobStatusChange,
   initialJobs,
   initialLastKey = null,
   authenticatedUser = null,
@@ -68,6 +84,10 @@ export function PublicJobsBoard({
   isCompany = false,
   notice = null,
 }: {
+  jobStatus: 'open' | 'closed'
+  query: string
+  setQuery: (value: string) => void
+  onJobStatusChange: (status: 'open' | 'closed') => void
   initialJobs?: JobBoardJob[]
   initialLastKey?: string | null
   authenticatedUser?: string | null
@@ -78,7 +98,6 @@ export function PublicJobsBoard({
   const resolvedInitialJobs = initialJobs ?? EMPTY_INITIAL_JOBS
   const hasInitialJobs = hasInitialPublicJobs(resolvedInitialJobs)
   const [jobs, setJobs] = useState<JobBoardJob[]>(resolvedInitialJobs)
-  const [query, setQuery] = useState("")
   const [selectedJob, setSelectedJob] = useState<JobBoardJob | null>(null)
   const [lastKey, setLastKey] = useState<string | null>(initialLastKey)
   const [isLoading, setIsLoading] = useState(!hasInitialJobs)
@@ -95,7 +114,7 @@ export function PublicJobsBoard({
     setIsLoading(true)
     setError(null)
 
-    fetchPublicJobsPage({ limit: INITIAL_PAGE_LIMIT, signal: controller.signal })
+    fetchPublicJobsPage({ limit: INITIAL_PAGE_LIMIT, status: jobStatus, signal: controller.signal })
       .then((page) => {
         setJobs(page.jobs)
         setLastKey(page.lastKey)
@@ -115,7 +134,7 @@ export function PublicJobsBoard({
       })
 
     return () => controller.abort()
-  }, [hasInitialJobs])
+  }, [hasInitialJobs, jobStatus])
 
   const handleLoadMore = () => {
     if (!lastKey || isLoadingMore) {
@@ -125,7 +144,7 @@ export function PublicJobsBoard({
     setIsLoadingMore(true)
     setError(null)
 
-    fetchPublicJobsPage({ limit: INITIAL_PAGE_LIMIT, lastKey })
+    fetchPublicJobsPage({ limit: INITIAL_PAGE_LIMIT, lastKey, status: jobStatus })
       .then((page) => {
         setJobs((currentJobs) => mergeJobBoardJobs(currentJobs, page.jobs))
         setLastKey(page.lastKey)
@@ -140,13 +159,13 @@ export function PublicJobsBoard({
   }
 
   const handleQueryChange = (value: string) => {
-    startTransition(() => {
-      setQuery(value)
-    })
+    setQuery(value)
   }
 
   return (
     <PublicJobsBoardView
+      jobStatus={jobStatus}
+      onJobStatusChange={onJobStatusChange}
       authenticatedUser={authenticatedUser}
       isCandidate={isCandidate}
       isCompany={isCompany}
@@ -167,6 +186,8 @@ export function PublicJobsBoard({
 }
 
 export function PublicJobsBoardView({
+  jobStatus = 'open',
+  onJobStatusChange,
   authenticatedUser = null,
   isCandidate = false,
   isCompany = false,
@@ -184,9 +205,11 @@ export function PublicJobsBoardView({
   hasMore,
 }: PublicJobsBoardViewProps) {
   const deferredQuery = useDeferredValue(query)
-  const filteredJobs = useMemo(() => filterJobBoardJobs(jobs, deferredQuery), [jobs, deferredQuery])
-  const showEmptyState = !isLoading && !error && jobs.length === 0
-  const showSearchEmptyState = !isLoading && jobs.length > 0 && filteredJobs.length === 0
+  const visibleJobs = useMemo(() => jobs.filter(job => jobStatus === 'closed'
+    ? job.status === 'Encerrada' : job.status !== 'Encerrada'), [jobs, jobStatus])
+  const filteredJobs = useMemo(() => filterJobBoardJobs(visibleJobs, deferredQuery), [visibleJobs, deferredQuery])
+  const showEmptyState = !isLoading && !error && visibleJobs.length === 0
+  const showSearchEmptyState = !isLoading && visibleJobs.length > 0 && filteredJobs.length === 0
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,107,0,0.16),_transparent_42%),linear-gradient(180deg,_#fff8f1_0%,_#ffffff_22%,_#fbfbfb_100%)] text-slate-950">
@@ -236,14 +259,13 @@ export function PublicJobsBoardView({
                   <MapPin className="size-4 text-slate-400" />
                   Brasil remoto e híbrido
                 </div>
-                <button
-                  type="button"
-                  disabled
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 px-4 py-3 text-sm font-medium text-slate-400"
+                <a
+                  href="#vagas"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-orange-200 px-4 py-3 text-sm font-medium text-orange-700 hover:bg-orange-50"
                 >
                   <Filter className="size-4" />
-                  Filtros em breve
-                </button>
+                  Filtrar por status
+                </a>
               </div>
             </div>
           </div>
@@ -277,11 +299,19 @@ export function PublicJobsBoardView({
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[#FF6B00]">Vagas em destaque</p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Oportunidades abertas agora</h2>
+            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{jobStatus === 'closed' ? 'Vagas encerradas' : 'Oportunidades abertas agora'}</h2>
             <p className="mt-2 text-sm text-slate-600">
               {filteredJobs.length} vaga{filteredJobs.length === 1 ? "" : "s"} encontrada{filteredJobs.length === 1 ? "" : "s"}
               {query.trim() ? " para a sua busca." : "."}
             </p>
+          </div>
+          <div className="flex gap-2" role="group" aria-label="Status das vagas">
+            {([['open', 'Abertas'], ['closed', 'Encerradas']] as const).map(([status, label]) => (
+              <button key={status} type="button" aria-pressed={jobStatus === status}
+                onClick={() => onJobStatusChange?.(status)}
+                className={cn('rounded-full border px-5 py-2 text-sm font-semibold', jobStatus === status
+                  ? 'border-orange-600 bg-orange-50 text-orange-800' : 'border-slate-300 bg-white text-slate-600')}>{label}</button>
+            ))}
           </div>
         </div>
 
@@ -310,8 +340,8 @@ export function PublicJobsBoardView({
 
         {showEmptyState ? (
           <div className="mt-8 rounded-[2rem] border border-dashed border-slate-300 bg-white px-8 py-16 text-center">
-            <h3 className="text-xl font-semibold text-slate-950">Nenhuma vaga disponível no momento</h3>
-            <p className="mt-3 text-sm text-slate-600">Volte em breve para acompanhar novas oportunidades publicadas.</p>
+            <h3 className="text-xl font-semibold text-slate-950">{jobStatus === 'closed' ? 'Nenhuma vaga encerrada encontrada' : 'Nenhuma vaga disponível no momento'}</h3>
+            <p className="mt-3 text-sm text-slate-600">{jobStatus === 'closed' ? 'Consulte Abertas para encontrar oportunidades disponíveis.' : 'Volte em breve para acompanhar novas oportunidades publicadas.'}</p>
           </div>
         ) : null}
 

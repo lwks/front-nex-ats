@@ -63,10 +63,10 @@ Importante: nao versione segredos reais em `.env.local`.
 
 ## Rotas de pagina (UI)
 
-- `/`: redireciona para `/jobs/list`; use `/?mode=login`, `/?mode=register` ou `/?mode=recover` para autenticação
+- `/`: redireciona para `/jobs/list`; use `/?mode=login`, `/?mode=register` ou `/?mode=recover` para autenticação. O parâmetro `next` preserva uma candidatura específica após o login de candidato.
 - `/jobs/list`: vagas públicas com filtros; Empresa autenticada pode consultar sem ações de candidatura, enquanto Candidato e visitante mantêm os links de candidatura
 - `/jobs/:guid`: detalhes públicos de uma vaga compartilhada por URL curta; Empresa autenticada pode consultar sem ação de candidatura
-- `/candidaturas`: candidatura completa de Candidato autenticado em 4 etapas; exige `?vagaGuid=...` e retorna à listagem com orientação quando a vaga não foi informada
+- `/candidaturas`: candidatura completa de Candidato autenticado em 4 etapas; exige `?vagaGuid=...`. Visitantes seguem para o login e retornam à mesma vaga depois de entrar; sem vaga informada, a rota retorna à listagem com orientação.
 - `/jobs/create`: formulario de criacao de vaga para Empresa autenticada, dentro da navegação ATS, com seletores de Area, Time, Senioridade, Setor, experiencia, beneficios e skills; localizacao por cidade e estado informados manualmente
 - `/meu-perfil`: edição do perfil reutilizável pelo Candidato autenticado, incluindo dados pessoais, profissionais, preferências, indicações e CV salvo
 - `/empresa/candidaturas`: quadro ATS de candidaturas por vaga para Empresa autenticada, com card "Nova vaga" para abrir o formulario
@@ -172,3 +172,13 @@ Veja [o guia do harness](docs/LOCAL_HARNESS.md). Copie [AGENTS.parent.md](docs/A
 Em `/candidaturas?vagaGuid=<id>`, o candidato autenticado consulta o próprio perfil e verifica se já se candidatou à vaga. Na primeira candidatura preenche o formulário completo. Nas seguintes pode usar as informações salvas ou revisar e alterar o perfil. Uma revisão final antecede o envio. A pretensão salarial e a mensagem são informadas para cada vaga; o compartilhamento deve ser confirmado novamente em toda candidatura. O aceite LGPD permanece válido por 21 dias e é solicitado de novo após esse prazo.
 
 O CV pode ser mantido, substituído por um novo upload ou omitido somente na candidatura atual. Omitir não remove o CV salvo no perfil. Candidaturas anteriores preservam os dados e o CV do momento do envio. Os proxies autenticados são `GET/PUT /api/candidates/me/profile`, `POST /api/candidates/me/cv-upload`, `GET /api/candidates/me/applications` e `POST /api/candidates/applications`. Uma vaga encerrada ou candidatura duplicada impede novo envio.
+
+## E-mail de candidatos e encerramento
+
+Em `/jobs/list`, a busca mostra somente vagas abertas por padrão; o filtro **Encerradas** consulta separadamente o arquivo de vagas encerradas. A paginação mantém o filtro selecionado. Links antigos continuam exibindo os detalhes, com aviso de encerramento e sem candidatura. O formulário verifica novamente a disponibilidade antes de enviar; a API também impede a gravação se a vaga for encerrada durante o preenchimento.
+
+Em `/minhas-candidaturas`, candidatos autenticados consultam exclusivamente seu próprio histórico, com filtros **Abertas**, **Encerradas** e **Todas**, acesso aos detalhes e à etapa da candidatura. O acesso fica no cabeçalho de vagas e em Meu perfil. Requer a API atualizada: `GET /api/jobs?status=open|closed` e `GET /api/candidates/me/applications?status=open|closed|all`. A consulta existente com `guid_vaga` continua retornando uma única candidatura.
+
+Em `/empresa/candidaturas`, Encerrar vaga abre a revisão da mensagem e permite notificar todos os candidatos. Desmarque a opção para apenas encerrar. No modal de uma candidatura, Enviar e-mail notifica somente aquela pessoa, sem encerrar a vaga. O front mostra o resultado por candidato; aceite SMTP não confirma entrega. Não há reenvio automático, inclusive em timeout ou aceite incerto. Antes de repetir um envio incerto, consulte os registros transacionais da Brevo.
+
+Configure `EMAIL_SERVICE_TOKEN` somente no ambiente do servidor Next, com o mesmo valor usado pela API. O endpoint `POST /api/emails` do commit da API `58e74e7` deve estar publicado e com SMTP configurado. O navegador chama `/api/jobs/:id/notifications`; o servidor valida perfil COMPANY e a propriedade da candidatura pela API, resolve o destinatário e encaminha a mensagem. Nunca coloque a chave em variáveis `NEXT_PUBLIC_*`. O envio em lote é feito em grupos de três requisições individuais; mantenha a página aberta até terminar. A lista e os resultados ficam na sessão do diálogo e não constituem um histórico persistente de envio. Testes usam respostas simuladas, sem e-mails reais.
