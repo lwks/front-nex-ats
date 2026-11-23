@@ -17,6 +17,7 @@ export async function GET(request: Request) {
     const limit = url.searchParams.get("limit")
     const lastKey = url.searchParams.get("lastKey")
     const upstreamUrl = new URL(JOBS_API_URL)
+    upstreamUrl.searchParams.set("status", url.searchParams.get("status") ?? "open")
 
     if (limit) {
       upstreamUrl.searchParams.set("limit", limit)

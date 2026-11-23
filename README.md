@@ -175,6 +175,10 @@ O CV pode ser mantido, substituído por um novo upload ou omitido somente na can
 
 ## E-mail de candidatos e encerramento
 
+Em `/jobs/list`, a busca mostra somente vagas abertas por padrão; o filtro **Encerradas** consulta separadamente o arquivo de vagas encerradas. A paginação mantém o filtro selecionado. Links antigos continuam exibindo os detalhes, com aviso de encerramento e sem candidatura. O formulário verifica novamente a disponibilidade antes de enviar; a API também impede a gravação se a vaga for encerrada durante o preenchimento.
+
+Em `/minhas-candidaturas`, candidatos autenticados consultam exclusivamente seu próprio histórico, com filtros **Abertas**, **Encerradas** e **Todas**, acesso aos detalhes e à etapa da candidatura. O acesso fica no cabeçalho de vagas e em Meu perfil. Requer a API atualizada: `GET /api/jobs?status=open|closed` e `GET /api/candidates/me/applications?status=open|closed|all`. A consulta existente com `guid_vaga` continua retornando uma única candidatura.
+
 Em `/empresa/candidaturas`, Encerrar vaga abre a revisão da mensagem e permite notificar todos os candidatos. Desmarque a opção para apenas encerrar. No modal de uma candidatura, Enviar e-mail notifica somente aquela pessoa, sem encerrar a vaga. O front mostra o resultado por candidato; aceite SMTP não confirma entrega. Não há reenvio automático, inclusive em timeout ou aceite incerto. Antes de repetir um envio incerto, consulte os registros transacionais da Brevo.
 
 Configure `EMAIL_SERVICE_TOKEN` somente no ambiente do servidor Next, com o mesmo valor usado pela API. O endpoint `POST /api/emails` do commit da API `58e74e7` deve estar publicado e com SMTP configurado. O navegador chama `/api/jobs/:id/notifications`; o servidor valida perfil COMPANY e a propriedade da candidatura pela API, resolve o destinatário e encaminha a mensagem. Nunca coloque a chave em variáveis `NEXT_PUBLIC_*`. O envio em lote é feito em grupos de três requisições individuais; mantenha a página aberta até terminar. A lista e os resultados ficam na sessão do diálogo e não constituem um histórico persistente de envio. Testes usam respostas simuladas, sem e-mails reais.

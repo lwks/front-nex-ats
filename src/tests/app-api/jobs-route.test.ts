@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { GET, OPTIONS, POST } from '@/app/api/jobs/route'
+import { GET, POST } from '@/app/api/jobs/route'
 const apiAuthorization = vi.hoisted(() => ({
   authorize: vi.fn().mockResolvedValue({ ok: true, accessToken: 'test-access-token' }),
 }))
@@ -22,7 +22,7 @@ describe('/api/jobs route', () => {
     const response = await GET(new Request('http://localhost/api/jobs?limit=6&lastKey=cursor-1'))
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://qqkukhkx3ee4of2muxjlb7f3l40qeari.lambda-url.us-east-1.on.aws/api/jobs?limit=6&lastKey=cursor-1',
+      'https://qqkukhkx3ee4of2muxjlb7f3l40qeari.lambda-url.us-east-1.on.aws/api/jobs?status=open&limit=6&lastKey=cursor-1',
       {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
@@ -41,6 +41,16 @@ describe('/api/jobs route', () => {
 
     expect(response.status).toBe(500)
     expect(consoleSpy).toHaveBeenCalled()
+  })
+
+  it('preserves the archive filter and cursor when forwarding to the API', async () => {
+    const mock = vi.fn().mockResolvedValue(new Response('{"data":{"items":[]}}', { status: 200 }))
+    vi.stubGlobal('fetch', mock)
+    const response = await GET(new Request('http://localhost/api/jobs?status=closed&limit=2&lastKey=archive-cursor'))
+    const url = new URL(mock.mock.calls[0][0])
+    expect(url.searchParams.get('status')).toBe('closed')
+    expect(url.searchParams.get('lastKey')).toBe('archive-cursor')
+    expect(response.status).toBe(200)
   })
 
   it('proxies POST response', async () => {

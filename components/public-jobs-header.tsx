@@ -14,7 +14,7 @@ export function PublicJobsHeader({ authenticatedUser = null, isCandidate = false
         <div className="flex size-11 items-center justify-center rounded-2xl bg-[#FF6B00] text-white shadow-[0_12px_30px_rgba(255,107,0,0.28)]"><Briefcase className="size-5" /></div>
         <div><p className="text-lg font-semibold tracking-tight">ClusterHR</p><p className="text-sm text-slate-500">Job Board</p></div>
       </Link>
-      {authenticatedUser && isCandidate ? <Link href="/meu-perfil" className="text-sm font-semibold text-[#C44E00] md:hidden">Meu perfil</Link> : null}
+      {authenticatedUser && isCandidate ? <div className="flex flex-wrap gap-3 text-sm font-semibold text-[#C44E00] md:hidden"><Link href="/meu-perfil">Meu perfil</Link><Link href="/minhas-candidaturas">Minhas candidaturas</Link></div> : null}
       <div className="hidden items-center gap-6 md:flex">
         <nav className="flex items-center gap-6 text-sm font-medium text-slate-600">
           <Link href={boardHref} className="transition hover:text-[#FF6B00]">Vagas</Link>
@@ -23,7 +23,7 @@ export function PublicJobsHeader({ authenticatedUser = null, isCandidate = false
         </nav>
         <div className="flex items-center gap-3">
           {authenticatedUser ? <>
-            {isCandidate ? <Link href="/meu-perfil" className="text-sm font-semibold text-[#C44E00] hover:underline">Meu perfil</Link> : null}
+            {isCandidate ? <><Link href="/meu-perfil" className="text-sm font-semibold text-[#C44E00] hover:underline">Meu perfil</Link><Link href="/minhas-candidaturas" className="text-sm font-semibold text-[#C44E00] hover:underline">Minhas candidaturas</Link></> : null}
             <span className="max-w-48 truncate text-sm font-semibold text-slate-700" aria-label="Usuário conectado">{authenticatedUser}</span>
             <a href="/api/auth/logout" className="text-sm text-slate-500 hover:text-slate-900">Sair</a>
           </> : <>
