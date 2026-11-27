@@ -9,13 +9,15 @@ type RecordData = Record<string, unknown>
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } })
 const value = (...values: unknown[]) => values.find(v => typeof v === 'string' && v.trim()) as string | undefined
 
-export async function GET(_request: Request, context: Context) {
+export async function GET(request: Request, context: Context) {
   const auth = await authorizeApiAccountType('COMPANY')
   if (!auth.ok) return auth.response
   try {
     const { id } = await context.params
+    const cycle = Number(new URL(request.url).searchParams.get('ciclo') ?? 1)
+    if (!Number.isSafeInteger(cycle) || cycle < 1) return json({ message: 'Ciclo inválido.' }, 400)
     // The API checks ownership of this vacancy before returning its candidates.
-    const response = await fetch(`${CANDIDATES_BY_JOB_GUIDS_API_URL}?${new URLSearchParams({ guid_vaga: id })}`, {
+    const response = await fetch(`${CANDIDATES_BY_JOB_GUIDS_API_URL}?${new URLSearchParams({ guid_vaga: id, scope: 'cycle', ciclo: String(cycle) })}`, {
       headers: { Authorization: `Bearer ${auth.accessToken}` }, cache: 'no-store',
     })
     if (!response.ok) return json({ message: 'Não foi possível consultar os destinatários desta vaga.' }, response.status)
@@ -37,7 +39,8 @@ export async function POST(request: Request, context: Context) {
   if (!body || typeof body.candidateId !== 'string' || !body.candidateId.trim()
     || typeof body.subject !== 'string' || !body.subject.trim() || body.subject.length > 200 || /[\r\n\x00]/.test(body.subject)
     || typeof body.text !== 'string' || !body.text.trim() || Buffer.byteLength(body.text, 'utf8') > 51200
-    || Object.keys(body).some(key => !['candidateId', 'subject', 'text'].includes(key))) {
+    || !Number.isSafeInteger(body.ciclo ?? 1) || (body.ciclo ?? 1) < 1
+    || Object.keys(body).some(key => !['candidateId', 'subject', 'text', 'ciclo'].includes(key))) {
     return json({ message: 'Informe candidato, assunto (até 200 caracteres) e mensagem (até 50 KB).' }, 400)
   }
   const serviceToken = process.env.EMAIL_SERVICE_TOKEN
@@ -51,6 +54,7 @@ export async function POST(request: Request, context: Context) {
     if (!candidateResponse.ok) return json({ message: 'Candidatura indisponível para esta empresa.' }, candidateResponse.status)
     const { data: candidate } = await candidateResponse.json()
     if (!candidate || candidate.guid_vaga !== id) return json({ message: 'O candidato não pertence a esta vaga.' }, 403)
+    if ((candidate.ciclo ?? 1) !== (body.ciclo ?? 1)) return json({ message: 'A candidatura não pertence ao ciclo selecionado.' }, 409)
     const to = value(candidate.contato, candidate.email, candidate.cd_email)
     if (!to) return json({ data: { status: 'skipped', message: 'Candidato sem e-mail.' } })
     try {

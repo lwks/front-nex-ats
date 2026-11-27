@@ -8,7 +8,7 @@ describe('Supabase email confirmation', () => {
   it('rejects an invalid link', async () => {
     const { GET } = await import('@/app/auth/confirm/route')
     const response = await GET(new NextRequest('http://0.0.0.0:3000/auth/confirm?type=email', { headers: { 'x-forwarded-host': 'clusterjobs.com.br' } }))
-    expect(response.headers.get('location')).toBe('https://clusterjobs.com.br/?error=confirmation')
+    expect(response.headers.get('location')).toBe('https://clusterjobs.com.br/?mode=login&error=confirmation')
   })
 
   it('verifies a recovery token and opens password update', async () => {

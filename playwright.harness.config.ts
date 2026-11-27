@@ -11,11 +11,13 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 0,
   timeout: 60_000,
+  // The first request compiles Next routes on Windows before exercising the application.
+  expect: { timeout: 15_000 },
   reporter: [['list'], ['html', { outputFolder: 'playwright-harness-report', open: 'never' }]],
   outputDir: 'test-results-harness',
   use: {
     baseURL: `http://localhost:${frontPort}`, trace: 'retain-on-failure', screenshot: 'only-on-failure',
-    actionTimeout: 15_000,
+    actionTimeout: 30_000,
     launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
       ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, args: ['--no-sandbox'] } : undefined,
   },

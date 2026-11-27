@@ -12,10 +12,14 @@ export class VacancyClosedError extends Error {
   constructor() { super('Esta vaga foi encerrada e não aceita mais candidaturas.') }
 }
 
-export async function assertVacancyOpen(jobGuid: string) {
-  const job = await request<{ status?: string }>(`/api/jobs/${encodeURIComponent(jobGuid)}`)
+export async function assertVacancyOpen(jobGuid: string, expectedCycle?: number) {
+  const job = await request<{ status?: string; ciclo_atual?: number }>(`/api/jobs/${encodeURIComponent(jobGuid)}`)
   if (!job || typeof job.status !== 'string') throw new Error('Não foi possível confirmar se a vaga está aberta.')
   if (job.status === 'Encerrada') throw new VacancyClosedError()
+  const cycle = job.ciclo_atual === undefined ? 1 : job.ciclo_atual
+  if (!Number.isSafeInteger(cycle) || cycle < 1) throw new Error('Não foi possível confirmar o ciclo da vaga. Recarregue a página.')
+  if (expectedCycle !== undefined && expectedCycle !== cycle) throw new Error('A vaga iniciou um novo ciclo. Recarregue a página antes de se candidatar.')
+  return cycle
 }
 export type ApplicationData = { mensagemEmpresa: string; pretensaoSalarial: string; compartilhamentoAccepted: boolean;
   lgpdAccepted?: boolean; cvAction: CvAction; cv?: SavedProfile['cv'] }
@@ -53,6 +57,8 @@ export function getOwnApplication(jobGuid: string) {
 export type CandidateApplicationSummary = {
   id: string; jobGuid: string; title: string; company: string; jobStatus: string | null;
   status: string; createdAt: string; closedAt: string | null
+  ciclo?: number; currentJobStatus?: string | null; removidaDaSelecao?: boolean
+  historico?: Array<{ tipo: string; ciclo: number; data: string | null; etapa: string; mensagem: string }>
 }
 export async function getMyApplications(status: 'open' | 'closed' | 'all', signal?: AbortSignal) {
   const data = await request<{ items: CandidateApplicationSummary[] }>(`/api/candidates/me/applications?status=${status}`, { signal })
@@ -81,7 +87,7 @@ export async function uploadProfileCv(file: File) {
   if (!response.ok) throw new Error('Não foi possível enviar o currículo.')
   return { key: upload.key, filename: file.name, contentType: file.type, size: file.size }
 }
-export function sendApplication(body: { guid_vaga: string; mode: 'USE_SAVED_PROFILE' | 'UPDATE_PROFILE'; profileVersion?: number;
+export function sendApplication(body: { guid_vaga: string; ciclo?: number; mode: 'USE_SAVED_PROFILE' | 'UPDATE_PROFILE'; profileVersion?: number;
   profile?: ReturnType<typeof profileFromForm>; application: ApplicationData }) {
   return request<{ guid_id: string }>('/api/candidates/applications', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),

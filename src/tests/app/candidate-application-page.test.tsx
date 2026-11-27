@@ -14,12 +14,12 @@ vi.mock('@/components/candidate-onboarding', () => ({
 describe('candidate application page', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('requires candidate authorization and redirects when no vacancy is provided', async () => {
+  it('redirects to vacancy selection before starting authentication when no vacancy is provided', async () => {
     const { default: CandidateApplicationPage } = await import('@/app/candidaturas/page')
 
     await expect(CandidateApplicationPage({ searchParams: Promise.resolve({}) }))
       .rejects.toThrow('REDIRECT:/jobs/list?notice=select-job')
-    expect(auth.requireAccountType).toHaveBeenCalledWith('CANDIDATE')
+    expect(auth.requireAccountType).not.toHaveBeenCalled()
   })
 
   it('passes the selected vacancy to the full candidate form', async () => {
@@ -27,6 +27,7 @@ describe('candidate application page', () => {
     const page = await CandidateApplicationPage({ searchParams: Promise.resolve({ vagaGuid: 'job-guid-1' }) })
 
     expect(page.props.jobGuid).toBe('job-guid-1')
+    expect(auth.requireAccountType).toHaveBeenCalledWith('CANDIDATE', '/candidaturas?vagaGuid=job-guid-1')
   })
 
   it('accepts the legacy vaga query parameter', async () => {

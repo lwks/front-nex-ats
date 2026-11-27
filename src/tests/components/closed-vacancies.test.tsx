@@ -31,7 +31,7 @@ describe('closed vacancy visibility', () => {
     const html = renderToStaticMarkup(<CandidateApplicationsList items={[{ id: 'own-1', jobGuid: closed.guid!,
       title: closed.title, company: '', status: 'Entrevista', jobStatus: 'Encerrada', createdAt: '', closedAt: null }]} />)
     expect(html).toContain('Entrevista')
-    expect(html).toContain('Processo encerrado')
+    expect(html).toContain('Este processo foi encerrado')
     expect(html).toContain('Ver detalhes da vaga')
     expect(html).not.toContain('/candidaturas?')
     expect(renderToStaticMarkup(<CandidateApplicationsList items={[]} />)).toContain('Nenhuma candidatura')

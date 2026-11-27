@@ -27,7 +27,9 @@ import { shouldClearCandidateNoteFeedback } from "@/lib/candidate-note-feedback"
 import { fetchCandidatesByJobGuids } from "@/services/candidates-by-job-guids-service"
 import { getCandidateCvDownloadUrl } from "@/services/cv-download-service"
 import { CandidateNotificationDialog } from "@/components/candidate-notification-dialog"
-import { closeCompanyJob } from "@/services/company-jobs-service"
+import { closeCompanyJob, reopenCompanyJob } from "@/services/company-jobs-service"
+import { ReopenJobDialog } from '@/components/reopen-job-dialog'
+import { CompanyJobHistory } from '@/components/company-job-history'
 
 type ApiJob = Record<string, unknown>
 
@@ -46,6 +48,7 @@ export type CompanyApplicationsJob = JobCard & {
   reportUrl: string
   status?: string
   closeReason?: string
+  cycle?: number
 }
 
 export type CompanyApplicationsViewProps = {
@@ -69,6 +72,7 @@ export type CompanyApplicationsViewProps = {
   jobStatusFilter?: "open" | "closed" | "all"
   onJobStatusFilterChange?: (value: "open" | "closed" | "all") => void
   onCloseJob?: () => void
+  onReopenJob?: () => void
   isClosingJob?: boolean
   closeReasonDraft?: string
   onCloseReasonChange?: (value: string) => void
@@ -270,6 +274,7 @@ export function normalizeCompanyJob(item: ApiJob, index: number): CompanyApplica
     reportUrl: pickString(item.reportUrl, item.report_url, item.relatorio_url) ?? "Nao informado",
     status: pickString(item.status) ?? "Aberto",
     closeReason: pickString(item.motivo_encerramento),
+    cycle: typeof item.ciclo_atual === 'number' ? item.ciclo_atual : 1,
   }
 }
 
@@ -375,6 +380,7 @@ export function CompanyApplicationsView({
   jobStatusFilter = "open",
   onJobStatusFilterChange = () => undefined,
   onCloseJob = () => undefined,
+  onReopenJob = () => undefined,
   isClosingJob = false,
   closeReasonDraft = "",
   onCloseReasonChange = () => undefined,
@@ -590,11 +596,13 @@ export function CompanyApplicationsView({
                   <button type="button" onClick={onCloseJob} disabled={isClosingJob} className="rounded-md bg-red-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{isClosingJob ? "Encerrando..." : "Encerrar vaga"}</button>
                 </div>
               ) : (
-                <div className="mb-4 rounded-md bg-gray-50 p-4 text-sm text-gray-700"><strong>Vaga encerrada.</strong>{currentJob.closeReason ? <p className="mt-1">Motivo: {currentJob.closeReason}</p> : <p className="mt-1">Nenhum motivo informado.</p>}</div>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-md bg-gray-50 p-4 text-sm text-gray-700"><div><strong>Vaga encerrada.</strong>{currentJob.closeReason ? <p className="mt-1">Motivo: {currentJob.closeReason}</p> : <p className="mt-1">Nenhum motivo informado.</p>}</div><button type="button" onClick={onReopenJob} className="rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white">Reabrir vaga</button></div>
               )}
-              {currentJob.status === "Encerrada" ? <p role="status" className="mb-3 text-sm text-gray-600">Pipeline somente leitura: vaga encerrada.</p> : null}
-              {closeJobFeedback ? <p role="status" className="mb-3 text-sm text-red-700">{closeJobFeedback}</p> : null}
+              <p className="mb-3 text-sm text-slate-500">Ciclo atual: {currentJob.cycle ?? 1}</p>
+              {currentJob.status === "Encerrada" ? <p role="status" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">Esta vaga está encerrada. A movimentação de candidatos está bloqueada. Reabra para receber novas candidaturas. Participantes de ciclos anteriores permanecem somente para consulta.</p> : null}
+              {closeJobFeedback ? <p role="status" className="mb-3 text-sm text-slate-700">{closeJobFeedback}</p> : null}
               {board}
+              <CompanyJobHistory key={`history-${currentJob.jobGuid}-${currentJob.status}-${currentJob.cycle}`} jobGuid={currentJob.jobGuid ?? ''} />
             </section>
           ) : null}
         </div>
@@ -604,7 +612,8 @@ export function CompanyApplicationsView({
 }
 
 export function CompanyApplicationsPage({ companyUserId, accountLabel }: { companyUserId: string; accountLabel?: string }) {
-  const [notificationTarget, setNotificationTarget] = useState<{ jobId: string; jobTitle: string; candidateId?: string; close: boolean } | null>(null)
+  const [notificationTarget, setNotificationTarget] = useState<{ jobId: string; jobTitle: string; cycle: number; candidateId?: string; close: boolean } | null>(null)
+  const [reopenTarget, setReopenTarget] = useState<CompanyApplicationsJob | null>(null)
   const [candidateSequence, setCandidateSequence] = useState<Application[]>([])
   const modalContentRef = useRef<HTMLDivElement>(null)
   const [selectedCandidate, setSelectedCandidate] = useState<Application | null>(null)
@@ -764,15 +773,29 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
     setIsClosingJob(true)
     setCloseJobFeedback(null)
     try {
-      const updated = await closeCompanyJob(currentJob.jobGuid, closeReasonDraft)
-      const closedJob = { ...currentJob, status: "Encerrada", closeReason: (updated.motivo_encerramento as string | undefined) ?? closeReasonDraft }
+      const updated = await closeCompanyJob(currentJob.jobGuid, closeReasonDraft, currentJob.cycle ?? 1)
+      const closedJob = { ...currentJob, status: "Encerrada", cycle: updated.ciclo_atual ?? currentJob.cycle ?? 1, closeReason: updated.motivo_encerramento ?? closeReasonDraft }
       setJobs((previous) => previous.map((job) => job.jobGuid === currentJob.jobGuid ? closedJob : job))
+      setSelectedCandidate(null)
+      setCandidateOverrides({})
       setJobStatusFilter("closed")
       setCloseJobFeedback("Vaga encerrada com sucesso.")
     } catch (error) {
       setCloseJobFeedback(error instanceof Error ? error.message : "Não foi possível encerrar a vaga.")
       throw error
     } finally { setIsClosingJob(false) }
+  }
+
+  const handleReopenJob = async () => {
+    if (!reopenTarget?.jobGuid) return
+    const updated = await reopenCompanyJob(reopenTarget.jobGuid, reopenTarget.cycle ?? 1)
+    setJobs(previous => previous.map(job => job.jobGuid === reopenTarget.jobGuid
+      ? { ...job, status: 'Aberto', cycle: updated.ciclo_atual, closeReason: undefined } : job))
+    setJobStatusFilter('open')
+    setSelectedJobGuid(reopenTarget.jobGuid)
+    setSelectedCandidate(null)
+    setCandidateOverrides({})
+    setCloseJobFeedback('Vaga reaberta com sucesso. Um novo ciclo de candidaturas foi iniciado.')
   }
 
   const hydratedSelectedCandidate = useMemo(() => {
@@ -798,7 +821,7 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
   }, [hydratedSelectedCandidate?.id, hydratedSelectedCandidate?.notes])
 
   const handleSaveCandidateNote = async () => {
-    if (!hydratedSelectedCandidate) {
+    if (!hydratedSelectedCandidate || hydratedSelectedCandidate.somenteLeitura || currentJob?.status === 'Encerrada') {
       return
     }
 
@@ -866,6 +889,7 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
   }
 
   const handleCandidateStatusChange = async (application: Application, status: ApplicationStatus) => {
+    if (currentJob?.status === 'Encerrada' || application.somenteLeitura) throw new Error('Esta candidatura está disponível somente para consulta.')
     if (!application.recordId) {
       throw new Error("Nao foi possivel identificar o candidato para atualizar a etapa.")
     }
@@ -895,7 +919,7 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
 
   const board = currentJob ? (
     <ApplicationBoardFromApi
-      key={currentJob.jobGuid}
+      key={`${currentJob.jobGuid}-${currentJob.status}-${currentJob.cycle}`}
       guidVaga={currentJob.jobGuid ?? ""}
       colunas={boardColumns}
       draggable={currentJob.status !== "Encerrada"}
@@ -930,15 +954,18 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
         board={board}
         jobStatusFilter={jobStatusFilter}
         onJobStatusFilterChange={setJobStatusFilter}
-        onCloseJob={() => { if (currentJob?.jobGuid) setNotificationTarget({ jobId: currentJob.jobGuid, jobTitle: currentJob.title, close: true }) }}
+        onCloseJob={() => { if (currentJob?.jobGuid) setNotificationTarget({ jobId: currentJob.jobGuid, jobTitle: currentJob.title, cycle: currentJob.cycle ?? 1, close: true }) }}
+        onReopenJob={() => { if (currentJob) setReopenTarget(currentJob) }}
         isClosingJob={isClosingJob}
         closeReasonDraft={closeReasonDraft}
         onCloseReasonChange={setCloseReasonDraft}
         closeJobFeedback={closeJobFeedback}
       />
 
+      {reopenTarget ? <ReopenJobDialog title={reopenTarget.title} onConfirm={handleReopenJob} onClose={() => setReopenTarget(null)} /> : null}
       {notificationTarget ? <CandidateNotificationDialog
         jobId={notificationTarget.jobId} jobTitle={notificationTarget.jobTitle} candidateId={notificationTarget.candidateId}
+        cycle={notificationTarget.cycle}
         closeJob={notificationTarget.close ? handleCloseJob : undefined} onClose={() => setNotificationTarget(null)}
       /> : null}
       {hydratedSelectedCandidate ? (
@@ -953,7 +980,7 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
                 <p className="text-sm text-gray-600">{fallback(hydratedSelectedCandidate.cargo)}</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => { if (currentJob?.jobGuid) setNotificationTarget({ jobId: currentJob.jobGuid, jobTitle: currentJob.title, candidateId: hydratedSelectedCandidate.recordId ?? hydratedSelectedCandidate.id, close: false }) }} className="rounded-lg border-2 border-orange-300 px-3 py-1 text-xs font-semibold">Enviar e-mail</button>
+                <button type="button" onClick={() => { if (currentJob?.jobGuid) setNotificationTarget({ jobId: currentJob.jobGuid, jobTitle: currentJob.title, cycle: hydratedSelectedCandidate.ciclo ?? 1, candidateId: hydratedSelectedCandidate.recordId ?? hydratedSelectedCandidate.id, close: false }) }} className="rounded-lg border-2 border-orange-300 px-3 py-1 text-xs font-semibold">Enviar e-mail</button>
               <button type="button" disabled={!nextCandidate || isSavingCandidateNote} onClick={() => { if (nextCandidate) setSelectedCandidate(nextCandidate) }} className="rounded-lg border-2 border-gray-300 px-3 py-1 text-xs font-semibold disabled:opacity-50">Próximo</button>
               <button
                 type="button"
@@ -1090,12 +1117,15 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
               </div>
             </section>
 
+            {hydratedSelectedCandidate.historico?.map(event => <p key={`${event.tipo}-${event.ciclo}`} className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">{event.mensagem}</p>)}
             <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Anotacoes do recruiter</p>
                   <p className="mt-1 text-sm text-gray-600">
-                    Esse texto fica vinculado ao candidato desta vaga e pode ser atualizado depois.
+                    {hydratedSelectedCandidate.somenteLeitura || currentJob?.status === 'Encerrada'
+                      ? 'Anotação interna preservada neste ciclo. Disponível somente para consulta.'
+                      : 'Esse texto fica vinculado ao candidato desta vaga e pode ser atualizado depois.'}
                   </p>
                 </div>
                 {hydratedSelectedCandidate.atualizadoEm ? (
@@ -1108,7 +1138,7 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
               <textarea
                 value={candidateNotesDraft}
                 onChange={(event) => setCandidateNotesDraft(event.target.value)}
-                disabled={currentJob?.status === "Encerrada"}
+                disabled={currentJob?.status === "Encerrada" || hydratedSelectedCandidate.somenteLeitura}
                 rows={5}
                 placeholder="Registre observacoes sobre entrevista, proximos passos, riscos ou destaque do perfil."
                 className="mt-4 w-full rounded-lg border-2 border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 outline-none transition focus:border-[#FF6B00] focus:ring-2 focus:ring-orange-100"
@@ -1127,14 +1157,14 @@ export function CompanyApplicationsPage({ companyUserId, accountLabel }: { compa
               ) : null}
 
               <div className="mt-4 flex justify-end">
-                {currentJob?.status !== "Encerrada" ? <button
+                {currentJob?.status !== "Encerrada" && !hydratedSelectedCandidate.somenteLeitura ? <button
                   type="button"
                   onClick={() => void handleSaveCandidateNote()}
                   disabled={isSavingCandidateNote}
                   className="rounded-lg bg-[#FF6B00] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#e66000] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSavingCandidateNote ? "Salvando..." : "Salvar anotacao"}
-                </button> : <span className="text-sm text-gray-600">Somente leitura: vaga encerrada.</span>}
+                </button> : <span className="text-sm text-gray-600">Somente consulta: ciclo encerrado.</span>}
               </div>
             </div>
             <div className="mt-5 flex justify-end border-t pt-5"><a href={`/empresa/candidaturas/${encodeURIComponent(hydratedSelectedCandidate.recordId ?? hydratedSelectedCandidate.id)}`} className="rounded-lg bg-[#FF6B00] px-5 py-3 text-sm font-semibold text-white">Ver mais detalhes</a></div>

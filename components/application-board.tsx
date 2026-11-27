@@ -47,6 +47,10 @@ export type Application = {
   atualizadoEm?: string
   cvFilename?: string
   hasCv?: boolean
+  ciclo?: number
+  cicloAnterior?: boolean
+  somenteLeitura?: boolean
+  historico?: Array<{ tipo: string; ciclo: number; mensagem: string }>
 }
 
 export type ApplicationColumn = {
@@ -136,7 +140,7 @@ function pickLabeledString(value: unknown, options: Array<{ value: string; label
 
 export { mapApiStatusToBoardStatus } from "@/lib/application-status"
 
-function extractCandidateItems(payload: unknown): unknown[] {
+export function extractCandidateItems(payload: unknown): unknown[] {
   if (Array.isArray(payload)) {
     return payload
   }
@@ -239,6 +243,12 @@ export function normalizeCandidate(item: unknown, index: number): Application | 
       ...(pickStringArray(item.softSkills, item.soft_skills) ?? []),
     ])],
     status: mapApiStatusToBoardStatus(rawStatus),
+    ciclo: typeof item.ciclo === 'number' ? item.ciclo : 1,
+    cicloAnterior: item.cicloAnterior === true,
+    somenteLeitura: item.somenteLeitura === true,
+    historico: Array.isArray(item.historico) ? item.historico.filter(isRecord)
+      .filter(event => typeof event.tipo === 'string' && typeof event.ciclo === 'number' && typeof event.mensagem === 'string')
+      .map(event => ({ tipo: event.tipo as string, ciclo: event.ciclo as number, mensagem: event.mensagem as string })) : [],
     atualizadoEm: pickString(item.updatedAt, item.updated_at, item.atualizadoEm),
     cvFilename: isRecord(item.cv) ? pickString(item.cv.filename) : undefined,
     hasCv: Boolean(item.cv && typeof item.cv === 'object' && (item.cv as Record<string, unknown>).filename),
@@ -288,7 +298,7 @@ export function ApplicationBoard({
   }, [colunas, resolvedApplications])
 
   const handleDragStart = (application: Application) => (event: DragEvent<HTMLDivElement>) => {
-    if (!draggable) return
+    if (!draggable || application.somenteLeitura) { event.preventDefault(); return }
     event.dataTransfer.setData("text/plain", application.id)
     event.dataTransfer.effectAllowed = "move"
     setDraggedId(application.id)
@@ -307,7 +317,7 @@ export function ApplicationBoard({
     if (!applicationId) return
 
     const currentApplication = resolvedApplications.find((application) => application.id === applicationId)
-    if (!currentApplication || currentApplication.status === columnId) {
+    if (!currentApplication || currentApplication.somenteLeitura || currentApplication.status === columnId) {
       setActiveColumn(null)
       return
     }
@@ -375,13 +385,14 @@ export function ApplicationBoard({
               <div
                 key={application.id}
                 data-testid={"candidate-card-" + application.id}
-                draggable={draggable}
+                draggable={draggable && !application.somenteLeitura}
+                title={!draggable ? 'Vaga encerrada: movimentação bloqueada. Clique para consultar os detalhes.' : application.somenteLeitura ? 'Ciclo encerrado: movimentação bloqueada. Clique para consultar os detalhes.' : 'Arraste para mudar de etapa ou clique para consultar.'}
                 onDragStart={handleDragStart(application)}
                 onDragEnd={handleDragEnd}
                 onClick={() => onApplicationSelect?.(application, colunas.flatMap(column => groupedApplications[column.id]))}
                 className={cn(
                   "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition",
-                  draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
+                  draggable && !application.somenteLeitura ? "cursor-grab active:cursor-grabbing" : "cursor-not-allowed",
                   draggedId === application.id && "opacity-60",
                   onApplicationSelect && "hover:border-slate-300 hover:shadow-md",
                 )}
@@ -398,6 +409,8 @@ export function ApplicationBoard({
                     : undefined
                 }
               >
+                {application.cicloAnterior ? <p className="mb-3 rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">Ciclo anterior · Ciclo {application.ciclo}</p> : null}
+                {(!draggable || application.somenteLeitura) ? <p className="mb-2 text-xs text-slate-500">Somente consulta · movimentação bloqueada</p> : null}
                 <div className="flex items-start gap-3">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white">
                     {getInitials(application.nome)}

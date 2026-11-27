@@ -8,7 +8,7 @@ describe('Supabase callback', () => {
   it('rejects a missing code', async () => {
     const { GET } = await import('@/app/auth/callback/route')
     const response = await GET(new NextRequest('http://localhost/auth/callback'))
-    expect(response.headers.get('location')).toContain('/?error=callback')
+    expect(response.headers.get('location')).toContain('/?mode=login&error=callback')
   })
 
   it('sends a verified company to the ATS', async () => {

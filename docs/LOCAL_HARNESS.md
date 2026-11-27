@@ -1,5 +1,13 @@
 # Executar front e back localmente
 
+## Pipeline e ciclos da vaga
+
+Em `/empresa/candidaturas`, encerrar retira Novos, RH, Técnica e Proposta da pipeline e registra o encerramento no histórico. Contratados e Rejeitados continuam nas colunas finais, disponíveis somente para consulta. O aviso e o cursor indicam o bloqueio da movimentação, preservando a abertura dos detalhes.
+
+Em Encerradas, **Reabrir vaga** pede confirmação e inicia um novo ciclo com o mesmo link e dados. Candidatos antigos não retornam automaticamente, mas podem enviar nova inscrição. Os resultados finais antigos recebem o selo **Ciclo anterior** e continuam bloqueados. O histórico da vaga e **Minhas candidaturas** preservam as inscrições anteriores, sem expor anotações internas ao candidato.
+
+Notificações são opcionais e usam somente os destinatários do ciclo selecionado; falhas de envio não desfazem o encerramento.
+
 Requer Node.js 22+, npm e os diretórios irmãos `front-nex-ats` e `lambda-api-next`, ambos com a branch `feature/config-harness` ou suas mudanças incorporadas.
 
 ```bash

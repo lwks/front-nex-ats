@@ -24,6 +24,7 @@ test('signs in each account type and sends it to the correct page', async ({ pag
     ['company@example.com', '/empresa/candidaturas'],
   ] as const) {
     await openReady(page, '/api/auth/logout')
+    await openReady(page, '/?mode=login')
     await page.getByLabel('E-mail').fill(email)
     await page.getByLabel('Senha').fill('correct-password')
     await page.getByRole('button', { name: 'Entrar', exact: true }).click()

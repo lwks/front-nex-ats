@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test"
 
 async function signIn(page: Page, type: 'candidate' | 'company') {
-  await page.goto('/')
+  await page.goto('/?mode=login')
   await page.waitForLoadState('networkidle')
   await page.getByLabel('E-mail').fill(`${type}@example.com`)
   await page.getByLabel('Senha').fill('correct-password')
@@ -150,7 +150,7 @@ test("allows five sectors and three preferred seniorities in candidate preferenc
   await expect(page.getByText('cv-e2e.pdf')).toBeVisible()
   let uploaded = false
   let candidatePayload: Record<string, unknown> | null = null
-  await page.route('**/api/candidates/me/cv-upload', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { uploadUrl: 'http://localhost:3000/e2e-s3-upload', key: 'cvs/candidate/profile/e2e.pdf' } }) }))
+  await page.route('**/api/candidates/me/cv-upload', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { uploadUrl: new URL('/e2e-s3-upload', page.url()).href, key: 'cvs/candidate/profile/e2e.pdf' } }) }))
   await page.route('**/e2e-s3-upload', async route => { uploaded = route.request().method() === 'PUT'; await route.fulfill({ status: 200, body: '' }) })
   await page.route('**/api/candidates/applications', async route => { candidatePayload = route.request().postDataJSON() as Record<string, unknown>; await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ data: { id: 'e2e-candidate' } }) }) })
   await page.getByRole('button', { name: 'Enviar candidatura' }).click()
