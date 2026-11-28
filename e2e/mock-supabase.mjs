@@ -1,7 +1,9 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 import { createServer } from 'node:http'
 
 const roles = new Map()
+const registeredUsers = new Map()
+const registeredEmails = new Map()
 const port = Number(process.env.E2E_SUPABASE_PORT || 54329)
 const harness = process.env.HARNESS_MODE === 'local'
 if (harness && (process.env.NODE_ENV !== 'development' || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL || process.env.NETLIFY)) {
@@ -10,6 +12,17 @@ if (harness && (process.env.NODE_ENV !== 'development' || process.env.AWS_LAMBDA
 if (harness) {
   roles.set('company', 'COMPANY')
   roles.set('candidate', 'CANDIDATE')
+}
+
+function userIdForEmail(email) {
+  const localId = String(email).split('@')[0]
+  if (harness || ['candidate', 'company'].includes(localId)) return localId
+  if (!registeredUsers.has(email)) {
+    const id = randomUUID()
+    registeredUsers.set(email, id)
+    registeredEmails.set(id, email)
+  }
+  return registeredUsers.get(email)
 }
 
 function verifiedLocalUser(token) {
@@ -27,7 +40,7 @@ function tokenFor(id) {
   const role = roles.get(id)
   const payload = Buffer.from(JSON.stringify({
     iss: `http://localhost:${port}/auth/v1`, aud: 'authenticated', role: 'authenticated',
-    sub: id, email: `${id}@example.com`, exp: Math.floor(Date.now() / 1000) + 3600,
+    sub: id, email: registeredEmails.get(id) ?? `${id}@example.com`, exp: Math.floor(Date.now() / 1000) + 3600,
     iat: Math.floor(Date.now() / 1000), app_metadata: role ? { account_type: role } : {},
     user_metadata: {},
   })).toString('base64url')
@@ -36,7 +49,7 @@ function tokenFor(id) {
 }
 
 function userFor(id) {
-  return { id, email: `${id}@example.com`, app_metadata: roles.has(id) ? { account_type: roles.get(id) } : {}, user_metadata: {}, aud: 'authenticated' }
+  return { id, email: registeredEmails.get(id) ?? `${id}@example.com`, app_metadata: roles.has(id) ? { account_type: roles.get(id) } : {}, user_metadata: {}, aud: 'authenticated' }
 }
 
 function send(response, status, body, headers = {}) {
@@ -68,7 +81,7 @@ createServer(async (request, response) => {
     let id = 'd7495e8c-62cf-46aa-af31-a3aa44b092d0'
     if (grant === 'password') {
       if (body.password !== 'correct-password') return send(response, 400, { message: 'Invalid login credentials' })
-      id = String(body.email).split('@')[0]
+      id = userIdForEmail(body.email)
       if (harness && !['candidate@example.com', 'company@example.com'].includes(body.email)) return send(response, 400, { message: 'Unknown local profile' })
       if (id === 'candidate') roles.set(id, 'CANDIDATE')
       if (id === 'company') roles.set(id, 'COMPANY')
@@ -98,7 +111,7 @@ createServer(async (request, response) => {
 
   if (url.pathname === '/auth/v1/signup' && request.method === 'POST') {
     const body = await bodyOf(request)
-    return send(response, 200, { user: { ...userFor(String(body.email).split('@')[0]), user_metadata: body.data ?? {} }, session: null })
+    return send(response, 200, { user: { ...userFor(userIdForEmail(body.email)), user_metadata: body.data ?? {} }, session: null })
   }
 
   if (url.pathname === '/auth/v1/recover') return send(response, 200, {})

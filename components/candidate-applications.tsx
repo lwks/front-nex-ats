@@ -49,9 +49,11 @@ export function CandidateApplicationsList({ items }: { items: CandidateApplicati
   return <ul className="space-y-4">{items.map(item => <li key={item.id} className="rounded-2xl border bg-white p-6">
     <h2 className="text-xl font-semibold">{item.title}</h2>
     {item.company ? <p className="mt-1 text-slate-600">{item.company}</p> : null}
-    <p className="mt-3 text-sm">Status da vaga: <strong>{item.jobStatus || 'Indisponível'}</strong></p>
+    <p className="mt-2 text-sm text-slate-500">Ciclo {item.ciclo ?? 1}</p>
+    <p className="mt-3 text-sm">Status deste processo: <strong>{item.jobStatus || 'Indisponível'}</strong></p>
     <p className="mt-2 text-sm">Etapa da candidatura: {item.status}</p>
-    {item.jobStatus === 'Encerrada' ? <p className="mt-3 text-sm text-slate-600">Processo encerrado. Nenhuma nova candidatura é permitida.</p> : null}
+    {item.historico?.map(event => <p key={`${event.tipo}-${event.ciclo}`} className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{event.mensagem}</p>)}
+    {item.jobStatus === 'Encerrada' ? <p className="mt-3 text-sm text-slate-600">{item.currentJobStatus === 'Aberto' ? 'A vaga foi reaberta em um novo ciclo. Esta inscrição permanece encerrada no seu histórico.' : 'Este processo foi encerrado. A candidatura permanece no seu histórico.'}</p> : null}
     {item.jobStatus ? <Link className="mt-4 inline-block font-semibold text-orange-700" href={sharedJobPath(item.jobGuid, item.title) ?? '/jobs/list'}>Ver detalhes da vaga</Link> : null}
   </li>)}</ul>
 }

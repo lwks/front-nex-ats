@@ -35,6 +35,10 @@ export async function GET(request: Request) {
 
     const query = new URLSearchParams()
     guidVagas.forEach((guidVaga) => query.append("guid_vaga", guidVaga))
+    for (const field of ['scope', 'ciclo']) {
+      const value = url.searchParams.get(field)
+      if (value !== null) query.set(field, value)
+    }
 
     const upstreamResponse = await fetch(`${CANDIDATES_BY_JOB_GUIDS_API_URL}?${query.toString()}`, {
       method: "GET",

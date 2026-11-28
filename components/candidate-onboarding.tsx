@@ -44,6 +44,7 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
   const [cvFile, setCvFile] = useState<File | null>(null)
   const [cvError, setCvError] = useState<string | null>(null)
   const [jobAvailability, setJobAvailability] = useState<"loading" | "open" | "closed" | "not-found" | "error">("loading")
+  const [jobCycle, setJobCycle] = useState(1)
   const [profile, setProfile] = useState<SavedProfile | null>(null)
   const [profileState, setProfileState] = useState<'loading' | 'ready' | 'existing' | 'error'>('loading')
   const [choice, setChoice] = useState<'USE_SAVED_PROFILE' | 'UPDATE_PROFILE' | null>(null)
@@ -60,8 +61,11 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
       .then(async (response) => {
         if (response.status === 404) { if (active) setJobAvailability("not-found"); return }
         if (!response.ok) throw new Error("job lookup failed")
-        const payload = await response.json() as { data?: { status?: string } }
-        if (active) setJobAvailability(payload.data?.status === "Encerrada" ? "closed" : "open")
+        const payload = await response.json() as { data?: { status?: string; ciclo_atual?: number } }
+        if (active) {
+          setJobCycle(payload.data?.ciclo_atual ?? 1)
+          setJobAvailability(payload.data?.status === "Encerrada" ? "closed" : "open")
+        }
       })
       .catch(() => { if (active) setJobAvailability("error") })
     return () => { active = false }
@@ -120,9 +124,9 @@ export function CandidateOnboarding({ jobGuid }: { jobGuid: string }) {
     setIsSubmitting(true)
 
     try {
-      await assertVacancyOpen(jobGuid)
+      await assertVacancyOpen(jobGuid, jobCycle)
       const cv = cvFile ? await uploadProfileCv(cvFile) : undefined
-      await sendApplication({ guid_vaga: jobGuid, mode: choice || 'UPDATE_PROFILE',
+      await sendApplication({ guid_vaga: jobGuid, ciclo: jobCycle, mode: choice || 'UPDATE_PROFILE',
         ...(profile ? { profileVersion: profile.version } : {}),
         ...(choice === 'UPDATE_PROFILE' ? { profile: profileFromForm(candidateData) } : {}),
         application: {

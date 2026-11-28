@@ -38,6 +38,8 @@ export default defineConfig({
         NEXT_DIST_DIR: '.next-e2e',
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'e2e-public-key',
         SUPABASE_SERVICE_ROLE_KEY: 'e2e-server-key',
+        // These tests mock API calls. An unmatched request must never reach production.
+        NEXT_PUBLIC_API_BASE_URL: 'http://127.0.0.1:1/api',
       },
     },
   ],

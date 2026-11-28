@@ -16,6 +16,22 @@ describe('candidate notification BFF', () => {
   })
   afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs() })
 
+  it('limits recipient lookup to the selected cycle', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: { items: [] } }))
+    vi.stubGlobal('fetch', fetchMock)
+    expect((await GET(new Request('http://localhost/notifications?ciclo=2'), context)).status).toBe(200)
+    const url = new URL(fetchMock.mock.calls[0][0])
+    expect(url.searchParams.get('scope')).toBe('cycle')
+    expect(url.searchParams.get('ciclo')).toBe('2')
+  })
+
+  it('rejects a candidate from another cycle before sending any email', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(candidate({ ciclo: 1 }))
+    vi.stubGlobal('fetch', fetchMock)
+    expect((await POST(request({ ...body, ciclo: 2 }), context)).status).toBe(409)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it('lists owned recipients without exposing their emails or service token', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ data: { items: [
       { id: 'c1', nome: 'Pessoa Teste', contato: 'synthetic@example.com' }, { id: 'c2', fullName: 'Sem email' },

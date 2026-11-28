@@ -18,7 +18,7 @@ describe('closed vacancy contracts', () => {
       .mockRejectedValueOnce(new Error('offline'))
     vi.stubGlobal('fetch', mock)
     await expect(assertVacancyOpen('job')).rejects.toBeInstanceOf(VacancyClosedError)
-    await expect(assertVacancyOpen('job')).resolves.toBeUndefined()
+    await expect(assertVacancyOpen('job')).resolves.toBe(1)
     await expect(assertVacancyOpen('job')).rejects.toThrow('confirmar')
     await expect(assertVacancyOpen('job')).rejects.toThrow('offline')
   })

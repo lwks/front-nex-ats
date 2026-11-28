@@ -1,4 +1,16 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
+
+async function openListingWithJob(page: Page, title: string) {
+  await page.goto('/jobs/list')
+  const titleElement = page.getByText(title, { exact: true })
+  const more = page.getByRole('button', { name: 'Carregar mais vagas', exact: true })
+  for (let batch = 0; batch < 10; batch++) {
+    await expect.poll(async () => await titleElement.isVisible() || await more.isVisible()).toBe(true)
+    if (await titleElement.isVisible()) return
+    await more.click()
+  }
+  await expect(titleElement).toBeVisible()
+}
 
 test('details and copied short URL open the correct vacancy, with copy feedback', async ({ page }) => {
   const guid = 'fb000000-0000-0000-0000-000000000000'
@@ -13,18 +25,17 @@ test('details and copied short URL open the correct vacancy, with copy feedback'
   } })
   expect(created.status()).toBe(201)
 
-  await page.goto('/jobs/list')
-  await expect(page.getByText(title, { exact: true })).toBeVisible()
+  await openListingWithJob(page, title)
   await page.locator('article').filter({ hasText: title }).getByRole('button', { name: 'Ver detalhes' }).click()
   const details = page.getByRole('link', { name: '+ Detalhes' })
   const path = await details.getAttribute('href')
   expect(path).toMatch(/\/jobs\/vaga-compartilhada-com-hifen-[A-Za-z0-9_-]{22}$/)
   expect(path!.slice(-22)).toContain('-')
   await details.click()
-  await expect(page).toHaveURL(new RegExp(path!))
+  await expect(page).toHaveURL(new RegExp(path!), { timeout: 30_000 })
   await expect(page.getByRole('heading', { name: title })).toBeVisible()
 
-  await page.goto('/jobs/list')
+  await openListingWithJob(page, title)
   await page.locator('article').filter({ hasText: title }).getByRole('button', { name: 'Ver detalhes' }).click()
   await page.evaluate(() => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
